@@ -3,13 +3,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Upload, LogOut, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BookOpen, Upload, FileText, TrendingUp, Calendar, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { UserMenu } from "@/components/UserMenu";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+interface AssessmentStats {
+  total: number;
+  draft: number;
+  published: number;
+  recent: Array<{
+    id: string;
+    title: string;
+    created_at: string;
+    status: string;
+  }>;
+}
 
 const Dashboard = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<AssessmentStats>({
+    total: 0,
+    draft: 0,
+    published: 0,
+    recent: []
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -21,6 +41,8 @@ const Dashboard = () => {
       
       if (!session) {
         navigate("/auth");
+      } else {
+        fetchStats(session.user.id);
       }
     });
 
@@ -30,6 +52,8 @@ const Dashboard = () => {
         setUser(session?.user ?? null);
         if (!session) {
           navigate("/auth");
+        } else {
+          fetchStats(session.user.id);
         }
       }
     );
@@ -37,22 +61,53 @@ const Dashboard = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível fazer logout.",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Logout realizado",
-        description: "Até a próxima!",
-      });
-      navigate("/");
+  const fetchStats = async (userId: string) => {
+    try {
+      const { data: assessments, error } = await supabase
+        .from("assessments")
+        .select("id, title, created_at, status")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const total = assessments?.length || 0;
+      const draft = assessments?.filter(a => a.status === 'draft').length || 0;
+      const published = assessments?.filter(a => a.status === 'published').length || 0;
+      const recent = assessments?.slice(0, 3) || [];
+
+      setStats({ total, draft, published, recent });
+    } catch (error: any) {
+      console.error("Erro ao carregar estatísticas:", error);
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      draft: "secondary",
+      published: "default",
+      archived: "outline"
+    } as const;
+    
+    const labels = {
+      draft: "Rascunho",
+      published: "Publicada", 
+      archived: "Arquivada"
+    };
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants] || "secondary"} className="text-xs">
+        {labels[status as keyof typeof labels] || status}
+      </Badge>
+    );
   };
 
   if (loading) {
@@ -76,16 +131,7 @@ const Dashboard = () => {
               <BookOpen className="h-6 w-6 text-primary" />
               <span className="text-lg font-semibold">ProvaFácil AI</span>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <User className="h-4 w-4" />
-                <span>{user?.email}</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
-              </Button>
-            </div>
+            <UserMenu />
           </div>
         </div>
       </header>
@@ -102,9 +148,82 @@ const Dashboard = () => {
             </p>
           </div>
 
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-3 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total de Avaliações</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.total === 1 ? "avaliação criada" : "avaliações criadas"}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Rascunhos</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.draft}</div>
+                <p className="text-xs text-muted-foreground">
+                  aguardando finalização
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Publicadas</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.published}</div>
+                <p className="text-xs text-muted-foreground">
+                  prontas para uso
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Assessments */}
+          {stats.recent.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Avaliações Recentes</h2>
+              <div className="space-y-3">
+                {stats.recent.map((assessment) => (
+                  <Card key={assessment.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="py-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-medium">{assessment.title}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Calendar className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              {formatDate(assessment.created_at)}
+                            </span>
+                            {getStatusBadge(assessment.status)}
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => navigate("/my-assessments")}>
+                          Ver Detalhes
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action Cards */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* Create Assessment Card */}
-            <Card className="border-primary/20 hover:border-primary/40 transition-colors cursor-pointer">
+            <Card className="border-primary/20 hover:border-primary/40 transition-colors cursor-pointer" onClick={() => navigate("/new-assessment")}>
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full w-fit">
                   <Upload className="h-6 w-6 text-primary" />
@@ -115,43 +234,44 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button className="w-full" variant="default">
+                <Button className="w-full" variant="default" onClick={() => navigate("/new-assessment")}>
                   Começar
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Placeholder cards for future features */}
-            <Card className="opacity-60">
+            {/* My Assessments Card */}
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/my-assessments")}>
               <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-muted rounded-full w-fit">
-                  <BookOpen className="h-6 w-6 text-muted-foreground" />
+                <div className="mx-auto mb-4 p-3 bg-secondary/10 rounded-full w-fit">
+                  <FileText className="h-6 w-6 text-secondary-foreground" />
                 </div>
-                <CardTitle className="text-muted-foreground">Minhas Avaliações</CardTitle>
+                <CardTitle>Minhas Avaliações</CardTitle>
                 <CardDescription>
-                  Em breve - Visualize suas avaliações criadas
+                  Visualize e gerencie suas avaliações criadas
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button className="w-full" variant="outline" disabled>
-                  Em breve
+                <Button className="w-full" variant="outline" onClick={() => navigate("/my-assessments")}>
+                  Ver Avaliações ({stats.total})
                 </Button>
               </CardContent>
             </Card>
 
-            <Card className="opacity-60">
+            {/* Templates Card */}
+            <Card className="cursor-pointer" onClick={() => navigate("/templates")}>
               <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-muted rounded-full w-fit">
+                <div className="mx-auto mb-4 p-3 bg-muted/10 rounded-full w-fit">
                   <BookOpen className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <CardTitle className="text-muted-foreground">Modelos</CardTitle>
+                <CardTitle>Modelos</CardTitle>
                 <CardDescription>
-                  Em breve - Use modelos pré-definidos
+                  Use modelos pré-definidos para acelerar a criação
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button className="w-full" variant="outline" disabled>
-                  Em breve
+                <Button className="w-full" variant="outline" onClick={() => navigate("/templates")}>
+                  Explorar Modelos
                 </Button>
               </CardContent>
             </Card>
