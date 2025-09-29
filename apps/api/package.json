@@ -1,0 +1,28 @@
+{
+    "name": "@prova-facil/api",
+    "version": "0.0.0",
+    "private": true,
+    "main": "api/index.js",
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "start": "node dist/main.js",
+        "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+        "dev:api": "ts-node-dev --respawn --transpile-only src/dev-server.ts"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.58.0",
+        "zod": "^3.23.0",
+        "@nestjs/core": "^10.0.0",
+        "@nestjs/common": "^10.0.0",
+        "@nestjs/platform-fastify": "^10.0.0",
+        "fastify": "^4.22.0",
+        "reflect-metadata": "^0.1.13",
+        "rxjs": "^7.8.0",
+        "typescript": "^5.5.0",
+        "ts-node-dev": "^2.0.0",
+        "tslib": "^2.6.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.3.1"
+    }
+}
