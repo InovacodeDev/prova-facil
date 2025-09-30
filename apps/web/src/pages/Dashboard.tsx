@@ -45,14 +45,8 @@ const Dashboard = () => {
     useEffect(() => {
         const init = async () => {
             try {
-                const token = localStorage.getItem("sb_access_token");
-                if (!token) {
-                    setLoading(false);
-                    navigate({ to: "/auth" });
-                    return;
-                }
-
-                const meRes = await apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+                // rely on cookie-based auth; apiFetch will attempt refresh on 401
+                const meRes = await apiFetch("/api/auth/me", { method: "GET", headers: {} });
                 if (!meRes.ok) {
                     setLoading(false);
                     navigate({ to: "/auth" });
@@ -61,7 +55,7 @@ const Dashboard = () => {
                 const { user } = await meRes.json();
                 setUser(user || null);
                 setLoading(false);
-                fetchStats(user.id);
+                if (user) fetchStats(user.id);
             } catch (e) {
                 console.error(e);
                 setLoading(false);
@@ -74,10 +68,9 @@ const Dashboard = () => {
 
     const fetchStats = async (userId: string) => {
         try {
-            const token = localStorage.getItem("sb_access_token");
             const resp = await apiFetch("/api/rpc/query", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     table: "assessments",
                     select: "id, title, created_at, status",

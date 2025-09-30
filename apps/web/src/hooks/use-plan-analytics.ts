@@ -4,13 +4,10 @@ export function usePlanAnalytics(redirect?: string | null) {
     useEffect(() => {
         (async () => {
             try {
-                const token = localStorage.getItem("sb_access_token");
                 await fetch("/api/analytics/plan-visit", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                    },
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ redirect }),
                 });
             } catch (e) {

@@ -202,3 +202,42 @@ If you'd like, I can now:
 -   Replace the last `@supabase/supabase-js` type usage in `apps/web/src/pages/Dashboard.tsx`, and then remove the dependency from the web package and update the lockfile.
 
 Tell me which step you want next.
+
+---
+
+## Cookie-based authentication and CSRF (migration notes)
+
+This project uses cookie-based authentication for the web app to avoid storing access tokens in localStorage. To protect state-changing endpoints from CSRF, the API implements a simple double-submit CSRF pattern:
+
+-   The server sets three cookies on sign-in/refresh:
+
+    -   `sb_access_token` (httpOnly) — short-lived access token.
+    -   `sb_refresh_token` (httpOnly) — long-lived refresh token.
+    -   `sb_csrf` (NOT httpOnly) — a random token readable by client JS used for double-submit CSRF protection.
+
+-   For state-changing requests (POST/PUT/PATCH/DELETE) the client must send the header `x-csrf-token` with the value of the `sb_csrf` cookie. The server verifies the header equals the cookie before allowing the request.
+
+Developer notes:
+
+-   The client helper `apps/web/src/lib/api.ts` automatically attaches the `x-csrf-token` header for unsafe HTTP methods by reading the `sb_csrf` cookie. It also sends credentials (cookies) on every request and performs a single automatic refresh if a 401 is received.
+
+-   You can disable CSRF enforcement locally by setting the environment variable `DISABLE_CSRF=true` when running the API. Do NOT set this in production.
+
+-   After merging the cookie-based auth changes, rebuild the web app so the `apps/web/dist` bundle is regenerated and no longer contains references to localStorage-held tokens:
+
+```bash
+# from the repo root
+pnpm --filter @prova-facil/web build
+```
+
+Testing the refresh flow manually:
+
+1. Start the API and web app locally.
+2. Sign in via the web UI — browser cookies `sb_access_token`, `sb_refresh_token`, and `sb_csrf` should be set.
+3. Make a state-changing request (create assessment, change profile). `x-csrf-token` will be sent automatically by `apiFetch`.
+4. To test refresh behavior: expire or revoke the `sb_access_token` (server-side or by clearing the cookie) and perform an API call — the client will call `/api/auth/refresh` once using the refresh cookie and retry the original request if refresh succeeds.
+
+Security considerations:
+
+-   Double-submit CSRF is simple and effective for same-site applications; consider a more robust CSRF strategy if you need stricter protections (synchronizer token pattern, SameSite=strict, or origin checks).
+-   Always ensure cookies are set with `secure=true` in production and consider tightening `sameSite` depending on your integration scenarios.

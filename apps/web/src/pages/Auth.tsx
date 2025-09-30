@@ -36,10 +36,7 @@ const Auth = () => {
             if (!res.ok) {
                 setError(data?.error || "Erro ao logar");
             } else {
-                // If supabase returns session data, optionally store it in localStorage
-                if (data?.session?.access_token) {
-                    localStorage.setItem("sb_access_token", data.session.access_token);
-                }
+                // Server sets httpOnly auth cookies; do not store tokens in localStorage when using cookie-based auth
                 toast({ title: "Bem-vindo de volta!", description: "Login realizado com sucesso." });
                 navigate({ to: "/dashboard" });
             }

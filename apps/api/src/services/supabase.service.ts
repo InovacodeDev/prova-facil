@@ -174,6 +174,38 @@ export class SupabaseService {
         }
     }
 
+    /**
+     * Refresh an access token using a refresh token via the Supabase Auth REST endpoint.
+     * Returns the session payload from Supabase (access_token, refresh_token, expires_in, etc.)
+     */
+    async refreshToken(refreshToken: string | null): Promise<any> {
+        if (!refreshToken) throw new HttpException({ error: 'missing refresh token' }, HttpStatus.UNAUTHORIZED);
+        const url = process.env.SUPABASE_URL;
+        const serviceRole = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+        if (!url || !serviceRole) {
+            throw new HttpException({ error: 'supabase configuration missing' }, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        try {
+            const resp = await fetch(`${url.replace(/\/$/, '')}/auth/v1/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    Authorization: `Bearer ${serviceRole}`,
+                },
+                body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                console.warn('refresh token failed', data);
+                throw new HttpException({ error: data?.error || 'refresh failed', details: data }, HttpStatus.UNAUTHORIZED);
+            }
+            return data;
+        } catch (e: any) {
+            console.error('refresh token error', e);
+            throw new HttpException({ error: e?.message || 'refresh failed' }, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     async createAssessment(token: string | null, body: unknown): Promise<any> {
         if (!token) throw new HttpException({ error: "missing token" }, HttpStatus.UNAUTHORIZED);
         const parse = CreateAssessmentSchema.safeParse(body || {});

@@ -55,15 +55,8 @@ const Profile = () => {
     useEffect(() => {
         const fetchUserAndProfile = async () => {
             try {
-                const token = localStorage.getItem("sb_access_token");
-                if (!token) {
-                    profileNavigate({ to: "/auth" });
-                    return;
-                }
-
-                const meRes = await apiFetch("/api/auth/me", {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                // server will authenticate using cookies
+                const meRes = await apiFetch("/api/auth/me", { method: "GET", headers: {} });
                 const meJson = await meRes.json();
                 if (!meRes.ok) {
                     profileNavigate({ to: "/auth" });
@@ -76,7 +69,7 @@ const Profile = () => {
 
                 const res = await apiFetch("/api/rpc/query", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ table: "profiles", select: "*", filter: { user_id: meUser?.id } }),
                 });
                 const payload = await res.json();
@@ -105,12 +98,9 @@ const Profile = () => {
         if (!user) return;
         setSaving(true);
         try {
-            const token = localStorage.getItem("sb_access_token");
-            if (!token) throw new Error("Usuário não autenticado");
-
             const res = await apiFetch("/api/profile", {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ full_name: fullName.trim() || null, bio: undefined }),
             });
             const payload = await res.json();
@@ -119,17 +109,14 @@ const Profile = () => {
             toast({ title: "Sucesso", description: "Perfil atualizado com sucesso!" });
 
             // reload profile
-            const token2 = localStorage.getItem("sb_access_token");
-            if (token2) {
-                const r = await apiFetch("/api/rpc/query", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token2}` },
-                    body: JSON.stringify({ table: "profiles", select: "*", filter: { user_id: user.id } }),
-                });
-                const p = await r.json();
-                const profileData: ProfileData | null = p?.data?.[0] ?? null;
-                if (profileData) setProfile(profileData);
-            }
+            const r = await apiFetch("/api/rpc/query", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ table: "profiles", select: "*", filter: { user_id: user.id } }),
+            });
+            const p = await r.json();
+            const profileData: ProfileData | null = p?.data?.[0] ?? null;
+            if (profileData) setProfile(profileData);
         } catch (err: unknown) {
             console.error("Erro ao salvar perfil:", err);
             toast({ title: "Erro", description: "Não foi possível salvar as alterações.", variant: "destructive" });
@@ -145,12 +132,9 @@ const Profile = () => {
 
         setDeleting(true);
         try {
-            const token = localStorage.getItem("sb_access_token");
-            if (!token) throw new Error("Usuário não autenticado");
-
             await apiFetch("/api/rpc/query", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     table: "profiles",
                     select: "*",
@@ -160,7 +144,7 @@ const Profile = () => {
             });
             await apiFetch("/api/rpc/query", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     table: "assessments",
                     select: "*",
@@ -170,7 +154,6 @@ const Profile = () => {
             });
 
             toast({ title: "Conta excluída", description: "Sua conta foi excluída com sucesso." });
-            localStorage.removeItem("sb_access_token");
             profileNavigate({ to: "/" });
         } catch (err: unknown) {
             console.error("Erro ao excluir conta:", err);

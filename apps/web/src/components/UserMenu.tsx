@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { profileRoute, changePasswordRoute } from "@/router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { apiFetch } from "../lib/api";
+import { apiFetch, apiLogout } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -31,39 +31,38 @@ export const UserMenu = () => {
     const { toast } = useToast();
 
     useEffect(() => {
-        fetchUserData();
+        void (async () => {
+            try {
+                const meRes = await apiFetch("/api/auth/me", { method: "GET", headers: {} });
+                if (!meRes.ok) return;
+                const me = await meRes.json();
+                setUser(me.user || null);
+
+                const res = await apiFetch("/api/rpc/query", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        table: "profiles",
+                        select: "full_name, avatar_url",
+                        filter: { user_id: me.user?.id },
+                    }),
+                });
+                const payload = await res.json();
+                setProfile(payload?.data?.[0] ?? null);
+            } catch (error: unknown) {
+                console.error("Erro ao carregar dados do usuário:", error);
+            }
+        })();
     }, []);
 
-    const fetchUserData = async () => {
-        try {
-            const token = localStorage.getItem("sb_access_token");
-            if (!token) return;
-
-            const meRes = await apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
-            const me = await meRes.json();
-            if (!meRes.ok) return;
-            setUser(me.user || null);
-
-            const res = await apiFetch("/api/rpc/query", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    table: "profiles",
-                    select: "full_name, avatar_url",
-                    filter: { user_id: me.user?.id },
-                }),
-            });
-            const payload = await res.json();
-            setProfile(payload?.data?.[0] ?? null);
-        } catch (error: unknown) {
-            console.error("Erro ao carregar dados do usuário:", error);
-        }
-    };
-
     const handleSignOut = async () => {
-        localStorage.removeItem("sb_access_token");
+        try {
+            await apiLogout();
+        } catch (e) {
+            console.error("Logout error:", e);
+        }
         toast({ title: "Logout realizado", description: "Até a próxima!" });
-        profileNavigate({ to: "/" });
+        profileNavigate({ to: "/auth" });
     };
 
     const getInitials = (name: string | null | undefined, email: string | null | undefined) => {
@@ -112,6 +111,10 @@ export const UserMenu = () => {
                 <DropdownMenuItem onClick={() => profileNavigate({ to: "/profile" })}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => profileNavigate({ to: "/usage" })}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Uso de Cotas</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => profileNavigate({ to: "/plan" })}>
                     <User className="mr-2 h-4 w-4" />

@@ -160,7 +160,59 @@ async function bootstrap() {
         } as unknown as import('fastify').FastifyRegisterOptions<Record<string, never>>,
     );
 
-    (app as any).setGlobalPrefix(process.env.API_PREFIX ?? 'api');
+    const apiPrefix = process.env.API_PREFIX ?? 'api';
+
+    // Simple double-submit CSRF protection for state-changing routes.
+    // It expects the client to send header 'x-csrf-token' with the value of the 'sb_csrf' cookie.
+    fastifyInstance.addHook('preHandler', async (request, reply) => {
+        const method = (request.raw.method || '').toUpperCase();
+        // Only validate for state-changing methods
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+            // allow certain public/auth routes to bypass CSRF since the client may not yet have cookies
+            const rawUrl = (request.raw.url || request.url || '').toString();
+            const bypassPaths = [
+                `/api/auth/signin`,
+                `/api/auth/signup`,
+                `/api/auth/refresh`,
+                `/api/auth/csrf`,
+                `/api/auth/logout`,
+                `/${apiPrefix}/auth/signin`,
+                `/${apiPrefix}/auth/signup`,
+                `/${apiPrefix}/auth/refresh`,
+                `/${apiPrefix}/auth/csrf`,
+                `/${apiPrefix}/auth/logout`,
+            ];
+            for (const p of bypassPaths) {
+                if (rawUrl.startsWith(p)) return; // skip CSRF enforcement for these endpoints
+            }
+
+            const cookieHeader = request.headers.cookie || '';
+            const cookies = cookieHeader.split(';').map((c: string) => c.trim()).filter(Boolean);
+            const cookieMap: Record<string,string> = {};
+            for (const c of cookies) {
+                const [k, ...rest] = c.split('=');
+                cookieMap[k] = rest.join('=');
+            }
+            const csrfCookie = cookieMap['sb_csrf'];
+
+            // If running in development and CSRF is disabled, allow bypass via env var
+            if (process.env.DISABLE_CSRF === 'true') return;
+
+            // If there is no sb_csrf cookie present, this is likely an unauthenticated/public request
+            // and cannot be exploited via cookie-based CSRF. Allow it. Only enforce the double-submit
+            // check when a csrf cookie exists (i.e., user has a cookie-based session).
+            if (!csrfCookie) return;
+
+            const csrfHeader = (request.headers['x-csrf-token'] as string) || '';
+            if (!csrfHeader || csrfCookie !== csrfHeader) {
+                reply.code(403).send({ error: 'Invalid CSRF token' });
+                return reply;
+            }
+        }
+        return;
+    });
+
+    (app as any).setGlobalPrefix(apiPrefix);
 
     console.log('=== Start listening');
     const port = parseInt(process.env.API_PORT ?? '8801', 10);

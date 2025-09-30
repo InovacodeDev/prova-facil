@@ -43,12 +43,10 @@ const ChangePassword = () => {
         setLoading(true);
 
         try {
-            const token = localStorage.getItem("sb_access_token");
-            if (!token) throw new Error("Usuário não autenticado");
-
+            // Use cookie-based auth; apiFetch includes credentials
             const res = await apiFetch("/api/auth/change-password", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ newPassword }),
             });
             const data = await res.json();
@@ -106,7 +104,6 @@ const ChangePassword = () => {
                                             value={currentPassword}
                                             onChange={(e) => setCurrentPassword(e.target.value)}
                                             placeholder="Digite sua senha atual"
-                                            required
                                         />
                                         <Button
                                             type="button"

@@ -41,15 +41,10 @@ const MyAssessments = () => {
     useEffect(() => {
         const fetchAssessments = async () => {
             try {
-                const token = localStorage.getItem("sb_access_token");
-                if (!token) {
-                    navigate({ to: "/auth" });
-                    return;
-                }
-
+                // rely on cookie-based auth; apiFetch sends credentials
                 const res = await apiFetch("/api/rpc/query", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         table: "assessments",
                         select: "*",
@@ -77,12 +72,9 @@ const MyAssessments = () => {
 
     const handleDelete = async (id: string) => {
         try {
-            const token = localStorage.getItem("sb_access_token");
-            if (!token) throw new Error("Usuário não autenticado");
-
             const res = await apiFetch("/api/rpc/query", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ table: "assessments", action: "delete", filter: { id } }),
             });
             const payload = await res.json();

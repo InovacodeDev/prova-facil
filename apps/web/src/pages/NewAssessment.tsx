@@ -38,6 +38,7 @@ const NewAssessment = () => {
     const { toast } = useToast();
     const loc = useLocation();
 
+    // quota/usage info removed from this screen; moved to /usage page
     const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
     const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
     const [titleOptions, setTitleOptions] = useState<string[]>([]);
@@ -116,9 +117,7 @@ const NewAssessment = () => {
         let mounted = true;
         (async () => {
             try {
-                const token = localStorage.getItem("sb_access_token");
                 const headers: Record<string, string> = { "Content-Type": "application/json" };
-                if (token) headers.Authorization = `Bearer ${token}`;
 
                 const [titlesRes, catsRes] = await Promise.all([
                     apiFetch("/api/rpc/query", {
@@ -158,13 +157,14 @@ const NewAssessment = () => {
                 }
                 // fetch profile plan to enforce frontend limits (best-effort)
                 try {
-                    const token = localStorage.getItem("sb_access_token");
+                    // If user is authenticated, server will read session from cookies
+                    const token = null;
                     if (token) {
                         // get current user id
                         try {
                             const meRes = await apiFetch("/api/auth/me", {
                                 method: "GET",
-                                headers: { Authorization: `Bearer ${token}` },
+                                headers: {},
                             });
                             let userId: string | undefined = undefined;
                             if (meRes.ok) {
@@ -179,7 +179,7 @@ const NewAssessment = () => {
                             };
                             const me = await apiFetch("/api/rpc/query", {
                                 method: "POST",
-                                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify(body),
                             });
                             if (me.ok) {
@@ -208,72 +208,13 @@ const NewAssessment = () => {
         };
     }, []);
 
-    // fetch usage+limits on mount (no category) to get plan & allowed types for initial UI state
-    useEffect(() => {
-        let mounted = true;
-        (async () => {
-            try {
-                const token = localStorage.getItem("sb_access_token");
-                if (!token) return;
-                const res = await apiFetch("/api/usage/with-limits", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({}),
-                });
-                if (!mounted) return;
-                if (res.ok) {
-                    const j = await res.json();
-                    if (j?.data) {
-                        setUsageInfo(j.data);
-                        if (j.data.plan) setUserPlan(j.data.plan);
-                        if (Array.isArray(j.data.allowedTypes) && j.data.allowedTypes.length > 0) {
-                            setQuestionTypes((prev) =>
-                                Array.from(
-                                    new Set(
-                                        prev
-                                            .filter((t: string) => j.data.allowedTypes.includes(t))
-                                            .concat(j.data.allowedTypes.slice(0, 1))
-                                    )
-                                )
-                            );
-                        }
-                    }
-                }
-            } catch (e) {
-                // ignore
-            }
-        })();
-        return () => {
-            mounted = false;
-        };
-    }, []);
+    // NOTE: we intentionally do NOT fetch global usage/limits on mount anymore.
+    // The API /api/usage/with-limits will be called only when a category is selected
+    // so the UI can present accurate per-category quotas. This keeps initial
+    // traffic lower and matches the requested behavior.
 
-    // fetch usage+limits whenever category changes (best-effort)
-    useEffect(() => {
-        let mounted = true;
-        (async () => {
-            try {
-                const token = localStorage.getItem("sb_access_token");
-                if (!token) return;
-                const body = category ? { category } : {};
-                const res = await apiFetch("/api/usage/with-limits", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                    body: JSON.stringify(body),
-                });
-                if (!mounted) return;
-                if (res.ok) {
-                    const j = await res.json();
-                    if (j?.data) setUsageInfo(j.data);
-                }
-            } catch (e) {
-                // ignore
-            }
-        })();
-        return () => {
-            mounted = false;
-        };
-    }, [category]);
+    // Intentionally no per-category quota checks on this page.
+    // Quota monitoring and progress are now available in the dedicated /usage page.
 
     const handleSubmit = (e: React.FormEvent) => {
         // Prevent form submit via Enter; POST happens only when clicking the explicit button
@@ -289,19 +230,15 @@ const NewAssessment = () => {
         setUploading(true);
 
         try {
-            // get token from localStorage (set by signin flow)
-            const token = localStorage.getItem("sb_access_token");
-            if (!token) {
-                navigate({ to: "/auth" });
-                return;
-            }
+            // The server authenticates using httpOnly cookies. Attempt to create the assessment and
+            // if the server responds 401 we redirect to /auth.
 
             // prepare files metadata only (do NOT include base64 PDF data)
             const filePayloads = files.map((f) => ({ name: f.name, size: f.size, mime: f.type }));
 
             const res = await apiFetch("/api/assessments", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     title: title.trim(),
                     files: filePayloads,
@@ -311,7 +248,13 @@ const NewAssessment = () => {
                 }),
             });
             const payload = await res.json();
-            if (!res.ok) throw new Error(payload?.error || "Erro ao gerar questões");
+            if (!res.ok) {
+                if (res.status === 401) {
+                    navigate({ to: "/auth" });
+                    return;
+                }
+                throw new Error(payload?.error || "Erro ao gerar questões");
+            }
             toast({ title: "Sucesso", description: "Questões geradas com sucesso!" });
             navigate({ to: "/my-assessments" });
         } catch (error: unknown) {
@@ -328,18 +271,11 @@ const NewAssessment = () => {
     };
 
     // derived usage values for the selected category (safe typed helpers)
-    const displayedMonthlyLimit: number | null = usageInfo?.monthlyLimit ?? null;
-    const displayedUsed: number | null = category
-        ? typeof usageInfo?.used !== "undefined"
-            ? usageInfo!.used ?? null
-            : usageInfo?.perCategory?.[category]?.used ?? null
-        : null;
-    const displayedRemaining: number | null = category
-        ? typeof usageInfo?.remaining !== "undefined"
-            ? usageInfo!.remaining ?? null
-            : usageInfo?.perCategory?.[category]?.remaining ?? null
-        : null;
-    const isQuotaExhausted = displayedRemaining !== null ? displayedRemaining <= 0 : false;
+    // No quota-derived values on this page
+    const displayedMonthlyLimit: number | null = null;
+    const displayedUsed: number | null = null;
+    const displayedRemaining: number | null = null;
+    const isQuotaExhausted = false;
 
     return (
         <div className="min-h-screen bg-background">
@@ -585,44 +521,59 @@ const NewAssessment = () => {
                                         Cancelar
                                     </Button>
                                     <div className="flex-1">
-                                        {category ? (
-                                            <div className="text-sm text-muted-foreground mb-2">
-                                                {displayedUsed !== null ? (
-                                                    <>
-                                                        Você gerou <strong>{displayedUsed}</strong>/
-                                                        {displayedMonthlyLimit ?? "–"} questões nesta matéria este mês.{" "}
-                                                        <strong>{displayedRemaining ?? "–"}</strong> restantes.
-                                                    </>
-                                                ) : (
-                                                    <>Sem uso registrado nesta matéria.</>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="text-sm text-muted-foreground mb-2">
-                                                Selecione uma matéria para ver sua cota.
-                                            </div>
-                                        )}
-                                        <Button
-                                            type="button"
-                                            disabled={
-                                                uploading ||
-                                                isQuotaExhausted ||
-                                                !title.trim() ||
-                                                !category ||
-                                                questionTypes.length === 0
+                                        {/* Submit button: only guard client-side for required fields */}
+                                        {(() => {
+                                            const reasons: string[] = [];
+                                            if (!category) reasons.push("Selecione uma matéria.");
+                                            if (!title.trim()) reasons.push("Informe o conteúdo das questões.");
+                                            if (questionTypes.length === 0)
+                                                reasons.push("Selecione ao menos um tipo de questão.");
+                                            if (uploading) reasons.push("Em andamento: gerando questões...");
+
+                                            console.log({
+                                                reasons,
+                                                uploading,
+                                                title: title.trim(),
+                                                category,
+                                                questionTypes,
+                                            });
+                                            const disabled =
+                                                uploading || !title.trim() || !category || questionTypes.length === 0;
+                                            const tooltipMessage = reasons.length > 0 ? reasons.join(" ") : undefined;
+
+                                            const button = (
+                                                <Button
+                                                    type="button"
+                                                    disabled={disabled}
+                                                    className="w-full"
+                                                    onClick={createAssessment}
+                                                >
+                                                    {uploading ? (
+                                                        <>
+                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            Gerando...
+                                                        </>
+                                                    ) : (
+                                                        "Gerar Questões"
+                                                    )}
+                                                </Button>
+                                            );
+
+                                            if (disabled && tooltipMessage) {
+                                                return (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="inline-block w-full">{button}</span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top">
+                                                            <div className="text-sm">{tooltipMessage}</div>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                );
                                             }
-                                            className="w-full"
-                                            onClick={createAssessment}
-                                        >
-                                            {uploading ? (
-                                                <>
-                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                    Gerando...
-                                                </>
-                                            ) : (
-                                                "Gerar Questões"
-                                            )}
-                                        </Button>
+
+                                            return button;
+                                        })()}
                                     </div>
                                 </div>
                             </form>

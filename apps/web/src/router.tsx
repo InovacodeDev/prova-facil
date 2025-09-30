@@ -9,6 +9,7 @@ import Templates from "./pages/Templates";
 import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
 import Plan from "./pages/Plan";
+import Usage from "./pages/Usage";
 import NotFound from "./pages/NotFound";
 
 // Create a root route and child routes to mirror the existing react-router-dom paths.
@@ -54,6 +55,7 @@ export const changePasswordRoute = createRoute({
     component: ChangePassword,
 });
 export const planRoute = createRoute({ getParentRoute: () => rootRoute, path: "/plan", component: Plan });
+export const usageRoute = createRoute({ getParentRoute: () => rootRoute, path: "/usage", component: Usage });
 export const notFoundRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "*",
@@ -69,6 +71,7 @@ const routeTree = rootRoute.addChildren([
     newAssessmentRoute,
     myAssessmentsRoute,
     templatesRoute,
+    usageRoute,
     planRoute,
     profileRoute,
     changePasswordRoute,
