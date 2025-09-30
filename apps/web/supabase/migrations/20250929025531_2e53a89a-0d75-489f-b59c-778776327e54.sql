@@ -1,9 +1,20 @@
 -- Create profiles table for user data
-CREATE TABLE public.profiles (
+-- Ensure enum type for plan exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'profile_plan_enum') THEN
+    CREATE TYPE profile_plan_enum AS ENUM ('starter','basic','essentials','plus','advanced');
+  END IF;
+END
+$$;
+
+CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name text,
   avatar_url text,
+  plan profile_plan_enum DEFAULT 'starter',
+  plan_expire_at timestamp with time zone,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now()
 );
