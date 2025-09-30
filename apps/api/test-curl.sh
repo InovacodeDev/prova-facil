@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Simple curl examples to test the local serverless API
-# Usage: set SUPABASE_URL and SUPABASE_SERVICE_ROLE in env before running or use a .env loader
+# Usage: set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in env before running or use a .env loader
 
 BASE_URL=${BASE_URL:-http://localhost:3000}
 TOKEN=${TOKEN:-}

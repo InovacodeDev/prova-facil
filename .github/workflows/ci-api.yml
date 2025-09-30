@@ -1,41 +1,41 @@
 name: CI - Build API
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
 
 jobs:
-  build-api:
-    name: Build API and verify artifact
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    build-api:
+        name: Build API and verify artifact
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+            - name: Use Node.js 20
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
 
-      - name: Install pnpm
-        run: npm install -g pnpm@10
+            - name: Install pnpm
+              run: npm install -g pnpm@10
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
 
-      - name: Build API
-        working-directory: apps/api
-        run: pnpm run build
+            - name: Build API
+              working-directory: apps/api
+              run: pnpm run build
 
-      - name: Verify dist/main.js exists
-        run: |
-          if [ ! -f "apps/api/dist/main.js" ]; then
-            echo "ERROR: apps/api/dist/main.js not found. Build step failed to produce the compiled Nest app.";
-            ls -la apps/api/dist || true;
-            exit 1;
-          fi
+            - name: Verify dist/main.js exists
+              run: |
+                  if [ ! -f "apps/api/dist/main.js" ]; then
+                    echo "ERROR: apps/api/dist/main.js not found. Build step failed to produce the compiled Nest app.";
+                    ls -la apps/api/dist || true;
+                    exit 1;
+                  fi
 
-      - name: List artifact
-        run: ls -la apps/api/dist | sed -n '1,200p'
+            - name: List artifact
+              run: ls -la apps/api/dist | sed -n '1,200p'

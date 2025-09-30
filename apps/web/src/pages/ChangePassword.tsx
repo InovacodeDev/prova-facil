@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../lib/api";
+import { profileRoute } from "@/router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BookOpen, ArrowLeft, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const ChangePassword = () => {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -16,7 +16,7 @@ const ChangePassword = () => {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
+    const navigate = profileRoute.useNavigate();
     const { toast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -46,7 +46,7 @@ const ChangePassword = () => {
             const token = localStorage.getItem("sb_access_token");
             if (!token) throw new Error("Usuário não autenticado");
 
-            const res = await fetch("/api/auth/change-password", {
+            const res = await apiFetch("/api/auth/change-password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ newPassword }),
@@ -55,12 +55,13 @@ const ChangePassword = () => {
             if (!res.ok) throw new Error(data?.error || "Erro ao alterar senha");
 
             toast({ title: "Sucesso", description: "Senha alterada com sucesso!" });
-            navigate("/profile");
-        } catch (error: any) {
+            navigate({ to: "/profile" });
+        } catch (error: unknown) {
             console.error("Erro ao alterar senha:", error);
+            const message = error instanceof Error ? error.message : String(error);
             toast({
                 title: "Erro",
-                description: error.message || "Não foi possível alterar a senha. Tente novamente.",
+                description: message || "Não foi possível alterar a senha. Tente novamente.",
                 variant: "destructive",
             });
         } finally {
@@ -74,7 +75,7 @@ const ChangePassword = () => {
             <header className="border-b border-border bg-card">
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" onClick={() => navigate("/profile")}>
+                        <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/profile" })}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Voltar
                         </Button>
@@ -187,7 +188,7 @@ const ChangePassword = () => {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() => navigate("/profile")}
+                                        onClick={() => navigate({ to: "/profile" })}
                                         className="flex-1"
                                     >
                                         Cancelar

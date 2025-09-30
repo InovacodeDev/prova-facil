@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../lib/api";
+import { dashboardRoute } from "@/router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, ArrowLeft, Plus, FileText, Calendar, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -36,52 +36,52 @@ const MyAssessments = () => {
     const [assessments, setAssessments] = useState<Assessment[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
-    const navigate = useNavigate();
+    const navigate = dashboardRoute.useNavigate();
     const { toast } = useToast();
 
     useEffect(() => {
-        fetchAssessments();
-    }, []);
+        const fetchAssessments = async () => {
+            try {
+                const token = localStorage.getItem("sb_access_token");
+                if (!token) {
+                    navigate({ to: "/auth" });
+                    return;
+                }
 
-    const fetchAssessments = async () => {
-        try {
-            const token = localStorage.getItem("sb_access_token");
-            if (!token) {
-                navigate("/auth");
-                return;
+                const res = await apiFetch("/api/rpc/query", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                        table: "assessments",
+                        select: "*",
+                        filter: {},
+                        order: { column: "created_at", asc: false },
+                    }),
+                });
+                const payload = await res.json();
+                if (!res.ok) throw new Error(payload?.error || "Erro ao carregar avaliações");
+                setAssessments(payload.data || []);
+            } catch (error: unknown) {
+                console.error("Erro ao carregar avaliações:", error);
+                toast({
+                    title: "Erro",
+                    description: "Não foi possível carregar suas avaliações.",
+                    variant: "destructive",
+                });
+            } finally {
+                setLoading(false);
             }
+        };
 
-            const res = await fetch("/api/rpc/query", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    table: "assessments",
-                    select: "*",
-                    filter: {},
-                    order: { column: "created_at", asc: false },
-                }),
-            });
-            const payload = await res.json();
-            if (!res.ok) throw new Error(payload?.error || "Erro ao carregar avaliações");
-            setAssessments(payload.data || []);
-        } catch (error: any) {
-            console.error("Erro ao carregar avaliações:", error);
-            toast({
-                title: "Erro",
-                description: "Não foi possível carregar suas avaliações.",
-                variant: "destructive",
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
+        void fetchAssessments();
+    }, [navigate, toast]);
 
     const handleDelete = async (id: string) => {
         try {
             const token = localStorage.getItem("sb_access_token");
             if (!token) throw new Error("Usuário não autenticado");
 
-            const res = await fetch("/api/rpc/query", {
+            const res = await apiFetch("/api/rpc/query", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ table: "assessments", action: "delete", filter: { id } }),
@@ -94,7 +94,7 @@ const MyAssessments = () => {
                 title: "Sucesso",
                 description: "Avaliação excluída com sucesso.",
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Erro ao excluir avaliação:", error);
             toast({
                 title: "Erro",
@@ -154,7 +154,7 @@ const MyAssessments = () => {
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                            <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/dashboard" })}>
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 Voltar
                             </Button>
@@ -163,7 +163,7 @@ const MyAssessments = () => {
                                 <span className="text-lg font-semibold">Minhas Avaliações</span>
                             </div>
                         </div>
-                        <Button onClick={() => navigate("/new-assessment")}>
+                        <Button onClick={() => navigate({ to: "/new-assessment" })}>
                             <Plus className="h-4 w-4 mr-2" />
                             Nova Avaliação
                         </Button>
@@ -182,7 +182,7 @@ const MyAssessments = () => {
                                 <CardDescription className="mb-6">
                                     Você ainda não criou nenhuma avaliação. Comece criando sua primeira!
                                 </CardDescription>
-                                <Button onClick={() => navigate("/new-assessment")}>
+                                <Button onClick={() => navigate({ to: "/new-assessment" })}>
                                     <Plus className="h-4 w-4 mr-2" />
                                     Criar Primeira Avaliação
                                 </Button>

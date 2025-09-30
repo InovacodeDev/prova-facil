@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,15 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BookOpen, Eye, EyeOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { dashboardRoute } from "@/router";
 import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const navigate = useNavigate();
+    const navigate = dashboardRoute.useNavigate();
     const { toast } = useToast();
 
     const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -27,7 +27,7 @@ const Auth = () => {
         const password = formData.get("password") as string;
 
         try {
-            const res = await fetch("/api/auth/signin", {
+            const res = await apiFetch("/api/auth/signin", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
@@ -41,10 +41,11 @@ const Auth = () => {
                     localStorage.setItem("sb_access_token", data.session.access_token);
                 }
                 toast({ title: "Bem-vindo de volta!", description: "Login realizado com sucesso." });
-                navigate("/dashboard");
+                navigate({ to: "/dashboard" });
             }
-        } catch (err: any) {
-            setError(err.message || "Erro ao logar");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            setError(message || "Erro ao logar");
         }
 
         setIsLoading(false);
@@ -61,7 +62,7 @@ const Auth = () => {
         const fullName = formData.get("fullName") as string;
 
         try {
-            const res = await fetch("/api/auth/signup", {
+            const res = await apiFetch("/api/auth/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password, full_name: fullName }),
@@ -72,8 +73,9 @@ const Auth = () => {
             } else {
                 toast({ title: "Conta criada!", description: "Verifique seu email para confirmar sua conta." });
             }
-        } catch (err: any) {
-            setError(err.message || "Erro ao criar conta");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            setError(message || "Erro ao criar conta");
         }
 
         setIsLoading(false);

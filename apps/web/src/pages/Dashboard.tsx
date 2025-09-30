@@ -1,13 +1,22 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../lib/api";
+import { dashboardRoute } from "@/router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Upload, FileText, TrendingUp, Calendar, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UserMenu } from "@/components/UserMenu";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+// Local supabase user shape used by the frontend to avoid importing
+// `@supabase/supabase-js` on the client. Keep this intentionally small
+// (only what the UI needs). If you persist additional fields, extend it.
+type SupabaseUser = {
+    id: string;
+    email?: string | null;
+    phone?: string | null;
+    user_metadata?: Record<string, unknown> | null;
+};
 
 interface AssessmentStats {
     total: number;
@@ -30,7 +39,7 @@ const Dashboard = () => {
         published: 0,
         recent: [],
     });
-    const navigate = useNavigate();
+    const navigate = dashboardRoute.useNavigate();
     const { toast } = useToast();
 
     useEffect(() => {
@@ -39,14 +48,14 @@ const Dashboard = () => {
                 const token = localStorage.getItem("sb_access_token");
                 if (!token) {
                     setLoading(false);
-                    navigate("/auth");
+                    navigate({ to: "/auth" });
                     return;
                 }
 
-                const meRes = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+                const meRes = await apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
                 if (!meRes.ok) {
                     setLoading(false);
-                    navigate("/auth");
+                    navigate({ to: "/auth" });
                     return;
                 }
                 const { user } = await meRes.json();
@@ -56,7 +65,7 @@ const Dashboard = () => {
             } catch (e) {
                 console.error(e);
                 setLoading(false);
-                navigate("/auth");
+                navigate({ to: "/auth" });
             }
         };
 
@@ -66,7 +75,7 @@ const Dashboard = () => {
     const fetchStats = async (userId: string) => {
         try {
             const token = localStorage.getItem("sb_access_token");
-            const resp = await fetch("/api/rpc/query", {
+            const resp = await apiFetch("/api/rpc/query", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
@@ -84,7 +93,7 @@ const Dashboard = () => {
             const recent = assessments?.slice(0, 3) || [];
 
             setStats({ total, draft, published, recent });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Erro ao carregar estatísticas:", error);
         }
     };
@@ -213,7 +222,7 @@ const Dashboard = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => navigate("/my-assessments")}
+                                                    onClick={() => navigate({ to: "/my-assessments" })}
                                                 >
                                                     Ver Detalhes
                                                 </Button>
@@ -230,7 +239,7 @@ const Dashboard = () => {
                         {/* Create Assessment Card */}
                         <Card
                             className="border-primary/20 hover:border-primary/40 transition-colors cursor-pointer"
-                            onClick={() => navigate("/new-assessment")}
+                            onClick={() => navigate({ to: "/new-assessment" })}
                         >
                             <CardHeader className="text-center">
                                 <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full w-fit">
@@ -243,7 +252,7 @@ const Dashboard = () => {
                                 <Button
                                     className="w-full"
                                     variant="default"
-                                    onClick={() => navigate("/new-assessment")}
+                                    onClick={() => navigate({ to: "/new-assessment" })}
                                 >
                                     Começar
                                 </Button>
@@ -253,7 +262,7 @@ const Dashboard = () => {
                         {/* My Assessments Card */}
                         <Card
                             className="hover:shadow-md transition-shadow cursor-pointer"
-                            onClick={() => navigate("/my-assessments")}
+                            onClick={() => navigate({ to: "/my-assessments" })}
                         >
                             <CardHeader className="text-center">
                                 <div className="mx-auto mb-4 p-3 bg-secondary/10 rounded-full w-fit">
@@ -266,7 +275,7 @@ const Dashboard = () => {
                                 <Button
                                     className="w-full"
                                     variant="outline"
-                                    onClick={() => navigate("/my-assessments")}
+                                    onClick={() => navigate({ to: "/my-assessments" })}
                                 >
                                     Ver Avaliações ({stats.total})
                                 </Button>
@@ -274,7 +283,7 @@ const Dashboard = () => {
                         </Card>
 
                         {/* Templates Card */}
-                        <Card className="cursor-pointer" onClick={() => navigate("/templates")}>
+                        <Card className="cursor-pointer" onClick={() => navigate({ to: "/templates" })}>
                             <CardHeader className="text-center">
                                 <div className="mx-auto mb-4 p-3 bg-muted/10 rounded-full w-fit">
                                     <BookOpen className="h-6 w-6 text-muted-foreground" />
@@ -283,7 +292,11 @@ const Dashboard = () => {
                                 <CardDescription>Use modelos pré-definidos para acelerar a criação</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Button className="w-full" variant="outline" onClick={() => navigate("/templates")}>
+                                <Button
+                                    className="w-full"
+                                    variant="outline"
+                                    onClick={() => navigate({ to: "/templates" })}
+                                >
                                     Explorar Modelos
                                 </Button>
                             </CardContent>

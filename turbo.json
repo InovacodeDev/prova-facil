@@ -11,6 +11,11 @@
             "outputs": [
                 "dist/**",
                 "build/**"
+            ],
+            "inputs": [
+                "package.json",
+                "tsconfig.json",
+                ".env"
             ]
         },
         "dev": {

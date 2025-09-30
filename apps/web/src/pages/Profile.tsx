@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../lib/api";
+import { dashboardRoute, profileRoute } from "@/router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,8 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, ArrowLeft, User, Camera, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -21,82 +20,95 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface Profile {
+interface ProfileData {
     id: string;
     user_id: string;
-    full_name: string | null;
-    avatar_url: string | null;
+    full_name?: string | null;
+    avatar_url?: string | null;
+    bio?: string | null;
 }
 
+type User = { id: string; email?: string | null };
+
 const Profile = () => {
-    const [user, setUser] = useState<SupabaseUser | null>(null);
-    const [profile, setProfile] = useState<Profile | null>(null);
+    const [user, setUser] = useState<User | null>(null);
+    const [profile, setProfile] = useState<ProfileData | null>(null);
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
-    const navigate = useNavigate();
+    const navigate = dashboardRoute.useNavigate();
+    const profileNavigate = profileRoute.useNavigate();
     const { toast } = useToast();
 
-    useEffect(() => {
-        fetchUserData();
-    }, []);
-
-    const fetchUserData = async () => {
-        try {
-            const token = localStorage.getItem("sb_access_token");
-            if (!token) {
-                navigate("/auth");
-                return;
-            }
-
-            // fetch basic user info via supabase getUser endpoint on the API
-            const meRes = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
-            const me = await meRes.json();
-            if (!meRes.ok) {
-                navigate("/auth");
-                return;
-            }
-
-            setUser(me.user || null);
-            setEmail(me.user?.email || "");
-
-            // fetch profile via rpc query helper
-            const res = await fetch("/api/rpc/query", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ table: "profiles", select: "*", filter: { user_id: me.user?.id } }),
-            });
-            const payload = await res.json();
-            const profileData = payload?.data?.[0] ?? null;
-
-            if (profileData) {
-                setProfile(profileData);
-                setFullName(profileData.full_name || "");
-            }
-        } catch (error: any) {
-            console.error("Erro ao carregar dados do usuário:", error);
-            toast({
-                title: "Erro",
-                description: "Não foi possível carregar os dados do perfil.",
-                variant: "destructive",
-            });
-        } finally {
-            setLoading(false);
-        }
+    const getInitials = (name: string) => {
+        if (!name) return "U";
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2);
     };
+
+    useEffect(() => {
+        const fetchUserAndProfile = async () => {
+            try {
+                const token = localStorage.getItem("sb_access_token");
+                if (!token) {
+                    profileNavigate({ to: "/auth" });
+                    return;
+                }
+
+                const meRes = await apiFetch("/api/auth/me", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const meJson = await meRes.json();
+                if (!meRes.ok) {
+                    profileNavigate({ to: "/auth" });
+                    return;
+                }
+
+                const meUser: User | null = meJson?.user ?? null;
+                setUser(meUser);
+                setEmail(meUser?.email ?? "");
+
+                const res = await apiFetch("/api/rpc/query", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ table: "profiles", select: "*", filter: { user_id: meUser?.id } }),
+                });
+                const payload = await res.json();
+                const profileData: ProfileData | null = payload?.data?.[0] ?? null;
+
+                if (profileData) {
+                    setProfile(profileData);
+                    setFullName(profileData.full_name ?? "");
+                }
+            } catch (err: unknown) {
+                console.error("Erro ao carregar dados do usuário:", err);
+                toast({
+                    title: "Erro",
+                    description: "Não foi possível carregar os dados do perfil.",
+                    variant: "destructive",
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        void fetchUserAndProfile();
+    }, [profileNavigate, toast]);
 
     const handleSave = async () => {
         if (!user) return;
-
         setSaving(true);
         try {
             const token = localStorage.getItem("sb_access_token");
             if (!token) throw new Error("Usuário não autenticado");
 
-            // Update profile via API - email handling omitted for now
-            const res = await fetch("/api/profile", {
+            const res = await apiFetch("/api/profile", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ full_name: fullName.trim() || null, bio: undefined }),
@@ -105,9 +117,21 @@ const Profile = () => {
             if (!res.ok) throw new Error(payload?.error || "Erro ao atualizar perfil");
 
             toast({ title: "Sucesso", description: "Perfil atualizado com sucesso!" });
-            await fetchUserData();
-        } catch (error: any) {
-            console.error("Erro ao salvar perfil:", error);
+
+            // reload profile
+            const token2 = localStorage.getItem("sb_access_token");
+            if (token2) {
+                const r = await apiFetch("/api/rpc/query", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token2}` },
+                    body: JSON.stringify({ table: "profiles", select: "*", filter: { user_id: user.id } }),
+                });
+                const p = await r.json();
+                const profileData: ProfileData | null = p?.data?.[0] ?? null;
+                if (profileData) setProfile(profileData);
+            }
+        } catch (err: unknown) {
+            console.error("Erro ao salvar perfil:", err);
             toast({ title: "Erro", description: "Não foi possível salvar as alterações.", variant: "destructive" });
         } finally {
             setSaving(false);
@@ -116,14 +140,15 @@ const Profile = () => {
 
     const handleDeleteAccount = async () => {
         if (!user) return;
+        const confirmed = window.confirm("Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.");
+        if (!confirmed) return;
 
         setDeleting(true);
         try {
             const token = localStorage.getItem("sb_access_token");
             if (!token) throw new Error("Usuário não autenticado");
 
-            // Delete profile and assessments via API rpc or dedicated endpoints
-            await fetch("/api/rpc/query", {
+            await apiFetch("/api/rpc/query", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
@@ -133,7 +158,7 @@ const Profile = () => {
                     action: "delete",
                 }),
             });
-            await fetch("/api/rpc/query", {
+            await apiFetch("/api/rpc/query", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
@@ -145,12 +170,10 @@ const Profile = () => {
             });
 
             toast({ title: "Conta excluída", description: "Sua conta foi excluída com sucesso." });
-
-            // Sign out client-side
             localStorage.removeItem("sb_access_token");
-            navigate("/");
-        } catch (error: any) {
-            console.error("Erro ao excluir conta:", error);
+            profileNavigate({ to: "/" });
+        } catch (err: unknown) {
+            console.error("Erro ao excluir conta:", err);
             toast({
                 title: "Erro",
                 description: "Não foi possível excluir a conta. Tente novamente.",
@@ -159,16 +182,6 @@ const Profile = () => {
         } finally {
             setDeleting(false);
         }
-    };
-
-    const getInitials = (name: string) => {
-        if (!name) return "U";
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
     };
 
     if (loading) {
@@ -188,7 +201,7 @@ const Profile = () => {
             <header className="border-b border-border bg-card">
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                        <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/dashboard" })}>
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Voltar
                         </Button>
@@ -214,9 +227,9 @@ const Profile = () => {
                             {/* Avatar Section */}
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-20 w-20">
-                                    <AvatarImage src={profile?.avatar_url || ""} />
+                                    <AvatarImage src={profile?.avatar_url ?? ""} />
                                     <AvatarFallback className="text-lg">
-                                        {getInitials(fullName || user?.email || "")}
+                                        {getInitials(fullName || email || "")}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -267,7 +280,7 @@ const Profile = () => {
                                         "Salvar Alterações"
                                     )}
                                 </Button>
-                                <Button variant="outline" onClick={() => navigate("/change-password")}>
+                                <Button variant="outline" onClick={() => navigate({ to: "/change-password" })}>
                                     Alterar Senha
                                 </Button>
                             </div>
