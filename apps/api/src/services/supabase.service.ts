@@ -24,7 +24,6 @@ const SigninSchema = z.object({ email: z.string().email(), password: z.string().
 const ChangePasswordSchema = z.object({ newPassword: z.string().min(8) });
 const CreateAssessmentSchema = z.object({
     title: z.string().min(1).optional(),
-    description: z.string().optional(),
     content: z.any().optional(),
     category: z.string().optional(), // subject/tag name (matéria)
     files: z
@@ -265,7 +264,7 @@ export class SupabaseService {
             // 2) Create assessment record
             const { data: assessmentRows, error: assessmentErr } = await getSupabaseAdmin()
                 .from('assessments')
-                .insert({ user_id: userId, title: payload.title ?? 'Untitled', description: payload.description ?? null })
+                .insert({ user_id: userId, title: payload.title ?? 'Untitled' })
                 .select()
                 .limit(1);
             if (assessmentErr) throw new HttpException({ error: assessmentErr.message }, HttpStatus.INTERNAL_SERVER_ERROR);

@@ -26,10 +26,9 @@ import {
 interface Assessment {
     id: string;
     title: string;
-    description: string | null;
     status: string;
     created_at: string;
-    pdf_filename: string | null;
+    // removed description and pdf_filename per schema changes
 }
 
 const MyAssessments = () => {
@@ -196,20 +195,13 @@ const MyAssessments = () => {
                                         <div className="flex items-start justify-between">
                                             <div className="space-y-1 flex-1">
                                                 <CardTitle className="text-lg">{assessment.title}</CardTitle>
-                                                {assessment.description && (
-                                                    <CardDescription>{assessment.description}</CardDescription>
-                                                )}
+                                                {/* description removed from schema */}
                                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                     <div className="flex items-center gap-1">
                                                         <Calendar className="h-4 w-4" />
                                                         {formatDate(assessment.created_at)}
                                                     </div>
-                                                    {assessment.pdf_filename && (
-                                                        <div className="flex items-center gap-1">
-                                                            <FileText className="h-4 w-4" />
-                                                            {assessment.pdf_filename}
-                                                        </div>
-                                                    )}
+                                                    {/* pdf_filename removed from schema */}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">

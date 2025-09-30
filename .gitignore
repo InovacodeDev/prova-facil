@@ -142,6 +142,7 @@ playwright/.cache/
 
 # Local development
 .local/
+supabase/.temp/
 
 # Sentry
 .sentryclirc
