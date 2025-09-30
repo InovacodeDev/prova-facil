@@ -1,0 +1,19 @@
+{
+    "buildCommand": "turbo run build --filter=@prova-facil/web",
+    "outputDirectory": "dist",
+    "framework": null,
+    "functions": {
+        "apps/api/api/index.js": {
+            "runtime": "nodejs20.x"
+        }
+    },
+    "env": {
+        "SERVERLESS": "true"
+    },
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/api"
+        }
+    ]
+}
