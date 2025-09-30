@@ -4,39 +4,118 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, Upload, ArrowLeft, FileText, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BookOpen, Upload, ArrowLeft, FileText, Loader2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+const SUBJECTS = [
+  { value: "mathematics", label: "Matemática" },
+  { value: "portuguese", label: "Português" },
+  { value: "history", label: "História" },
+  { value: "geography", label: "Geografia" },
+  { value: "science", label: "Ciências" },
+  { value: "arts", label: "Artes" },
+  { value: "english", label: "Inglês" },
+  { value: "literature", label: "Literatura" },
+  { value: "physics", label: "Física" },
+  { value: "chemistry", label: "Química" },
+  { value: "biology", label: "Biologia" },
+  { value: "philosophy", label: "Filosofia" },
+  { value: "sociology", label: "Sociologia" },
+  { value: "spanish", label: "Espanhol" },
+];
+
+const QUESTION_TYPES = [
+  { id: "multiple_choice", label: "Múltipla escolha" },
+  { id: "true_false", label: "Verdadeiro ou Falso" },
+  { id: "open", label: "Aberta ou Dissertativa" },
+  { id: "sum", label: "Somatória" },
+];
+
 const NewAssessment = () => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [content, setContent] = useState("");
+  const [questionCount, setQuestionCount] = useState("10");
+  const [subject, setSubject] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [questionTypes, setQuestionTypes] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile && selectedFile.type === "application/pdf") {
-      setFile(selectedFile);
-    } else {
+    const selectedFiles = Array.from(e.target.files || []);
+    const validTypes = [
+      "application/pdf",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    const validFiles = selectedFiles.filter((file) => validTypes.includes(file.type));
+    
+    if (validFiles.length !== selectedFiles.length) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione um arquivo PDF válido.",
+        description: "Apenas arquivos PDF, PPT, PPTX, DOC e DOCX são permitidos.",
         variant: "destructive",
       });
+      return;
     }
+
+    const totalSize = [...files, ...validFiles].reduce((acc, file) => acc + file.size, 0);
+    const maxSize = 50 * 1024 * 1024; // 50MB
+
+    if (totalSize > maxSize) {
+      toast({
+        title: "Erro",
+        description: "O tamanho total dos arquivos não pode exceder 50MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFiles([...files, ...validFiles]);
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(files.filter((_, i) => i !== index));
+  };
+
+  const toggleQuestionType = (typeId: string) => {
+    setQuestionTypes((prev) =>
+      prev.includes(typeId) ? prev.filter((id) => id !== typeId) : [...prev, typeId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim()) {
+    if (!content.trim()) {
       toast({
         title: "Erro",
-        description: "O título é obrigatório.",
+        description: "O conteúdo das questões é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!subject) {
+      toast({
+        title: "Erro",
+        description: "Selecione uma matéria.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (questionTypes.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Selecione pelo menos um tipo de questão.",
         variant: "destructive",
       });
       return;
@@ -50,44 +129,33 @@ const NewAssessment = () => {
       if (!user) {
         toast({
           title: "Erro",
-          description: "Você precisa estar logado para criar uma avaliação.",
+          description: "Você precisa estar logado para criar questões.",
           variant: "destructive",
         });
         navigate("/auth");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("assessments")
-        .insert({
-          title: title.trim(),
-          description: description.trim() || null,
-          user_id: user.id,
-          pdf_filename: file?.name || null,
-          status: "draft"
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      // TODO: Integrar com IA para gerar questões
       toast({
         title: "Sucesso",
-        description: "Avaliação criada com sucesso!",
+        description: `${questionCount} questões de ${SUBJECTS.find(s => s.value === subject)?.label} serão geradas!`,
       });
 
       navigate("/my-assessments");
     } catch (error: any) {
-      console.error("Erro ao criar avaliação:", error);
+      console.error("Erro ao criar questões:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar a avaliação. Tente novamente.",
+        description: "Não foi possível criar as questões. Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
     }
   };
+
+  const isFormValid = content.trim() && subject && questionTypes.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -101,7 +169,7 @@ const NewAssessment = () => {
             </Button>
             <div className="flex items-center gap-2">
               <BookOpen className="h-6 w-6 text-primary" />
-              <span className="text-lg font-semibold">Nova Avaliação</span>
+              <span className="text-lg font-semibold">Criar Questões</span>
             </div>
           </div>
         </div>
@@ -114,59 +182,133 @@ const NewAssessment = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-primary" />
-                Criar Nova Avaliação
+                Criar Questões com IA
               </CardTitle>
               <CardDescription>
-                Preencha as informações básicas e faça o upload do PDF para gerar questões automaticamente
+                Preencha os campos abaixo para gerar questões automaticamente com inteligência artificial
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Conteúdo das Questões */}
                 <div className="space-y-2">
-                  <Label htmlFor="title">Título da Avaliação *</Label>
+                  <Label htmlFor="content">Conteúdo das Questões *</Label>
                   <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Ex: Avaliação de História - Segunda Guerra Mundial"
+                    id="content"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Ex: Segunda Guerra Mundial, Teorema de Pitágoras, Fotossíntese..."
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição (opcional)</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Descreva o conteúdo ou objetivo desta avaliação..."
-                    rows={3}
-                  />
+                {/* Quantidade e Matéria */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="questionCount">Quantidade de Questões *</Label>
+                    <Input
+                      id="questionCount"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={questionCount}
+                      onChange={(e) => setQuestionCount(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Matéria *</Label>
+                    <Select value={subject} onValueChange={setSubject}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a matéria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUBJECTS.map((subj) => (
+                          <SelectItem key={subj.value} value={subj.value}>
+                            {subj.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
+                {/* Upload de Arquivos */}
                 <div className="space-y-2">
-                  <Label htmlFor="file">Upload do PDF (opcional)</Label>
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <Label htmlFor="files">Importar Documentos (opcional)</Label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-6">
                     <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-center">
                       <p className="text-sm text-muted-foreground">
-                        {file ? file.name : "Arraste um arquivo PDF aqui ou clique para selecionar"}
+                        Arraste arquivos aqui ou clique para selecionar
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PDF, PPT, PPTX, DOC ou DOCX - Máximo 50MB total
                       </p>
                       <Input
-                        id="file"
+                        id="files"
                         type="file"
-                        accept=".pdf"
+                        accept=".pdf,.ppt,.pptx,.doc,.docx"
+                        multiple
                         onChange={handleFileChange}
                         className="hidden"
                       />
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => document.getElementById("file")?.click()}
+                        onClick={() => document.getElementById("files")?.click()}
                       >
-                        Selecionar PDF
+                        Selecionar Arquivos
                       </Button>
                     </div>
+                    
+                    {files.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        {files.map((file, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between bg-muted p-2 rounded"
+                          >
+                            <span className="text-sm truncate flex-1">{file.name}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFile(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-muted-foreground mt-4 italic">
+                      * Os documentos são usados apenas para gerar as questões e não ficam salvos
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tipos de Questões */}
+                <div className="space-y-2">
+                  <Label>Tipos de Questões *</Label>
+                  <div className="space-y-3">
+                    {QUESTION_TYPES.map((type) => (
+                      <div key={type.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={type.id}
+                          checked={questionTypes.includes(type.id)}
+                          onCheckedChange={() => toggleQuestionType(type.id)}
+                        />
+                        <Label
+                          htmlFor={type.id}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {type.label}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -181,16 +323,16 @@ const NewAssessment = () => {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={uploading}
+                    disabled={uploading || !isFormValid}
                     className="flex-1"
                   >
                     {uploading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Criando...
+                        Gerando Questões...
                       </>
                     ) : (
-                      "Criar Avaliação"
+                      "Gerar Questões"
                     )}
                   </Button>
                 </div>
