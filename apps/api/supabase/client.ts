@@ -11,7 +11,7 @@ const anonKey = process.env.SUPABASE_ANON_KEY?.trim() || process.env.SUPABASE_PU
 
 export function getAdminSupabaseClient(): SupabaseClient {
   if (!url || !serviceRole) {
-    throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE are required for server-side Supabase operations.');
+    throw new Error('SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are required for server-side Supabase operations.');
   }
   const g = global as any;
   if (!g.__supabaseAdmin) {
