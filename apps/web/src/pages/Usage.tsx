@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { apiFetch } from "../lib/api";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, ChartPie } from "lucide-react";
+import { dashboardRoute } from "@/router";
+import { UserMenu } from "@/components/UserMenu";
 
 type UsageItem = {
     name: string;
@@ -57,8 +60,29 @@ const UsagePage: React.FC = () => {
         };
     }, [toast]);
 
+    const headerNavigate = dashboardRoute.useNavigate();
+
     return (
         <div className="min-h-screen bg-background">
+            <header className="border-b border-border bg-card">
+                <div className="container mx-auto px-4 py-4">
+                    <div className="flex items-center gap-4">
+                        <button
+                            className="flex items-center gap-2 text-sm text-foreground"
+                            onClick={() => headerNavigate({ to: "/dashboard" })}
+                        >
+                            <ArrowLeft className="h-4 w-4" /> Voltar
+                        </button>
+                        <div className="flex items-center gap-2 flex-1">
+                            <ChartPie className="h-6 w-6 text-primary" />
+                            <span className="text-lg font-semibold">Uso de Cotas</span>
+                        </div>
+                        <div className="ml-auto">
+                            <UserMenu />
+                        </div>
+                    </div>
+                </div>
+            </header>
             <main className="container mx-auto px-4 py-8">
                 <div className="max-w-3xl mx-auto">
                     <Card>

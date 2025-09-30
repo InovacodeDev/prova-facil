@@ -52,7 +52,8 @@ const Dashboard = () => {
                     navigate({ to: "/auth" });
                     return;
                 }
-                const { user } = await meRes.json();
+                const meJson = await meRes.json();
+                const user = meJson?.user ?? null;
                 setUser(user || null);
                 setLoading(false);
                 if (user) fetchStats(user.id);

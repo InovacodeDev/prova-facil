@@ -38,17 +38,26 @@ export const UserMenu = () => {
                 const me = await meRes.json();
                 setUser(me.user || null);
 
-                const res = await apiFetch("/api/rpc/query", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        table: "profiles",
-                        select: "full_name, avatar_url",
-                        filter: { user_id: me.user?.id },
-                    }),
-                });
-                const payload = await res.json();
-                setProfile(payload?.data?.[0] ?? null);
+                // If the server returns profile together with user, prefer it
+                const returnedProfile = me.profile ?? null;
+                if (returnedProfile) {
+                    setProfile({
+                        full_name: returnedProfile.full_name ?? null,
+                        avatar_url: returnedProfile.avatar_url ?? null,
+                    });
+                } else {
+                    const res = await apiFetch("/api/rpc/query", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            table: "profiles",
+                            select: "full_name, avatar_url",
+                            filter: { user_id: me.user?.id },
+                        }),
+                    });
+                    const payload = await res.json();
+                    setProfile(payload?.data?.[0] ?? null);
+                }
             } catch (error: unknown) {
                 console.error("Erro ao carregar dados do usuário:", error);
             }

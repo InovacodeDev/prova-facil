@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChartPie } from "lucide-react";
 import { dashboardRoute } from "@/router";
 import { useToast } from "@/hooks/use-toast";
 import usePlanAnalytics from "@/hooks/use-plan-analytics";
 import { Loader2 } from "lucide-react";
+import { UserMenu } from "@/components/UserMenu";
 
 const availablePlans = [
     { id: "starter", name: "Starter", price: "Grátis", features: ["Gerar 10 questões/mês", "PDF import básico"] },
@@ -76,8 +77,12 @@ export default function Plan() {
                         <Button variant="ghost" size="sm" onClick={() => headerNavigate({ to: "/dashboard" })}>
                             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
                         </Button>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-1">
+                            <ChartPie className="h-6 w-6 text-primary" />
                             <span className="text-lg font-semibold">Planos</span>
+                        </div>
+                        <div className="ml-auto">
+                            <UserMenu />
                         </div>
                     </div>
                 </div>

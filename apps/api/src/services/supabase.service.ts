@@ -167,7 +167,17 @@ export class SupabaseService {
             } = await getSupabaseAdmin().auth.getUser(token);
             if (error || !user)
                 throw new HttpException({ error: error?.message || "invalid token" }, HttpStatus.UNAUTHORIZED);
-            return { user };
+            // fetch profile for the user (if exists)
+            let profile: any = null;
+            try {
+                const { data: profiles } = await getSupabaseAdmin().from('profiles').select('*').eq('user_id', (user as any).id).limit(1);
+                if (Array.isArray(profiles) && profiles[0]) profile = profiles[0];
+            } catch (e) {
+                // ignore profile fetch errors, return user nonetheless
+                console.warn('failed to fetch profile for user', e);
+            }
+
+            return { user, profile };
         } catch (e: any) {
             console.error(e);
             throw new HttpException({ error: e?.message || "me failed" }, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -680,11 +690,13 @@ private async generateQuestions(opts: {
                 };
             }
 
-            // For all categories, map each to remaining
+            // For all categories, map each to remaining. Ensure we always return an object for perCategory
             const perCategory: Record<string, { used: number; remaining: number }> = {};
-            for (const [cat, cnt] of Object.entries(usage)) {
-                const used = Number(cnt || 0);
-                perCategory[cat] = { used, remaining: Math.max(0, monthlyLimit - used) };
+            if (usage && typeof usage === 'object') {
+                for (const [cat, cnt] of Object.entries(usage)) {
+                    const used = Number(cnt || 0);
+                    perCategory[cat] = { used, remaining: Math.max(0, monthlyLimit - used) };
+                }
             }
 
             return {
@@ -692,7 +704,7 @@ private async generateQuestions(opts: {
                     plan: userPlan,
                     allowedTypes,
                     monthlyLimit,
-                    perCategory,
+                    perCategory: perCategory || {},
                 },
             };
         } catch (e: any) {

@@ -67,17 +67,25 @@ const Profile = () => {
                 setUser(meUser);
                 setEmail(meUser?.email ?? "");
 
-                const res = await apiFetch("/api/rpc/query", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ table: "profiles", select: "*", filter: { user_id: meUser?.id } }),
-                });
-                const payload = await res.json();
-                const profileData: ProfileData | null = payload?.data?.[0] ?? null;
+                // Prefer the profile returned by /api/auth/me if present to avoid an extra RPC
+                const returnedProfile: ProfileData | null = meJson?.profile ?? null;
+                if (returnedProfile) {
+                    setProfile(returnedProfile);
+                    setFullName(returnedProfile.full_name ?? "");
+                } else {
+                    // Fallback: fetch profile via RPC as before
+                    const res = await apiFetch("/api/rpc/query", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ table: "profiles", select: "*", filter: { user_id: meUser?.id } }),
+                    });
+                    const payload = await res.json();
+                    const profileData: ProfileData | null = payload?.data?.[0] ?? null;
 
-                if (profileData) {
-                    setProfile(profileData);
-                    setFullName(profileData.full_name ?? "");
+                    if (profileData) {
+                        setProfile(profileData);
+                        setFullName(profileData.full_name ?? "");
+                    }
                 }
             } catch (err: unknown) {
                 console.error("Erro ao carregar dados do usuário:", err);
