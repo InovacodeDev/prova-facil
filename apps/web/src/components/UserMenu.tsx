@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { profileRoute, changePasswordRoute } from "@/router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { apiFetch } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -9,20 +10,24 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, Lock, LogOut } from "lucide-react";
+import { User, Lock, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface Profile {
     full_name: string | null;
     avatar_url: string | null;
 }
 
+interface User {
+    id: string;
+    email?: string | null;
+}
+
 export const UserMenu = () => {
-    const [user, setUser] = useState<SupabaseUser | null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
-    const navigate = useNavigate();
+    const profileNavigate = profileRoute.useNavigate();
+    const changePasswordNavigate = changePasswordRoute.useNavigate();
     const { toast } = useToast();
 
     useEffect(() => {
@@ -34,12 +39,12 @@ export const UserMenu = () => {
             const token = localStorage.getItem("sb_access_token");
             if (!token) return;
 
-            const meRes = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+            const meRes = await apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
             const me = await meRes.json();
             if (!meRes.ok) return;
             setUser(me.user || null);
 
-            const res = await fetch("/api/rpc/query", {
+            const res = await apiFetch("/api/rpc/query", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
@@ -56,13 +61,12 @@ export const UserMenu = () => {
     };
 
     const handleSignOut = async () => {
-        // Clear client token and redirect
         localStorage.removeItem("sb_access_token");
         toast({ title: "Logout realizado", description: "Até a próxima!" });
-        navigate("/");
+        profileNavigate({ to: "/" });
     };
 
-    const getInitials = (name: string | null, email: string | undefined) => {
+    const getInitials = (name: string | null | undefined, email: string | null | undefined) => {
         if (name) {
             return name
                 .split(" ")
@@ -91,7 +95,7 @@ export const UserMenu = () => {
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
                         <AvatarImage src={profile?.avatar_url || ""} alt={getDisplayName()} />
-                        <AvatarFallback>{getInitials(profile?.full_name, user.email)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(profile?.full_name, user.email as string | null)}</AvatarFallback>
                     </Avatar>
                 </Button>
             </DropdownMenuTrigger>
@@ -105,11 +109,15 @@ export const UserMenu = () => {
                     </div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                <DropdownMenuItem onClick={() => profileNavigate({ to: "/profile" })}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/change-password")}>
+                <DropdownMenuItem onClick={() => profileNavigate({ to: "/plan" })}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Planos</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => changePasswordNavigate({ to: "/change-password" })}>
                     <Lock className="mr-2 h-4 w-4" />
                     <span>Alterar Senha</span>
                 </DropdownMenuItem>
