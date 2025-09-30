@@ -530,13 +530,6 @@ const NewAssessment = () => {
                                                 reasons.push("Selecione ao menos um tipo de questão.");
                                             if (uploading) reasons.push("Em andamento: gerando questões...");
 
-                                            console.log({
-                                                reasons,
-                                                uploading,
-                                                title: title.trim(),
-                                                category,
-                                                questionTypes,
-                                            });
                                             const disabled =
                                                 uploading || !title.trim() || !category || questionTypes.length === 0;
                                             const tooltipMessage = reasons.length > 0 ? reasons.join(" ") : undefined;
