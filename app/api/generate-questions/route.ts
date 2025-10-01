@@ -8,7 +8,6 @@ import {
     GenerateQuestionsInput,
 } from "@/lib/genkit/prompts";
 import { QuestionType } from "@/db/schema";
-import { incrementActionLog } from "@/lib/logs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 segundos para chamadas de IA
@@ -156,10 +155,10 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 8. Registrar log de ação
-        await incrementActionLog("new_questions");
-
-        // 9. Retornar sucesso
+        // 8. Retornar sucesso
+        // NOTA: Os logs são atualizados automaticamente via triggers SQL:
+        // - create_new_questions: trigger no INSERT de assessments
+        // - new_questions: trigger no INSERT de questions
         return NextResponse.json({
             success: true,
             assessment_id: assessment.id,

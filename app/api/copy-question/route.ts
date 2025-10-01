@@ -2,11 +2,11 @@
  * API Route: Copy Question
  * Incrementa o contador de cópias de uma questão
  * Ignora duplicatas em menos de 1 minuto
+ * NOTA: O log é atualizado automaticamente via trigger SQL
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { incrementActionLog } from "@/lib/logs";
 
 export async function POST(request: NextRequest) {
     try {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         // 3. Buscar questão atual
         const { data: question, error: fetchError } = await supabase
             .from("questions")
-            .select()
+            .select("copy_count, copy_last_at")
             .eq("id", questionId)
             .single();
 
@@ -47,21 +47,26 @@ export async function POST(request: NextRequest) {
 
         if (shouldIncrement) {
             // 5. Incrementar copy_count e atualizar copy_last_at
-            await supabase
+            // A trigger SQL vai incrementar automaticamente o log de copy_question
+            const { data: updated, error: updateError } = await supabase
                 .from("questions")
                 .update({
                     copy_count: question.copy_count + 1,
                     copy_last_at: now.toISOString(),
                 })
-                .eq("id", questionId);
+                .eq("id", questionId)
+                .select("copy_count")
+                .single();
 
-            // 6. Registrar log de ação
-            await incrementActionLog("copy_question");
+            if (updateError) {
+                console.error("Error updating question:", updateError);
+                return NextResponse.json({ error: "Erro ao atualizar questão" }, { status: 500 });
+            }
 
             return NextResponse.json({
                 success: true,
                 message: "Cópia registrada com sucesso",
-                copy_count: question.copy_count + 1,
+                copy_count: updated?.copy_count || question.copy_count + 1,
             });
         } else {
             return NextResponse.json({
