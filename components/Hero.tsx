@@ -9,6 +9,8 @@ interface StatsData {
         questionsGenerated: number;
         questionsCopied: number;
         totalActions: number;
+        uniqueAssessments: number;
+        meanQuestionsPerAssessment: number;
     };
 }
 
@@ -35,6 +37,8 @@ export const Hero = () => {
 
     const questionsGenerated = stats?.totals.questionsGenerated || 0;
     const usersCount = Math.ceil(questionsGenerated / 10); // Aproximação de usuários
+    const uniqueAssessments = stats?.totals.uniqueAssessments || 0;
+    const meanQuestionsPerAssessment = stats?.totals.meanQuestionsPerAssessment || 0;
 
     return (
         <section className="relative py-20 lg:py-32 overflow-hidden">
@@ -92,15 +96,34 @@ export const Hero = () => {
                         </div>
 
                         {/* Social Proof */}
-                        <div className="pt-8 border-t border-border">
-                            <p className="text-sm text-muted-foreground mb-3">
-                                {questionsGenerated > 0
-                                    ? `Já geramos ${formatNumber(questionsGenerated)}+ questões para ${formatNumber(
-                                          usersCount
-                                      )}+ educadores`
-                                    : "Confiado por educadores em todo o Brasil"}
-                            </p>
-                            <div className="flex items-center gap-6">
+                        <div className="pt-8 border-t border-border space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-2xl font-bold text-primary">
+                                        {questionsGenerated > 0 ? formatNumber(questionsGenerated) : "---"}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">Questões geradas</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-2xl font-bold text-primary">
+                                        {uniqueAssessments > 0 ? formatNumber(uniqueAssessments) : "---"}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">Conteúdos avaliados</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-2xl font-bold text-primary">
+                                        {usersCount > 0 ? formatNumber(usersCount) : "---"}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">Educadores ativos</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-2xl font-bold text-primary">
+                                        {meanQuestionsPerAssessment > 0 ? meanQuestionsPerAssessment.toFixed(1) : "---"}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">Questões por conteúdo</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-6 pt-4">
                                 <div className="text-2xl font-bold text-primary">4.9★</div>
                                 <div className="text-sm text-muted-foreground">
                                     "Revolucionou minha rotina de preparação"

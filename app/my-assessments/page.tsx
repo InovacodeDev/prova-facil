@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookOpen, ArrowLeft, Plus, Loader2, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -256,28 +257,37 @@ export default function MyAssessmentsPage() {
 
                         {subjectsWithQuestions.map((subject) => (
                             <TabsContent key={subject.id} value={subject.id} className="space-y-8 mt-6">
-                                {Object.entries(groupedData[subject.id].assessments).map(([title, questions]) => {
-                                    const filteredQuestions = filterQuestionsByType(questions);
+                                <Accordion type="multiple" className="w-full space-y-4">
+                                    {Object.entries(groupedData[subject.id].assessments).map(([title, questions]) => {
+                                        const filteredQuestions = filterQuestionsByType(questions);
 
-                                    // Não mostrar seção se não houver questões após filtro
-                                    if (filteredQuestions.length === 0) return null;
+                                        // Não mostrar seção se não houver questões após filtro
+                                        if (filteredQuestions.length === 0) return null;
 
-                                    return (
-                                        <div key={title} className="space-y-4">
-                                            <h3 className="text-xl font-semibold text-foreground border-l-4 border-primary pl-4">
-                                                {title}{" "}
-                                                <span className="text-sm text-muted-foreground">
-                                                    ({filteredQuestions.length} questões)
-                                                </span>
-                                            </h3>
-                                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                                {filteredQuestions.map((question) => (
-                                                    <QuestionCard key={question.id} question={question} />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        return (
+                                            <AccordionItem key={title} value={title} className="border rounded-lg px-4">
+                                                <AccordionTrigger className="hover:no-underline">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-1 w-1 rounded-full bg-primary" />
+                                                        <h3 className="text-lg font-semibold text-foreground">
+                                                            {title}
+                                                        </h3>
+                                                        <span className="text-sm text-muted-foreground">
+                                                            ({filteredQuestions.length} questões)
+                                                        </span>
+                                                    </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="pt-4">
+                                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                                        {filteredQuestions.map((question) => (
+                                                            <QuestionCard key={question.id} question={question} />
+                                                        ))}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        );
+                                    })}
+                                </Accordion>
                             </TabsContent>
                         ))}
                     </Tabs>

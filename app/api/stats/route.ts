@@ -27,6 +27,9 @@ export async function GET() {
         const totalQuestions =
             (formattedStats.create_new_questions?.count || 0) + (formattedStats.new_questions?.count || 0);
         const totalCopies = formattedStats.copy_question?.count || 0;
+        const uniqueAssessments = formattedStats.unique_assessments?.count || 0;
+        // Mean is stored as integer * 10, so divide by 10 to get decimal
+        const meanQuestionsPerAssessment = (formattedStats.mean_questions_per_assessment?.count || 0) / 10;
 
         return NextResponse.json({
             success: true,
@@ -36,6 +39,8 @@ export async function GET() {
                     questionsGenerated: totalQuestions,
                     questionsCopied: totalCopies,
                     totalActions: totalQuestions + totalCopies,
+                    uniqueAssessments: uniqueAssessments,
+                    meanQuestionsPerAssessment: meanQuestionsPerAssessment,
                 },
             },
         });

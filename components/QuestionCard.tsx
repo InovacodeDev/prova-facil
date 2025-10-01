@@ -34,7 +34,13 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
     const handleCopy = async (e: React.MouseEvent) => {
         e.stopPropagation();
 
-        const answersText = question.answers.map((a, i) => `${String.fromCharCode(97 + i)}) ${a.answer}`).join("\n");
+        const answersText = question.answers.map((a, i) => {
+          if (question.type === "open") {
+            return a.answer;
+          } else {
+            return `${a.number ? a.number : String.fromCharCode(97 + i)}) ${a.answer}`;
+          }
+        }).join("\n");
 
         const textToCopy = `${question.question}\n\n${answersText}`;
 

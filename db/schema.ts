@@ -35,9 +35,17 @@ export const ActionType = {
     create_new_questions: "create_new_questions",
     new_questions: "new_questions",
     copy_question: "copy_question",
+    unique_assessments: "unique_assessments",
+    mean_questions_per_assessment: "mean_questions_per_assessment",
 } as const;
 
-export const actionTypeEnum = pgEnum("action_type", ["create_new_questions", "new_questions", "copy_question"]);
+export const actionTypeEnum = pgEnum("action_type", [
+    "create_new_questions",
+    "new_questions",
+    "copy_question",
+    "unique_assessments",
+    "mean_questions_per_assessment",
+]);
 
 export const AcademicLevel = {
     elementarySchool: "elementary_school",
