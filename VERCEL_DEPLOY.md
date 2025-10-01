@@ -120,6 +120,7 @@ Se você ver erros 404 para imagens (como `/_next/image?url=...`):
 **Solução**: As imagens estáticas foram configuradas para usar `<img>` ao invés de `next/image` para garantir compatibilidade com o Vercel. Isso já foi resolvido no código.
 
 Se ainda houver problemas:
+
 1. Verifique se a pasta `public/assets` foi incluída no deploy
 2. Confirme que os arquivos de imagem estão commitados no Git
 3. Limpe o cache da Vercel: Settings → Advanced → Clear Build Cache

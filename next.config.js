@@ -8,7 +8,7 @@ const nextConfig = {
             },
         ],
         unoptimized: false, // Permitir otimização
-        formats: ['image/webp', 'image/avif'],
+        formats: ["image/webp", "image/avif"],
     },
     experimental: {
         serverActions: {
