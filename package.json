@@ -6,7 +6,7 @@
   "description": "A plataforma definitiva para criação e gestão de avaliações escolares, simplificando o processo para educadores e instituições.",
   "author": "Titor M.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 8800",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

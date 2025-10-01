@@ -122,19 +122,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Não foi possível gerar questões" }, { status: 500 });
         }
 
-        // 6. Buscar subject_id pelo nome
-        const { data: subjectData } = await supabase.from("subjects").select("id").eq("name", subject).single();
-
         // 7. Inserir questões e respostas no banco
         for (const genQuestion of allGeneratedQuestions) {
-            console.log("question_type:", genQuestion.question.type);
             // Inserir questão
             const { data: insertedQuestion, error: questionError } = await supabase
                 .from("questions")
                 .insert({
                     assessment_id: assessment.id,
-                    subject_id: subjectData?.id,
-                    question_type: genQuestion.question.type,
+                    type: genQuestion.question.type,
                     question: genQuestion.question.question,
                 })
                 .select()
