@@ -7,6 +7,8 @@ const nextConfig = {
                 hostname: "**.supabase.co",
             },
         ],
+        unoptimized: false, // Permitir otimização
+        formats: ['image/webp', 'image/avif'],
     },
     experimental: {
         serverActions: {

@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Sparkles, Target } from "lucide-react";
-import Image from "next/image";
 
 export const Hero = () => {
     return (
@@ -75,13 +74,11 @@ export const Hero = () => {
                     {/* Hero Image */}
                     <div className="relative">
                         <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                            <Image
+                            <img
                                 src="/assets/hero-education.jpg"
                                 alt="Professor criando avaliações com IA"
-                                width={600}
-                                height={400}
                                 className="w-full h-auto object-cover"
-                                priority
+                                loading="eager"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                         </div>
