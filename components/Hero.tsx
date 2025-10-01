@@ -2,8 +2,40 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Sparkles, Target } from "lucide-react";
+import { useEffect, useState } from "react";
+
+interface StatsData {
+    totals: {
+        questionsGenerated: number;
+        questionsCopied: number;
+        totalActions: number;
+    };
+}
 
 export const Hero = () => {
+    const [stats, setStats] = useState<StatsData | null>(null);
+
+    useEffect(() => {
+        // Fetch stats from API
+        fetch("/api/stats")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    setStats(data.data);
+                }
+            })
+            .catch((error) => console.error("Error fetching stats:", error));
+    }, []);
+
+    const formatNumber = (num: number) => {
+        if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+        if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+        return num.toString();
+    };
+
+    const questionsGenerated = stats?.totals.questionsGenerated || 0;
+    const usersCount = Math.ceil(questionsGenerated / 10); // Aproximação de usuários
+
     return (
         <section className="relative py-20 lg:py-32 overflow-hidden">
             {/* Background gradient */}
@@ -61,7 +93,13 @@ export const Hero = () => {
 
                         {/* Social Proof */}
                         <div className="pt-8 border-t border-border">
-                            <p className="text-sm text-muted-foreground mb-3">Confiado por mais de 10.000 educadores</p>
+                            <p className="text-sm text-muted-foreground mb-3">
+                                {questionsGenerated > 0
+                                    ? `Já geramos ${formatNumber(questionsGenerated)}+ questões para ${formatNumber(
+                                          usersCount
+                                      )}+ educadores`
+                                    : "Confiado por educadores em todo o Brasil"}
+                            </p>
                             <div className="flex items-center gap-6">
                                 <div className="text-2xl font-bold text-primary">4.9★</div>
                                 <div className="text-sm text-muted-foreground">

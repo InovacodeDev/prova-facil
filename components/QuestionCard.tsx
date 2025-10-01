@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clipboard, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Clipboard, Check, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { track } from "@vercel/analytics";
 
 interface Answer {
     id: string;
@@ -15,6 +17,8 @@ interface Answer {
 interface Question {
     id: string;
     question: string;
+    type: string;
+    copy_count: number;
     answers: Answer[];
 }
 
@@ -24,6 +28,7 @@ interface QuestionCardProps {
 
 export const QuestionCard = ({ question }: QuestionCardProps) => {
     const [isFlipped, setIsFlipped] = useState(false);
+    const [copyCount, setCopyCount] = useState(question.copy_count);
     const { toast } = useToast();
 
     const handleCopy = async (e: React.MouseEvent) => {
@@ -35,6 +40,29 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
 
         try {
             await navigator.clipboard.writeText(textToCopy);
+
+            // Track evento de cópia (Vercel Analytics)
+            track("question_copied", {
+                questionType: question.type,
+            });
+
+            // Registrar cópia no backend
+            try {
+                const response = await fetch("/api/copy-question", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ questionId: question.id }),
+                });
+
+                const data = await response.json();
+                if (data.success && data.copy_count !== undefined) {
+                    setCopyCount(data.copy_count);
+                }
+            } catch (apiError) {
+                console.error("Error tracking copy:", apiError);
+                // Não falhar a cópia por erro no tracking
+            }
+
             toast({
                 title: "Copiado!",
                 description: "Questão copiada para a área de transferência.",
@@ -49,7 +77,17 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
     };
 
     return (
-        <div className="perspective-1000" style={{ perspective: "1000px" }}>
+        <div className="perspective-1000 relative" style={{ perspective: "1000px" }}>
+            {/* Badge de copy count - posicionada fora do card, estilo notificação */}
+            {copyCount > 0 && (
+                <div className="absolute -top-2 -right-2 z-20">
+                    <Badge variant="secondary" className="flex items-center gap-1 shadow-lg border-2 border-background">
+                        <Copy className="h-3 w-3" />
+                        <span className="text-xs font-semibold">{copyCount}</span>
+                    </Badge>
+                </div>
+            )}
+
             <Card
                 className={cn("cursor-pointer transition-transform duration-500 hover:shadow-lg", "relative")}
                 style={{
@@ -74,7 +112,11 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
                             <div className="space-y-2">
                                 {question.answers.map((answer, index) => (
                                     <div key={answer.id} className="p-3 bg-muted rounded-lg text-sm">
-                                        <span className="font-semibold mr-2">{String.fromCharCode(97 + index)})</span>
+                                        {question.type === "open" ? null : (
+                                            <span className="font-semibold mr-2">
+                                                {answer.number ? answer.number : `${String.fromCharCode(97 + index)})`}
+                                            </span>
+                                        )}
                                         {answer.answer}
                                     </div>
                                 ))}
@@ -112,7 +154,11 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
                                             !answer.is_correct && "opacity-40"
                                         )}
                                     >
-                                        <span className="font-semibold mr-2">{String.fromCharCode(97 + index)})</span>
+                                        {question.type === "open" ? null : (
+                                            <span className="font-semibold mr-2">
+                                                {answer.number ? answer.number : `${String.fromCharCode(97 + index)})`}
+                                            </span>
+                                        )}
                                         <span>{answer.answer}</span>
                                     </div>
                                 ))}

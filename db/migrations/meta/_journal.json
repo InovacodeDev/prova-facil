@@ -15,6 +15,13 @@
       "when": 1759328804989,
       "tag": "0001_chunky_robbie_robertson",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1759347625734,
+      "tag": "0002_nebulous_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

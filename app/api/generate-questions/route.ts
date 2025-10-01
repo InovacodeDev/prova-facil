@@ -8,6 +8,7 @@ import {
     GenerateQuestionsInput,
 } from "@/lib/genkit/prompts";
 import { QuestionType } from "@/db/schema";
+import { incrementActionLog } from "@/lib/logs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 segundos para chamadas de IA
@@ -155,7 +156,10 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 8. Retornar sucesso
+        // 8. Registrar log de ação
+        await incrementActionLog("new_questions");
+
+        // 9. Retornar sucesso
         return NextResponse.json({
             success: true,
             assessment_id: assessment.id,

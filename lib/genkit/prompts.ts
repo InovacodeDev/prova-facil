@@ -9,13 +9,7 @@
  */
 import { ai } from "@/lib/genkit/config";
 import { z } from "zod";
-import {
-    McqQuestionSchema,
-    TfQuestionSchema,
-    DissertativeQuestionSchema,
-    SumQuestionSchema,
-    QuestionsResponseSchema,
-} from "./schemas";
+import { QuestionsResponseSchema } from "./schemas";
 
 // ============================================================================
 // INPUT SCHEMAS

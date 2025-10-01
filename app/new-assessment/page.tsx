@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { invalidateDashboardCache } from "@/lib/cache";
+import { track } from "@vercel/analytics";
 
 const SUBJECTS = [
     { value: "mathematics", label: "Matemática" },
@@ -381,6 +382,13 @@ export default function NewAssessmentPage() {
             toast({
                 title: "Sucesso!",
                 description: `${result.questions_generated} questões foram geradas com sucesso!`,
+            });
+
+            // Track do evento (Vercel Analytics)
+            track("questions_generated", {
+                count: result.questions_generated,
+                subject: subject,
+                types: questionTypes.join(","),
             });
 
             // Invalidar cache do dashboard
