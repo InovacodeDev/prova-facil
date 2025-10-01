@@ -1,3 +1,176 @@
+# prova-facil
+
+![Status da CI/CD](URL_DO_BADGE) ![Licença](URL_DO_BADGE) ![npm version](URL_DO_BADGE)
+
+A plataforma definitiva para criação e gestão de avaliações escolares — simplificando o processo para educadores e instituições.
+
+## 📜 Sobre o Projeto
+
+`prova-facil` é uma aplicação web construída com Next.js e TypeScript para ajudar professores e coordenadores a gerar, organizar e distribuir avaliações escolares. A plataforma integra IA (via Genkit / Google AI) para geração automática de questões, um painel para gerenciamento de avaliações, e rastreamento de interações (cópias, gerações) armazenado no banco de dados.
+
+O sistema utiliza Supabase para autenticação e armazenamento, Drizzle ORM para migrações e tipos do banco, e Vercel Analytics para eventos personalizados. O foco é reduzir o tempo que educadores gastam criando avaliações, ao oferecer geração rápida de questões, um banco de questões e ferramentas de administração.
+
+## ✨ Features
+
+-   Geração automática de questões por IA (vários tipos: múltipla escolha, verdadeiro/falso, dissertativa, sumário)
+-   Upload e análise de documentos (PDF) para gerar questões a partir do conteúdo
+-   Banco de questões e dashboard com filtros por tipo
+-   Tracking de cópias e gerações (logs automatizados via triggers SQL)
+-   Autenticação via Supabase
+-   Integração com Vercel Analytics para eventos customizados
+
+## 🛠️ Tecnologias Utilizadas
+
+-   Linguagem: TypeScript (project configured via `tsconfig.json`)
+-   Framework: Next.js (app router)
+-   UI: React, Tailwind CSS, Radix UI
+-   Database: PostgreSQL (Supabase) + Drizzle ORM
+-   Auth/Storage: Supabase (`@supabase/supabase-js`, `@supabase/ssr`)
+-   Dev tooling: pnpm (lockfile present), TypeScript, ESLint
+-   AI: Genkit / Google AI (`@genkit-ai/googleai`)
+-   Analytics: Vercel Analytics
+
+## 🚀 Começando (Do Zero ao 'Rodável')
+
+### Pré-requisitos
+
+-   Node.js >= 22 (ver `package.json` engines)
+-   pnpm >= 9 (project uses `pnpm@10.17.1` as packageManager)
+-   PostgreSQL (or Supabase project)
+-   (Opcional) Docker & Docker Compose — caso queira rodar dependências localmente em containers
+
+### Instalação
+
+1. Clone o repositório:
+
+```bash
+git clone URL_DO_REPOSITORIO
+cd prova-facil
+```
+
+2. Instale as dependências (pnpm):
+
+```bash
+pnpm install
+```
+
+3. Configure variáveis de ambiente:
+
+```bash
+cp .env.example .env.local
+# Edit .env.local and fill values
+```
+
+Variáveis encontradas em `.env.example`:
+
+| Variável                      | Descrição                                              |
+| ----------------------------- | ------------------------------------------------------ |
+| NEXT_PUBLIC_SUPABASE_URL      | URL do projeto Supabase (ex.: https://xyz.supabase.co) |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | Chave pública anônima do Supabase                      |
+| DATABASE_URL                  | Connection string do banco (usado por Drizzle)         |
+| NEXT_PUBLIC_HYPERTUNE_TOKEN   | Token Hypertune (migrado/obsoleto em alguns setups)    |
+| GOOGLE_AI_API_KEY             | API key para o Genkit / Google AI                      |
+
+> Nota: O repositório inclui `.vercelignore` que exclui `.env.local` por padrão. Não faça commit de segredos.
+
+4. (Opcional) Inicie serviços de dependência com Docker (se você tiver um Docker setup):
+
+```bash
+# Se existir um docker-compose.yml
+docker-compose up -d
+```
+
+5. Migrações do banco de dados (Drizzle):
+
+```bash
+pnpm db:gen
+# Use drizzle-kit commands to create/apply migrations as configured in drizzle.config.ts
+```
+
+## ⚡ Uso
+
+Principais scripts disponíveis em `package.json`:
+
+-   `pnpm dev` — Inicia o servidor de desenvolvimento (Next.js) na porta 8800
+-   `pnpm build` — Gera o build de produção
+-   `pnpm start` — Inicia o servidor Next.js preparado para produção
+-   `pnpm lint` — Executa o linter (ESLint)
+-   `pnpm db:gen` — Gera tipos/migrations com Drizzle
+-   `pnpm db:check` — Valida configurações do Drizzle
+
+### Rodando em desenvolvimento
+
+```bash
+pnpm dev
+# Abra http://localhost:8800
+```
+
+## 📡 Endpoints da API (resumo)
+
+O projeto usa o App Router (`app/api/*`). Endpoints principais observados:
+
+| Método | Rota                      | Descrição                                                                        |
+| ------ | ------------------------- | -------------------------------------------------------------------------------- |
+| POST   | `/api/generate-questions` | Gera questões via IA a partir de prompt/assessment; cria assessment e questions. |
+| POST   | `/api/copy-question`      | Atualiza `copy_count` para a questão (trigger SQL incrementa logs).              |
+| GET    | `/api/stats`              | Retorna estatísticas de uso (revalidate 1h).                                     |
+
+> Outros endpoints podem existir em `app/api/` (ex.: auth callbacks, templates, stats). Consulte a pasta `app/api` para detalhes.
+
+## 📂 Estrutura do Projeto (visão curta)
+
+Top-level relevante (resumido):
+
+```
+app/
+  ├─ api/           # Endpoints do servidor (Next.js App Router)
+  ├─ auth/          # Páginas de autenticação
+  ├─ dashboard/     # Painel do usuário
+  ├─ my-assessments/ # Biblioteca de avaliações
+components/        # Componentes React reutilizáveis (Hero, Header, QuestionCard...)
+db/                # Drizzle schema, migrations, triggers.sql
+lib/               # Suporte (supabase client, utils, logs helpers)
+public/            # Assets estáticos (imagens, favicon)
+README.md
+package.json
+pnpm-lock.yaml
+```
+
+Breve descrição dos diretórios:
+
+-   `app/` — Roteamento e páginas (Next.js App Router)
+-   `components/` — Componentes UIs
+-   `db/` — Migrations e schema Drizzle
+-   `lib/` — Helpers (Supabase clients, logging, utils)
+-   `public/` — Assets públicos
+
+## 🤝 Como Contribuir
+
+Contribuições são bem-vindas!
+
+1. Fork o repositório
+2. Crie uma branch com um nome descritivo: `git checkout -b feat/nova-feature`
+3. Faça commits atômicos com mensagens claras
+4. Abra um Pull Request descrevendo a mudança e por que é necessária
+
+Siga as convenções do projeto e adicione testes quando possível.
+
+## 📄 Licença
+
+Este repositório não contém um arquivo `LICENSE`. O campo `license` não está presente em `package.json`.
+Se desejar publicar este projeto publicamente, adicione um arquivo `LICENSE` apropriado (ex.: MIT) e atualize `package.json`.
+
+---
+
+Se precisar, posso:
+
+-   Adicionar exemplos de uso das APIs (payloads e responses)
+-   Gerar um pequeno arquivo `CONTRIBUTING.md` e um template de Pull Request
+-   Inserir instruções de deploy no Vercel e como aplicar as migrations/triggers no Supabase
+
+Conjuração realizada por: Tito
+Conjuração realizada em: 01 de Outubro de 2025
+
 # ProvaFácil AI - Next.js
 
 Sistema de criação e gestão de avaliações educacionais com Inteligência Artificial.
