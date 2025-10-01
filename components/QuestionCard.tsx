@@ -49,14 +49,18 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
     };
 
     return (
-        <div className="perspective-1000">
+        <div className="perspective-1000" style={{ perspective: "1000px" }}>
             <Card
-                className={cn("cursor-pointer transition-all duration-500 hover:shadow-lg", "relative")}
+                className={cn("cursor-pointer transition-transform duration-500 hover:shadow-lg", "relative")}
+                style={{
+                    transformStyle: "preserve-3d",
+                    // transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                }}
                 onClick={() => setIsFlipped(!isFlipped)}
             >
-                <CardContent className="p-6">
-                    {!isFlipped ? (
-                        /* Frente do card */
+                <CardContent className="p-6" style={{ backfaceVisibility: "hidden" }}>
+                    <div style={{ backfaceVisibility: "hidden" }} className={cn(isFlipped && "hidden")}>
+                        {/* Frente do card */}
                         <div className="space-y-4">
                             <div className="flex items-start justify-between gap-4">
                                 <p className="font-medium text-foreground leading-relaxed flex-1">
@@ -76,8 +80,19 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
                                 ))}
                             </div>
                         </div>
-                    ) : (
-                        /* Verso do card */
+                    </div>
+
+                    <div
+                        style={{
+                            backfaceVisibility: "hidden",
+                            position: isFlipped ? "relative" : "absolute",
+                            top: isFlipped ? "auto" : 0,
+                            left: isFlipped ? "auto" : 0,
+                            width: isFlipped ? "auto" : "100%",
+                        }}
+                        className={cn(!isFlipped && "hidden")}
+                    >
+                        {/* Verso do card */}
                         <div className="space-y-4">
                             <div className="flex items-start justify-between gap-4">
                                 <p className="font-medium text-foreground leading-relaxed flex-1">
@@ -94,18 +109,16 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
                                         key={answer.id}
                                         className={cn(
                                             "p-3 bg-muted rounded-lg text-sm transition-all",
-                                            !answer.is_correct && "opacity-20"
+                                            !answer.is_correct && "opacity-40"
                                         )}
                                     >
-                                        <span className={cn("font-semibold mr-2", answer.is_correct && "font-bold")}>
-                                            {String.fromCharCode(97 + index)})
-                                        </span>
-                                        <span className={cn(answer.is_correct && "font-bold")}>{answer.answer}</span>
+                                        <span className="font-semibold mr-2">{String.fromCharCode(97 + index)})</span>
+                                        <span>{answer.answer}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                    )}
+                    </div>
                 </CardContent>
             </Card>
         </div>

@@ -75,10 +75,19 @@ function getContextDescription(context: string): string {
 
 function buildFilesContext(files?: Array<{ name?: string; type?: string; data?: string }>): string {
     if (!files || files.length === 0) {
-        return "NENHUM ARQUIVO FORNECIDO. Você deve criar questões baseadas no título e na matéria, usando seus conhecimentos gerais sobre o tema.";
+        return "⚠️ ATENÇÃO: NENHUM ARQUIVO FOI FORNECIDO.\n\nVocê NÃO deve criar questões neste caso. Informe o usuário que é necessário fornecer arquivos com o conteúdo para gerar questões específicas sobre o tema.";
     }
 
-    return files.map((file, index) => `Arquivo ${index + 1}: {{media url=files.${index}.data}}`).join("\n");
+    const filesList = files.map((file, index) => `Arquivo ${index + 1}: {{media url=files.${index}.data}}`).join("\n");
+
+    return `📚 ARQUIVOS FORNECIDOS PELO USUÁRIO:
+${filesList}
+
+⚠️ REGRA CRÍTICA: Você DEVE ler e analisar TODO o conteúdo dos arquivos acima.
+As questões devem ser criadas EXCLUSIVAMENTE baseadas no conteúdo presente nesses arquivos.
+NÃO invente informações. NÃO use conhecimento externo além do que está nos arquivos.
+Se o usuário pediu questões sobre "Segunda Guerra Mundial" mas os arquivos contêm apenas sobre "Primeira Guerra Mundial", 
+você DEVE criar questões sobre "Primeira Guerra Mundial" (o conteúdo dos arquivos).`;
 }
 
 // ============================================================================
@@ -99,18 +108,23 @@ MATERIAL DE REFERÊNCIA:
 TAREFA: Gere {{count}} questões de múltipla escolha sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
 INSTRUÇÕES:
-1. Analise cuidadosamente todo o material fornecido nos arquivos acima
-2. Crie questões que sigam EXATAMENTE o contexto acadêmico especificado
-3. Base as questões no conteúdo real dos arquivos fornecidos
-4. Se nenhum arquivo foi fornecido, crie questões relevantes sobre o tema da matéria
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido nos arquivos acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente nos arquivos
+3. NÃO invente informações que não estão nos arquivos
+4. NÃO use conhecimento externo além do conteúdo dos arquivos fornecidos
+5. Se o título da avaliação menciona um tema mas os arquivos contêm outro tema, SIGA O CONTEÚDO DOS ARQUIVOS
+6. Crie questões que sigam o contexto acadêmico especificado
+7. Se NENHUM arquivo foi fornecido, retorne um erro informando que arquivos são necessários
 
 REGRAS OBRIGATÓRIAS:
 1. Cada questão DEVE ter exatamente 5 alternativas
 2. Apenas UMA alternativa deve estar correta (is_correct: true)
-3. As alternativas incorretas devem ser plausíveis mas claramente erradas
-4. A questão deve ser clara e objetiva
-5. Evite pegadinhas, foque em avaliar conhecimento real
-6. Use linguagem apropriada para o nível acadêmico
+3. A alternativa correta deve estar em uma posição ALEATÓRIA (não apenas na primeira posição)
+4. As alternativas incorretas devem ser plausíveis mas claramente erradas
+5. A questão deve ser clara e objetiva
+6. Evite pegadinhas, foque em avaliar conhecimento real
+7. Use linguagem apropriada para o nível acadêmico
+8. IMPORTANTE: Varie a posição da resposta correta - ela pode ser a primeira, segunda, terceira, quarta ou quinta alternativa
 
 FORMATO DE SAÍDA (JSON):
 {
@@ -121,8 +135,8 @@ FORMATO DE SAÍDA (JSON):
         "question": "Texto da pergunta aqui?"
       },
       "answers": [
-        {"answer": "Alternativa correta", "is_correct": true},
         {"answer": "Alternativa incorreta 1", "is_correct": false},
+        {"answer": "Alternativa correta", "is_correct": true},
         {"answer": "Alternativa incorreta 2", "is_correct": false},
         {"answer": "Alternativa incorreta 3", "is_correct": false},
         {"answer": "Alternativa incorreta 4", "is_correct": false}
@@ -130,6 +144,13 @@ FORMATO DE SAÍDA (JSON):
     }
   ]
 }
+
+EXEMPLO DE BOA PRÁTICA - Varie a posição da resposta correta:
+- Questão 1: resposta correta na posição 2
+- Questão 2: resposta correta na posição 4
+- Questão 3: resposta correta na posição 1
+- Questão 4: resposta correta na posição 5
+- Questão 5: resposta correta na posição 3
 
 Gere as questões agora:`,
 });
@@ -183,10 +204,13 @@ MATERIAL DE REFERÊNCIA:
 TAREFA: Gere {{count}} questões de verdadeiro/falso sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
 INSTRUÇÕES:
-1. Analise cuidadosamente todo o material fornecido nos arquivos acima
-2. Crie questões que sigam EXATAMENTE o contexto acadêmico especificado
-3. Base as questões no conteúdo real dos arquivos fornecidos
-4. Se nenhum arquivo foi fornecido, crie questões relevantes sobre o tema da matéria
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido nos arquivos acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente nos arquivos
+3. NÃO invente informações que não estão nos arquivos
+4. NÃO use conhecimento externo além do conteúdo dos arquivos fornecidos
+5. Se o título da avaliação menciona um tema mas os arquivos contêm outro tema, SIGA O CONTEÚDO DOS ARQUIVOS
+6. Crie questões que sigam o contexto acadêmico especificado
+7. Se NENHUM arquivo foi fornecido, retorne um erro informando que arquivos são necessários
 
 REGRAS OBRIGATÓRIAS:
 1. Cada questão DEVE ter exatamente 5 afirmações
@@ -267,10 +291,13 @@ MATERIAL DE REFERÊNCIA:
 TAREFA: Gere {{count}} questões dissertativas sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
 INSTRUÇÕES:
-1. Analise cuidadosamente todo o material fornecido nos arquivos acima
-2. Crie questões que sigam EXATAMENTE o contexto acadêmico especificado
-3. Base as questões no conteúdo real dos arquivos fornecidos
-4. Se nenhum arquivo foi fornecido, crie questões relevantes sobre o tema da matéria
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido nos arquivos acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente nos arquivos
+3. NÃO invente informações que não estão nos arquivos
+4. NÃO use conhecimento externo além do conteúdo dos arquivos fornecidos
+5. Se o título da avaliação menciona um tema mas os arquivos contêm outro tema, SIGA O CONTEÚDO DOS ARQUIVOS
+6. Crie questões que sigam o contexto acadêmico especificado
+7. Se NENHUM arquivo foi fornecido, retorne um erro informando que arquivos são necessários
 
 REGRAS OBRIGATÓRIAS:
 1. Cada questão deve ter UMA pergunta aberta que estimule reflexão
@@ -347,10 +374,13 @@ MATERIAL DE REFERÊNCIA:
 TAREFA: Gere {{count}} questões de somatória sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
 INSTRUÇÕES:
-1. Analise cuidadosamente todo o material fornecido nos arquivos acima
-2. Crie questões que sigam EXATAMENTE o contexto acadêmico especificado
-3. Base as questões no conteúdo real dos arquivos fornecidos
-4. Se nenhum arquivo foi fornecido, crie questões relevantes sobre o tema da matéria
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido nos arquivos acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente nos arquivos
+3. NÃO invente informações que não estão nos arquivos
+4. NÃO use conhecimento externo além do conteúdo dos arquivos fornecidos
+5. Se o título da avaliação menciona um tema mas os arquivos contêm outro tema, SIGA O CONTEÚDO DOS ARQUIVOS
+6. Crie questões que sigam o contexto acadêmico especificado
+7. Se NENHUM arquivo foi fornecido, retorne um erro informando que arquivos são necessários
 
 REGRAS OBRIGATÓRIAS PARA QUESTÕES DE SOMATÓRIA:
 1. Cada questão deve ter entre 1 e 7 afirmações
