@@ -93,7 +93,7 @@ export default function UsagePage() {
             id,
             user_id,
             created_at,
-            categories (
+            subjects (
               id,
               name
             )

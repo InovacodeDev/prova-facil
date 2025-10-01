@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Upload, ArrowLeft, FileText, Loader2, X, Check } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { BookOpen, Upload, ArrowLeft, FileText, Loader2, X, Check, Lock, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,29 @@ const QUESTION_CONTEXTS = [
     { value: "pesquisa", label: "Prompt para Pesquisa (Nível Pós-Doc)" },
 ];
 
+const PLAN_LIMITS: Record<string, { questionLimit: number; allowedTypes: string[] }> = {
+    starter: {
+        questionLimit: 20,
+        allowedTypes: ["multiple_choice"],
+    },
+    basic: {
+        questionLimit: 50,
+        allowedTypes: ["multiple_choice", "open"],
+    },
+    essentials: {
+        questionLimit: 100,
+        allowedTypes: ["multiple_choice", "true_false", "open"],
+    },
+    plus: {
+        questionLimit: 300,
+        allowedTypes: ["multiple_choice", "true_false", "open", "sum"],
+    },
+    advanced: {
+        questionLimit: 300,
+        allowedTypes: ["multiple_choice", "true_false", "open", "sum"],
+    },
+};
+
 export default function NewAssessmentPage() {
     const [title, setTitle] = useState("");
     const [questionCount, setQuestionCount] = useState("10");
@@ -58,9 +82,101 @@ export default function NewAssessmentPage() {
     const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
     const [filteredTitleSuggestions, setFilteredTitleSuggestions] = useState<string[]>([]);
     const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
+    const [userPlan, setUserPlan] = useState<string>("starter");
+    const [subjectUsage, setSubjectUsage] = useState<number>(0);
+    const [maxQuestions, setMaxQuestions] = useState<number>(20);
     const router = useRouter();
     const { toast } = useToast();
     const supabase = createClient();
+
+    // Buscar plano do usuário e uso atual
+    useEffect(() => {
+        const fetchUserPlanAndUsage = async () => {
+            try {
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+                if (!user) return;
+
+                // Buscar plano do usuário
+                const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("id, plan")
+                    .eq("user_id", user.id)
+                    .single();
+
+                if (profile) {
+                    setUserPlan(profile.plan);
+                }
+            } catch (error) {
+                console.error("Erro ao buscar plano:", error);
+            }
+        };
+
+        fetchUserPlanAndUsage();
+    }, [supabase]);
+
+    // Atualizar uso ao selecionar matéria
+    useEffect(() => {
+        const fetchSubjectUsage = async () => {
+            if (!subject) {
+                setSubjectUsage(0);
+                return;
+            }
+
+            try {
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+                if (!user) return;
+
+                // Buscar profile
+                const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
+
+                if (!profile) return;
+
+                // Buscar subject_id
+                const { data: subjectData } = await supabase.from("subjects").select("id").eq("name", subject).single();
+
+                if (!subjectData) return;
+
+                // Calcular início do mês atual
+                const startOfMonth = new Date();
+                startOfMonth.setDate(1);
+                startOfMonth.setHours(0, 0, 0, 0);
+
+                // Buscar quantas questões foram geradas nesta matéria neste mês
+                const { data: questionsData } = await supabase
+                    .from("questions")
+                    .select(
+                        `
+                        id,
+                        assessments!inner (
+                            id,
+                            user_id,
+                            subject_id,
+                            created_at
+                        )
+                    `
+                    )
+                    .eq("assessments.user_id", profile.id)
+                    .eq("assessments.subject_id", subjectData.id)
+                    .gte("assessments.created_at", startOfMonth.toISOString());
+
+                const usage = questionsData?.length || 0;
+                setSubjectUsage(usage);
+
+                // Calcular máximo disponível
+                const planLimit = PLAN_LIMITS[userPlan]?.questionLimit || 20;
+                const available = Math.max(0, planLimit - usage);
+                setMaxQuestions(available);
+            } catch (error) {
+                console.error("Erro ao buscar uso:", error);
+            }
+        };
+
+        fetchSubjectUsage();
+    }, [subject, userPlan, supabase]);
 
     // Buscar títulos distintos de avaliações existentes
     useEffect(() => {
@@ -266,6 +382,11 @@ export default function NewAssessmentPage() {
                 description: `${result.questions_generated} questões foram geradas com sucesso!`,
             });
 
+            // Invalidar cache do dashboard
+            if (typeof window !== "undefined") {
+                localStorage.removeItem("dashboard_stats_cache");
+            }
+
             router.push("/my-assessments");
         } catch (error: any) {
             console.error("Erro ao criar questões:", error);
@@ -279,7 +400,21 @@ export default function NewAssessmentPage() {
         }
     };
 
-    const isFormValid = title.trim() && subject && questionContext && questionTypes.length > 0;
+    const isFormValid = title.trim() && subject && questionContext && questionTypes.length > 0 && files.length > 0;
+    const canGenerate = isFormValid && maxQuestions > 0;
+
+    const getBlockReason = () => {
+        if (files.length === 0) return "Você precisa selecionar pelo menos um documento para gerar questões.";
+        if (maxQuestions === 0)
+            return `Você atingiu o limite de ${
+                PLAN_LIMITS[userPlan]?.questionLimit || 20
+            } questões por matéria neste mês. Tente novamente no próximo mês ou faça upgrade do seu plano.`;
+        if (!title.trim()) return "Preencha o título da avaliação.";
+        if (!subject) return "Selecione uma matéria.";
+        if (!questionContext) return "Selecione o contexto/nível da questão.";
+        if (questionTypes.length === 0) return "Selecione pelo menos um tipo de questão.";
+        return null;
+    };
 
     return (
         <div className="min-h-screen bg-background">
@@ -396,11 +531,21 @@ export default function NewAssessmentPage() {
                                             id="questionCount"
                                             type="number"
                                             min="1"
-                                            max="100"
+                                            max={maxQuestions}
                                             value={questionCount}
-                                            onChange={(e) => setQuestionCount(e.target.value)}
+                                            onChange={(e) => {
+                                                const val = parseInt(e.target.value) || 0;
+                                                setQuestionCount(Math.min(val, maxQuestions).toString());
+                                            }}
                                             required
                                         />
+                                        {subject && (
+                                            <p className="text-xs text-muted-foreground">
+                                                Plano {userPlan}: {subjectUsage}/
+                                                {PLAN_LIMITS[userPlan]?.questionLimit || 20} questões usadas este mês em{" "}
+                                                {subject}. <strong>Disponível: {maxQuestions}</strong>
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -422,8 +567,20 @@ export default function NewAssessmentPage() {
 
                                 {/* Upload de Arquivos */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="files">Importar Documentos (opcional)</Label>
-                                    <div className="border-2 border-dashed border-border rounded-lg p-6">
+                                    <Label htmlFor="files" className="flex items-center gap-2">
+                                        Importar Documentos *
+                                        {files.length === 0 && (
+                                            <span className="text-xs text-destructive font-normal">(Obrigatório)</span>
+                                        )}
+                                    </Label>
+                                    <div
+                                        className={cn(
+                                            "border-2 border-dashed rounded-lg p-6 transition-colors",
+                                            files.length === 0
+                                                ? "border-destructive/50 bg-destructive/5"
+                                                : "border-border"
+                                        )}
+                                    >
                                         <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                                         <div className="space-y-2 text-center">
                                             <p className="text-sm text-muted-foreground">
@@ -471,7 +628,7 @@ export default function NewAssessmentPage() {
                                         )}
 
                                         <p className="text-xs text-muted-foreground mt-4 italic">
-                                            * Os documentos são usados apenas para gerar as questões e não ficam salvos
+                                            * Os documentos são usados para gerar as questões e não ficam salvos
                                         </p>
                                     </div>
                                 </div>
@@ -479,20 +636,62 @@ export default function NewAssessmentPage() {
                                 {/* Tipos de Questões */}
                                 <div className="space-y-2">
                                     <Label>Tipos de Questões *</Label>
-                                    <div className="space-y-3">
-                                        {QUESTION_TYPES.map((type) => (
-                                            <div key={type.id} className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id={type.id}
-                                                    checked={questionTypes.includes(type.id)}
-                                                    onCheckedChange={() => toggleQuestionType(type.id)}
-                                                />
-                                                <Label htmlFor={type.id} className="text-sm font-normal cursor-pointer">
-                                                    {type.label}
-                                                </Label>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <TooltipProvider>
+                                        <div className="space-y-3">
+                                            {QUESTION_TYPES.map((type) => {
+                                                const allowedTypes = PLAN_LIMITS[userPlan]?.allowedTypes || [
+                                                    "multiple_choice",
+                                                ];
+                                                const isAllowed = allowedTypes.includes(type.id);
+
+                                                return (
+                                                    <div key={type.id} className="flex items-center space-x-2">
+                                                        {isAllowed ? (
+                                                            <>
+                                                                <Checkbox
+                                                                    id={type.id}
+                                                                    checked={questionTypes.includes(type.id)}
+                                                                    onCheckedChange={() => toggleQuestionType(type.id)}
+                                                                />
+                                                                <Label
+                                                                    htmlFor={type.id}
+                                                                    className="text-sm font-normal cursor-pointer"
+                                                                >
+                                                                    {type.label}
+                                                                </Label>
+                                                            </>
+                                                        ) : (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div className="flex items-center space-x-2 opacity-50 cursor-not-allowed">
+                                                                        <Checkbox
+                                                                            id={type.id}
+                                                                            checked={false}
+                                                                            disabled
+                                                                        />
+                                                                        <Label
+                                                                            htmlFor={type.id}
+                                                                            className="text-sm font-normal cursor-not-allowed flex items-center gap-1"
+                                                                        >
+                                                                            {type.label}
+                                                                            <Lock className="h-3 w-3" />
+                                                                        </Label>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="text-xs">
+                                                                        Este tipo de questão não está disponível no
+                                                                        plano <strong>{userPlan}</strong>. Faça upgrade
+                                                                        para desbloquear.
+                                                                    </p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </TooltipProvider>
                                 </div>
 
                                 <div className="flex gap-3 pt-4">
@@ -504,16 +703,39 @@ export default function NewAssessmentPage() {
                                     >
                                         Cancelar
                                     </Button>
-                                    <Button type="submit" disabled={uploading || !isFormValid} className="flex-1">
-                                        {uploading ? (
-                                            <>
-                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                Gerando Questões...
-                                            </>
-                                        ) : (
-                                            "Gerar Questões"
-                                        )}
-                                    </Button>
+
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <div className="flex-1">
+                                                    <Button
+                                                        type="submit"
+                                                        disabled={uploading || !canGenerate}
+                                                        className="w-full"
+                                                    >
+                                                        {uploading ? (
+                                                            <>
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                Gerando Questões...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {!canGenerate && (
+                                                                    <AlertCircle className="h-4 w-4 mr-2" />
+                                                                )}
+                                                                Gerar Questões
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            </TooltipTrigger>
+                                            {!canGenerate && getBlockReason() && (
+                                                <TooltipContent>
+                                                    <p className="text-xs max-w-[250px]">{getBlockReason()}</p>
+                                                </TooltipContent>
+                                            )}
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </div>
                             </form>
                         </CardContent>
