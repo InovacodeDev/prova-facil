@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BookOpen, Upload, ArrowLeft, FileText, Loader2, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { BookOpen, Upload, ArrowLeft, FileText, Loader2, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 const SUBJECTS = [
   { value: "mathematics", label: "Matemática" },
@@ -41,8 +44,49 @@ const NewAssessment = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Buscar títulos de avaliações existentes
+  useEffect(() => {
+    const fetchAssessmentTitles = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("assessments")
+          .select("title")
+          .not("title", "is", null);
+
+        if (error) throw error;
+
+        const titles = data
+          .map((item) => item.title)
+          .filter((title): title is string => title !== null && title.trim() !== "");
+        
+        // Remove duplicatas
+        const uniqueTitles = Array.from(new Set(titles));
+        setSuggestions(uniqueTitles);
+      } catch (error) {
+        console.error("Erro ao buscar títulos:", error);
+      }
+    };
+
+    fetchAssessmentTitles();
+  }, []);
+
+  // Filtrar sugestões baseado no input
+  useEffect(() => {
+    if (content.trim()) {
+      const filtered = suggestions.filter((suggestion) =>
+        suggestion.toLowerCase().includes(content.toLowerCase())
+      );
+      setFilteredSuggestions(filtered);
+    } else {
+      setFilteredSuggestions([]);
+    }
+  }, [content, suggestions]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
@@ -193,13 +237,51 @@ const NewAssessment = () => {
                 {/* Conteúdo das Questões */}
                 <div className="space-y-2">
                   <Label htmlFor="content">Conteúdo das Questões *</Label>
-                  <Input
-                    id="content"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Ex: Segunda Guerra Mundial, Teorema de Pitágoras, Fotossíntese..."
-                    required
-                  />
+                  <Popover open={showSuggestions && filteredSuggestions.length > 0} onOpenChange={setShowSuggestions}>
+                    <PopoverTrigger asChild>
+                      <div className="relative">
+                        <Input
+                          id="content"
+                          value={content}
+                          onChange={(e) => {
+                            setContent(e.target.value);
+                            setShowSuggestions(true);
+                          }}
+                          onFocus={() => setShowSuggestions(true)}
+                          placeholder="Ex: Segunda Guerra Mundial, Teorema de Pitágoras, Fotossíntese..."
+                          required
+                          autoComplete="off"
+                        />
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start" side="bottom">
+                      <Command>
+                        <CommandList>
+                          <CommandEmpty>Nenhuma sugestão encontrada.</CommandEmpty>
+                          <CommandGroup heading="Sugestões baseadas em avaliações anteriores">
+                            {filteredSuggestions.slice(0, 5).map((suggestion, index) => (
+                              <CommandItem
+                                key={index}
+                                value={suggestion}
+                                onSelect={() => {
+                                  setContent(suggestion);
+                                  setShowSuggestions(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    content === suggestion ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {suggestion}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Quantidade e Matéria */}
