@@ -66,6 +66,8 @@ export default function MyAssessmentsPage() {
                 return;
             }
 
+            const { data } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
+
             // Buscar todas as questões com suas respostas e avaliações
             const { data: questionsData, error: questionsError } = await supabase
                 .from("questions")
@@ -83,14 +85,14 @@ export default function MyAssessmentsPage() {
             id,
             title,
             user_id,
-            categories (
+            subjects (
               id,
               name
             )
           )
         `
                 )
-                .eq("assessments.user_id", user.id);
+                .eq("assessments.user_id", data.id);
 
             if (questionsError) throw questionsError;
 
@@ -107,12 +109,12 @@ export default function MyAssessmentsPage() {
 
                 questionsData.forEach((q: any) => {
                     const assessment = q.assessments;
-                    const category = assessment?.categories;
+                    const subjects = assessment?.subjects;
 
-                    if (!category) return;
+                    if (!subjects) return;
 
                     // Encontrar a matéria correspondente
-                    const subject = subjectsData.find((s) => s.id === category.id);
+                    const subject = subjectsData.find((s) => s.id === subjects.id);
                     if (!subject) return;
 
                     if (!grouped[subject.id]) {

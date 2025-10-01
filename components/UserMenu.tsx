@@ -18,7 +18,6 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface Profile {
     full_name: string | null;
-    avatar_url: string | null;
 }
 
 export const UserMenu = () => {
@@ -44,7 +43,7 @@ export const UserMenu = () => {
 
             const { data: profileData } = await supabase
                 .from("profiles")
-                .select("full_name, avatar_url")
+                .select("full_name")
                 .eq("user_id", user.id)
                 .single();
 
@@ -104,7 +103,7 @@ export const UserMenu = () => {
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
-                        <AvatarImage src={profile?.avatar_url || ""} alt={getDisplayName()} />
+                        <AvatarImage src={""} alt={getDisplayName()} />
                         <AvatarFallback>{getInitials(profile?.full_name, user.email)}</AvatarFallback>
                     </Avatar>
                 </Button>

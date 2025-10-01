@@ -13,13 +13,10 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AssessmentStats {
     total: number;
-    draft: number;
-    published: number;
     recent: Array<{
         id: string;
         title: string;
         created_at: string;
-        status: string;
     }>;
 }
 
@@ -28,8 +25,6 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<AssessmentStats>({
         total: 0,
-        draft: 0,
-        published: 0,
         recent: [],
     });
     const router = useRouter();
@@ -82,18 +77,16 @@ export default function DashboardPage() {
         try {
             const { data: assessments, error } = await supabase
                 .from("assessments")
-                .select("id, title, created_at, status")
+                .select("id, title, created_at")
                 .eq("user_id", userId)
                 .order("created_at", { ascending: false });
 
             if (error) throw error;
 
             const total = assessments?.length || 0;
-            const draft = assessments?.filter((a) => a.status === "draft").length || 0;
-            const published = assessments?.filter((a) => a.status === "published").length || 0;
             const recent = assessments?.slice(0, 3) || [];
 
-            setStats({ total, draft, published, recent });
+            setStats({ total, recent });
         } catch (error: any) {
             console.error("Erro ao carregar estatísticas:", error);
         }
@@ -177,28 +170,6 @@ export default function DashboardPage() {
                                 </p>
                             </CardContent>
                         </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Rascunhos</CardTitle>
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{stats.draft}</div>
-                                <p className="text-xs text-muted-foreground">aguardando finalização</p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Publicadas</CardTitle>
-                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{stats.published}</div>
-                                <p className="text-xs text-muted-foreground">prontas para uso</p>
-                            </CardContent>
-                        </Card>
                     </div>
 
                     {/* Recent Assessments */}
@@ -217,7 +188,6 @@ export default function DashboardPage() {
                                                         <span className="text-sm text-muted-foreground">
                                                             {formatDate(assessment.created_at)}
                                                         </span>
-                                                        {getStatusBadge(assessment.status)}
                                                     </div>
                                                 </div>
                                                 <Button

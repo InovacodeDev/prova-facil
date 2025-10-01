@@ -27,7 +27,6 @@ interface Profile {
     id: string;
     user_id: string;
     full_name: string | null;
-    avatar_url: string | null;
 }
 
 export default function ProfilePage() {
@@ -201,7 +200,6 @@ export default function ProfilePage() {
                             {/* Avatar Section */}
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-20 w-20">
-                                    <AvatarImage src={profile?.avatar_url || ""} />
                                     <AvatarFallback className="text-lg">
                                         {getInitials(fullName || user?.email || "")}
                                     </AvatarFallback>
