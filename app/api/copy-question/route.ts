@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         const shouldIncrement = !question.copy_last_at || new Date(question.copy_last_at) < oneMinuteAgo;
 
         if (shouldIncrement) {
+            console.log({ questionId });
             // 5. Incrementar copy_count e atualizar copy_last_at
             // A trigger SQL vai incrementar automaticamente o log de copy_question
             const { data: updated, error: updateError } = await supabase
