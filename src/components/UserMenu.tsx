@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, Lock, LogOut } from "lucide-react";
+import { User, Lock, LogOut, CreditCard, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -71,12 +71,11 @@ export const UserMenu = () => {
 
   const getInitials = (name: string | null, email: string | undefined) => {
     if (name) {
-      return name
-        .split(" ")
-        .map(n => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
+      const words = name.trim().split(" ").filter(w => w.length > 0);
+      if (words.length >= 2) {
+        return (words[0][0] + words[1][0]).toUpperCase();
+      }
+      return words[0].slice(0, 2).toUpperCase();
     }
     
     if (email) {
@@ -123,6 +122,14 @@ export const UserMenu = () => {
         <DropdownMenuItem onClick={() => navigate("/change-password")}>
           <Lock className="mr-2 h-4 w-4" />
           <span>Alterar Senha</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/plan")}>
+          <CreditCard className="mr-2 h-4 w-4" />
+          <span>Plano</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/usage")}>
+          <BarChart3 className="mr-2 h-4 w-4" />
+          <span>Cota de Uso</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>

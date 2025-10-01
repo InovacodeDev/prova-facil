@@ -1,49 +1,58 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { BookOpen, ArrowLeft, Plus, FileText, Calendar, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookOpen, ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { UserMenu } from "@/components/UserMenu";
+import { QuestionCard } from "@/components/QuestionCard";
+
+interface Answer {
+  id: string;
+  answer: string;
+  is_correct: boolean;
+  number: number | null;
+}
+
+interface Question {
+  id: string;
+  question: string;
+  answers: Answer[];
+}
 
 interface Assessment {
   id: string;
   title: string;
-  description: string | null;
-  status: string;
-  created_at: string;
-  pdf_filename: string | null;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+}
+
+interface GroupedData {
+  [subjectId: string]: {
+    subjectName: string;
+    assessments: {
+      [assessmentTitle: string]: Question[];
+    };
+  };
 }
 
 const MyAssessments = () => {
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [groupedData, setGroupedData] = useState<GroupedData>({});
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchAssessments();
+    fetchData();
   }, []);
 
-  const fetchAssessments = async () => {
+  const fetchData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -52,20 +61,81 @@ const MyAssessments = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("assessments")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // Buscar todas as questões com suas respostas e avaliações
+      const { data: questionsData, error: questionsError } = await supabase
+        .from("questions")
+        .select(`
+          id,
+          question,
+          answers (
+            id,
+            answer,
+            is_correct,
+            number
+          ),
+          assessments!inner (
+            id,
+            title,
+            user_id,
+            categories (
+              id,
+              name
+            )
+          )
+        `)
+        .eq("assessments.user_id", user.id);
 
-      if (error) throw error;
+      if (questionsError) throw questionsError;
 
-      setAssessments(data || []);
+      // Buscar todas as matérias
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from("subjects")
+        .select("id, name");
+
+      if (subjectsError) throw subjectsError;
+
+      // Agrupar dados por matéria e título de avaliação
+      const grouped: GroupedData = {};
+      
+      if (questionsData && subjectsData) {
+        setSubjects(subjectsData);
+        
+        questionsData.forEach((q: any) => {
+          const assessment = q.assessments;
+          const category = assessment?.categories;
+          
+          if (!category) return;
+          
+          // Encontrar a matéria correspondente
+          const subject = subjectsData.find(s => s.id === category.id);
+          if (!subject) return;
+
+          if (!grouped[subject.id]) {
+            grouped[subject.id] = {
+              subjectName: subject.name,
+              assessments: {},
+            };
+          }
+
+          const title = assessment.title || "Sem título";
+          if (!grouped[subject.id].assessments[title]) {
+            grouped[subject.id].assessments[title] = [];
+          }
+
+          grouped[subject.id].assessments[title].push({
+            id: q.id,
+            question: q.question,
+            answers: q.answers || [],
+          });
+        });
+      }
+
+      setGroupedData(grouped);
     } catch (error: any) {
-      console.error("Erro ao carregar avaliações:", error);
+      console.error("Erro ao carregar questões:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar suas avaliações.",
+        description: "Não foi possível carregar suas questões.",
         variant: "destructive",
       });
     } finally {
@@ -73,72 +143,18 @@ const MyAssessments = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from("assessments")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setAssessments(prev => prev.filter(a => a.id !== id));
-      toast({
-        title: "Sucesso",
-        description: "Avaliação excluída com sucesso.",
-      });
-    } catch (error: any) {
-      console.error("Erro ao excluir avaliação:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir a avaliação.",
-        variant: "destructive",
-      });
-    } finally {
-      setDeleteId(null);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      draft: "secondary",
-      published: "default",
-      archived: "outline"
-    } as const;
-    
-    const labels = {
-      draft: "Rascunho",
-      published: "Publicada",
-      archived: "Arquivada"
-    };
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || "secondary"}>
-        {labels[status as keyof typeof labels] || status}
-      </Badge>
-    );
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <BookOpen className="h-8 w-8 text-primary mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Carregando avaliações...</p>
+          <Loader2 className="h-8 w-8 text-primary mx-auto mb-4 animate-spin" />
+          <p className="text-muted-foreground">Carregando questões...</p>
         </div>
       </div>
     );
   }
+
+  const subjectsWithQuestions = subjects.filter(s => groupedData[s.id]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,110 +169,67 @@ const MyAssessments = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <BookOpen className="h-6 w-6 text-primary" />
-                <span className="text-lg font-semibold">Minhas Avaliações</span>
+                <span className="text-lg font-semibold">Minhas Questões</span>
               </div>
             </div>
-            <Button onClick={() => navigate("/new-assessment")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Avaliação
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button onClick={() => navigate("/new-assessment")}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Questão
+              </Button>
+              <UserMenu />
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {assessments.length === 0 ? (
-            <Card className="text-center py-12">
-              <CardContent>
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <CardTitle className="mb-2">Nenhuma avaliação encontrada</CardTitle>
-                <CardDescription className="mb-6">
-                  Você ainda não criou nenhuma avaliação. Comece criando sua primeira!
-                </CardDescription>
-                <Button onClick={() => navigate("/new-assessment")}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeira Avaliação
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {assessments.map((assessment) => (
-                <Card key={assessment.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1 flex-1">
-                        <CardTitle className="text-lg">{assessment.title}</CardTitle>
-                        {assessment.description && (
-                          <CardDescription>{assessment.description}</CardDescription>
-                        )}
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {formatDate(assessment.created_at)}
-                          </div>
-                          {assessment.pdf_filename && (
-                            <div className="flex items-center gap-1">
-                              <FileText className="h-4 w-4" />
-                              {assessment.pdf_filename}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(assessment.status)}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setDeleteId(assessment.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+        {subjectsWithQuestions.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Nenhuma questão encontrada</h3>
+              <p className="text-muted-foreground mb-6">
+                Você ainda não criou nenhuma questão. Comece criando sua primeira!
+              </p>
+              <Button onClick={() => navigate("/new-assessment")}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Primeira Questão
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue={subjectsWithQuestions[0]?.id} className="w-full">
+            <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+              {subjectsWithQuestions.map((subject) => (
+                <TabsTrigger key={subject.id} value={subject.id}>
+                  {subject.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {subjectsWithQuestions.map((subject) => (
+              <TabsContent key={subject.id} value={subject.id} className="space-y-8 mt-6">
+                {Object.entries(groupedData[subject.id].assessments).map(
+                  ([title, questions]) => (
+                    <div key={title} className="space-y-4">
+                      <h3 className="text-xl font-semibold text-foreground border-l-4 border-primary pl-4">
+                        {title}
+                      </h3>
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {questions.map((question) => (
+                          <QuestionCard key={question.id} question={question} />
+                        ))}
                       </div>
                     </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                  )
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
       </main>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteId && handleDelete(deleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

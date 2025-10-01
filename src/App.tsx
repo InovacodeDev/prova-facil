@@ -11,6 +11,8 @@ import MyAssessments from "./pages/MyAssessments";
 import Templates from "./pages/Templates";
 import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
+import Plan from "./pages/Plan";
+import Usage from "./pages/Usage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +32,8 @@ const App = () => (
           <Route path="/templates" element={<Templates />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/change-password" element={<ChangePassword />} />
+          <Route path="/plan" element={<Plan />} />
+          <Route path="/usage" element={<Usage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
