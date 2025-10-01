@@ -134,6 +134,7 @@ drizzle/
 /supabase/.temp/
 /supabase/volumes/
 /supabase/db_data/
+/supabase/migrations/
 
 # Testing
 coverage/
