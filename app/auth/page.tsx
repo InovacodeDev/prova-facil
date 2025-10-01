@@ -118,7 +118,7 @@ export default function AuthPage() {
             email,
             password,
             options: {
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
+                emailRedirectTo: process.env.NEXT_PUBLIC_SIGNUP_REDIRECT_URL,
                 data: {
                     full_name: fullName,
                     academic_level_id: selectedAcademicLevel,
