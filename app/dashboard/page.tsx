@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { BookOpen, Upload, FileText, TrendingUp, Calendar, BarChart3, PieChart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UserMenu } from "@/components/UserMenu";
@@ -186,26 +185,6 @@ export default function DashboardPage() {
             month: "2-digit",
             year: "numeric",
         });
-    };
-
-    const getStatusBadge = (status: string) => {
-        const variants = {
-            draft: "secondary",
-            published: "default",
-            archived: "outline",
-        } as const;
-
-        const labels = {
-            draft: "Rascunho",
-            published: "Publicada",
-            archived: "Arquivada",
-        };
-
-        return (
-            <Badge variant={variants[status as keyof typeof variants] || "secondary"} className="text-xs">
-                {labels[status as keyof typeof labels] || status}
-            </Badge>
-        );
     };
 
     if (loading) {
@@ -408,25 +387,6 @@ export default function DashboardPage() {
                             <CardContent>
                                 <Button className="w-full" variant="outline">
                                     Ver Questões ({stats.total})
-                                </Button>
-                            </CardContent>
-                        </Card>
-
-                        {/* Templates Card */}
-                        <Card
-                            className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
-                            onClick={() => router.push("/templates")}
-                        >
-                            <CardHeader className="text-center">
-                                <div className="mx-auto mb-4 p-3 bg-muted/10 rounded-full w-fit">
-                                    <BookOpen className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                                <CardTitle>Modelos</CardTitle>
-                                <CardDescription>Use modelos pré-definidos para acelerar a criação</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button className="w-full" variant="outline">
-                                    Explorar Modelos
                                 </Button>
                             </CardContent>
                         </Card>
