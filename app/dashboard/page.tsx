@@ -11,13 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { UserMenu } from "@/components/UserMenu";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
-// Função global para invalidar cache do dashboard
-export const invalidateDashboardCache = () => {
-    if (typeof window !== "undefined") {
-        localStorage.removeItem("dashboard_stats_cache");
-    }
-};
-
 interface QuestionStats {
     total: number;
     bySubject: Record<string, { count: number; name: string }>;

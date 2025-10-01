@@ -13,6 +13,7 @@ import { BookOpen, Upload, ArrowLeft, FileText, Loader2, X, Check, Lock, AlertCi
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { invalidateDashboardCache } from "@/lib/cache";
 
 const SUBJECTS = [
     { value: "mathematics", label: "Matemática" },
@@ -383,9 +384,7 @@ export default function NewAssessmentPage() {
             });
 
             // Invalidar cache do dashboard
-            if (typeof window !== "undefined") {
-                localStorage.removeItem("dashboard_stats_cache");
-            }
+            invalidateDashboardCache();
 
             router.push("/my-assessments");
         } catch (error: any) {
