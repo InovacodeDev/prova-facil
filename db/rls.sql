@@ -234,6 +234,65 @@ CREATE POLICY logs_delete_auth
   TO authenticated
   USING (auth.uid() IS NOT NULL);
 
+
+-- ================================
+-- academic_levels
+-- ================================
+ALTER TABLE IF EXISTS public.academic_levels ENABLE ROW LEVEL SECURITY;
+
+-- SELECT: allow public read access (change TO authenticated to require login)
+DROP POLICY IF EXISTS academic_levels_select_public ON public.academic_levels;
+CREATE POLICY academic_levels_select_public
+  ON public.academic_levels
+  FOR SELECT
+  TO public, authenticated
+  USING (true);
+
+-- INSERT: only admins may insert
+DROP POLICY IF EXISTS academic_levels_insert_admin ON public.academic_levels;
+CREATE POLICY academic_levels_insert_admin
+  ON public.academic_levels
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
+    )
+  );
+
+-- UPDATE: only admins may update
+DROP POLICY IF EXISTS academic_levels_update_admin ON public.academic_levels;
+CREATE POLICY academic_levels_update_admin
+  ON public.academic_levels
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
+    )
+  );
+
+-- DELETE: only admins may delete
+DROP POLICY IF EXISTS academic_levels_delete_admin ON public.academic_levels;
+CREATE POLICY academic_levels_delete_admin
+  ON public.academic_levels
+  FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
+    )
+  );
+
 -- ================================
 -- Notes:
 -- - Policies use column names directly in WITH CHECK (evaluated against the new row).
