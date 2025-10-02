@@ -12,6 +12,13 @@ import { QuestionType } from "@/db/schema";
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 segundos para chamadas de IA
 
+interface DocumentMetadata {
+    fileName: string;
+    fileType: string;
+    wordCount: number;
+    pageCount?: number;
+}
+
 interface GenerateQuestionsRequest {
     title: string;
     questionCount: number;
@@ -20,7 +27,9 @@ interface GenerateQuestionsRequest {
     questionTypes: Array<keyof typeof QuestionType>;
     questionContext: string;
     academicLevel?: string;
-    files?: Array<{ name: string; type: string; data: string }>;
+    documentContent?: string; // Texto extraído de DOCX
+    pdfFiles?: Array<{ name: string; type: string; data: string }>; // PDFs completos (plus/advanced)
+    documentMetadata?: DocumentMetadata[];
 }
 
 export async function POST(request: NextRequest) {
@@ -36,11 +45,36 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
         }
 
-        const { data } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
+        // Buscar profile e plano do usuário
+        const { data: profile } = await supabase.from("profiles").select("id, plan").eq("user_id", user.id).single();
+
+        if (!profile) {
+            return NextResponse.json({ error: "Profile não encontrado" }, { status: 404 });
+        }
+
+        // Buscar modelo de IA configurado para o plano do usuário
+        const { data: planModelData } = await supabase
+            .from("plan_models")
+            .select("model")
+            .eq("plan", profile.plan)
+            .single();
+
+        const aiModel = planModelData?.model || "gemini-2.0-flash-exp";
+        console.log(`Usando modelo ${aiModel} para plano ${profile.plan}`);
 
         // 2. Parse do body
         const body: GenerateQuestionsRequest = await request.json();
-        const { title, questionCount, subject, subjectId, questionTypes, questionContext, academicLevel, files } = body;
+        const {
+            title,
+            questionCount,
+            subject,
+            subjectId,
+            questionTypes,
+            questionContext,
+            academicLevel,
+            documentContent,
+            pdfFiles,
+        } = body;
 
         // Validações
         console.log(body);
@@ -53,7 +87,7 @@ export async function POST(request: NextRequest) {
         const { data: assessment, error: assessmentError } = await supabase
             .from("assessments")
             .insert({
-                user_id: data.id,
+                user_id: profile.id,
                 title: title,
                 subject_id: subjectId,
             })
@@ -83,7 +117,9 @@ export async function POST(request: NextRequest) {
                 count,
                 questionContext,
                 academicLevel,
-                files,
+                documentContent, // Texto de DOCX
+                pdfFiles, // PDFs completos (plus/advanced)
+                aiModel, // Modelo de IA configurado por plano
             };
 
             try {

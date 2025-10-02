@@ -16,23 +16,40 @@ const PLANS = [
         name: "Starter",
         price: "Grátis",
         description: "Para começar a criar questões",
-        features: ["Apenas múltipla escolha", "Máximo de 20 questões por matéria/mês", "Suporte por email"],
+        aiLevel: "IA Básica",
+        features: [
+            "Apenas múltipla escolha",
+            "Máximo de 20 questões por matéria/mês",
+            "Upload: TXT, PDF (até 5MB)",
+            "IA com capacidade fundamental",
+            "Suporte por email",
+        ],
     },
     {
         id: "basic",
         name: "Basic",
         price: "R$ 29,90/mês",
         description: "Para professores iniciantes",
-        features: ["Múltipla escolha e dissertativo", "Máximo de 50 questões por matéria/mês", "Suporte prioritário"],
+        aiLevel: "IA Básica",
+        features: [
+            "Múltipla escolha e dissertativo",
+            "Máximo de 50 questões por matéria/mês",
+            "Upload: TXT, PDF, DOCX (até 10MB)",
+            "IA com capacidade fundamental",
+            "Suporte prioritário",
+        ],
     },
     {
         id: "essentials",
         name: "Essentials",
         price: "R$ 49,90/mês",
         description: "Para professores ativos",
+        aiLevel: "IA Avançada",
         features: [
             "Todos os tipos exceto somatória",
             "Máximo de 100 questões por matéria/mês",
+            "Upload: TXT, PDF, DOCX, Links (até 20MB)",
+            "IA com processamento avançado",
             "Suporte prioritário",
             "Estatísticas avançadas",
         ],
@@ -42,12 +59,14 @@ const PLANS = [
         name: "Plus",
         price: "R$ 79,90/mês",
         description: "Para professores profissionais",
+        aiLevel: "IA Avançada",
         features: [
             "Todos os tipos de questões",
             "Máximo de 300 questões por matéria/mês",
+            "Upload: Todos os formatos (até 50MB)",
+            "IA com processamento avançado",
             "Suporte prioritário VIP",
             "Estatísticas avançadas",
-            "Exportação em múltiplos formatos",
         ],
     },
     {
@@ -55,14 +74,15 @@ const PLANS = [
         name: "Advanced",
         price: "R$ 129,90/mês",
         description: "Para professores universitários",
+        aiLevel: "IA Premium",
         features: [
             "Todos os tipos de questões",
             "Máximo de 300 questões por matéria/mês",
+            "Upload: Todos os formatos (até 100MB)",
+            "IA com máxima capacidade e precisão",
             "Matérias específicas por área",
             "Suporte prioritário VIP",
             "Estatísticas avançadas",
-            "Exportação em múltiplos formatos",
-            "API de integração",
         ],
         highlighted: true,
     },
@@ -192,10 +212,15 @@ export default function PlanPage() {
                             )}
 
                             <CardHeader>
-                                <CardTitle className="flex items-center justify-between">
-                                    {plan.name}
+                                <CardTitle className="flex items-center justify-between mb-2">
+                                    <span>{plan.name}</span>
                                     {currentPlan === plan.id && <Badge variant="secondary">Plano Atual</Badge>}
                                 </CardTitle>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Badge variant="outline" className="text-xs">
+                                        {plan.aiLevel}
+                                    </Badge>
+                                </div>
                                 <CardDescription>{plan.description}</CardDescription>
                                 <div className="mt-4">
                                     <span className="text-3xl font-bold">{plan.price}</span>

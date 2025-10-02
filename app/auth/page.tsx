@@ -8,10 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { ProvaFacilLogo } from "@/assets/logo";
 
 const ACADEMIC_LEVELS = [
     { value: "elementary_school", label: "Ensino Fundamental" },
@@ -170,8 +171,7 @@ export default function AuthPage() {
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="flex items-center justify-center gap-2 mb-8">
-                    <BookOpen className="h-8 w-8 text-primary" />
-                    <span className="text-2xl font-bold text-foreground">ProvaFácil AI</span>
+                    <ProvaFacilLogo className="h-8" />
                 </div>
 
                 <Card className="border-border bg-card shadow-lg">

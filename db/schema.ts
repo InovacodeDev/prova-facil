@@ -156,6 +156,14 @@ export const academicLevelSubjects = pgTable("academic_level_subjects", {
     created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const planModels = pgTable("plan_models", {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    plan: planEnum().notNull().unique(),
+    model: varchar("model", { length: 255 }).notNull(),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one }) => ({
     academicLevel: one(academicLevels, { fields: [profiles.academic_level_id], references: [academicLevels.id] }),

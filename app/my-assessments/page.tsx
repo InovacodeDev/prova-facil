@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookOpen, ArrowLeft, Plus, Loader2, Filter } from "lucide-react";
+import { ProvaFacilLogo, ProvaFacilIcon } from "@/assets/logo";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { UserMenu } from "@/components/UserMenu";
@@ -197,10 +198,7 @@ export default function MyAssessmentsPage() {
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 Voltar
                             </Button>
-                            <div className="flex items-center gap-2">
-                                <BookOpen className="h-6 w-6 text-primary" />
-                                <span className="text-lg font-semibold">Minhas Questões</span>
-                            </div>
+                            <ProvaFacilLogo className="h-6" />
                         </div>
                         <div className="flex items-center gap-3">
                             {/* Filtro de tipo de questão */}
@@ -234,7 +232,7 @@ export default function MyAssessmentsPage() {
                 {subjectsWithQuestions.length === 0 ? (
                     <Card className="text-center py-12">
                         <CardContent>
-                            <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <ProvaFacilIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                             <h3 className="text-xl font-semibold mb-2">Nenhuma questão encontrada</h3>
                             <p className="text-muted-foreground mb-6">
                                 Você ainda não criou nenhuma questão. Comece criando sua primeira!

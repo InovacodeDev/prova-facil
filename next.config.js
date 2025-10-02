@@ -24,6 +24,17 @@ const nextConfig = {
         ignoreDuringBuilds: false,
         dirs: ["app", "components", "lib", "hooks", "db"],
     },
+    webpack: (config, { isServer }) => {
+        // Configuração para pdfjs-dist funcionar corretamente no client-side
+        if (!isServer) {
+            config.resolve.alias = {
+                ...config.resolve.alias,
+                canvas: false,
+                encoding: false,
+            };
+        }
+        return config;
+    },
 };
 
 export default nextConfig;

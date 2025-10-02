@@ -7,7 +7,7 @@
  * - Dissertative/Open Questions
  * - Sum Questions (Brazilian style with powers of 2)
  */
-import { ai } from "@/lib/genkit/config";
+import { ai, getGoogleAIModel } from "@/lib/genkit/config";
 import { z } from "zod";
 import { QuestionsResponseSchema } from "./schemas";
 
@@ -33,10 +33,12 @@ const GenerateQuestionsInputSchema = z.object({
         .describe(
             "The context/level of the question: fixacao, contextualizada, teorica, estudo_caso, discursiva_aberta, letra_lei, pesquisa"
         ),
-    files: z
+    documentContent: z.string().optional().describe("Optional extracted text content from DOCX/DOC documents"),
+    pdfFiles: z
         .array(FileContentSchema)
         .optional()
-        .describe("Optional array of files (PDF, DOCX, PPTX) to use as source material for questions"),
+        .describe("Optional PDF files as base64 (for plus/advanced plans only)"),
+    aiModel: z.string().optional().describe("AI model to use (e.g., gemini-2.0-flash-exp, gemini-exp-1206)"),
 });
 
 export type GenerateQuestionsInput = z.infer<typeof GenerateQuestionsInputSchema>;
@@ -67,21 +69,39 @@ function getContextDescription(context: string): string {
     return contexts[context] || contexts.fixacao;
 }
 
-function buildFilesContext(files?: Array<{ name?: string; type?: string; data?: string }>): string {
-    if (!files || files.length === 0) {
-        return "⚠️ ATENÇÃO: NENHUM ARQUIVO FOI FORNECIDO.\n\nVocê NÃO deve criar questões neste caso. Informe o usuário que é necessário fornecer arquivos com o conteúdo para gerar questões específicas sobre o tema.";
+function buildDocumentContext(
+    documentContent?: string,
+    pdfFiles?: Array<{ name?: string; type?: string; data?: string }>
+): string {
+    const hasTextContent = documentContent && documentContent.trim().length > 0;
+    const hasPdfFiles = pdfFiles && pdfFiles.length > 0;
+
+    if (!hasTextContent && !hasPdfFiles) {
+        return "⚠️ ATENÇÃO: NENHUM DOCUMENTO FOI FORNECIDO.\n\nVocê NÃO deve criar questões neste caso. Informe o usuário que é necessário fornecer documentos com o conteúdo para gerar questões específicas sobre o tema.";
     }
 
-    const filesList = files.map((file, index) => `Arquivo ${index + 1}: {{media url=files.${index}.data}}`).join("\n");
+    let context = "";
 
-    return `📚 ARQUIVOS FORNECIDOS PELO USUÁRIO:
-${filesList}
+    // Adicionar texto extraído de DOCX
+    if (hasTextContent) {
+        context += `📚 CONTEÚDO TRANSCRITO (DOCX/DOC):\n\n${documentContent}\n\n`;
+    }
 
-⚠️ REGRA CRÍTICA: Você DEVE ler e analisar TODO o conteúdo dos arquivos acima.
-As questões devem ser criadas EXCLUSIVAMENTE baseadas no conteúdo presente nesses arquivos.
-NÃO invente informações. NÃO use conhecimento externo além do que está nos arquivos.
-Se o usuário pediu questões sobre "Segunda Guerra Mundial" mas os arquivos contêm apenas sobre "Primeira Guerra Mundial", 
-você DEVE criar questões sobre "Primeira Guerra Mundial" (o conteúdo dos arquivos).`;
+    // Adicionar PDFs como media files
+    if (hasPdfFiles) {
+        const filesList = pdfFiles
+            .map((file, index) => `PDF ${index + 1}: {{media url=pdfFiles.${index}.data}}`)
+            .join("\n");
+        context += `📄 ARQUIVOS PDF FORNECIDOS:\n${filesList}\n\n`;
+    }
+
+    context += `⚠️ REGRA CRÍTICA: Você DEVE ler e analisar TODO o conteúdo acima.
+As questões devem ser criadas EXCLUSIVAMENTE baseadas no conteúdo presente acima.
+NÃO invente informações. NÃO use conhecimento externo além do que está no conteúdo fornecido.
+Se o usuário pediu questões sobre "Segunda Guerra Mundial" mas o conteúdo fornecido contém apenas sobre "Primeira Guerra Mundial", 
+você DEVE criar questões sobre "Primeira Guerra Mundial" (o conteúdo fornecido).`;
+
+    return context;
 }
 
 // ============================================================================
@@ -97,18 +117,18 @@ const generateMcqPrompt = ai.definePrompt({
 CONTEXTO ACADÊMICO: {{questionContextDescription}}
 
 MATERIAL DE REFERÊNCIA:
-{{filesContext}}
+{{documentContext}}
 
 TAREFA: Gere {{count}} questões de múltipla escolha sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
 INSTRUÇÕES:
-1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido nos arquivos acima
-2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente nos arquivos
-3. NÃO invente informações que não estão nos arquivos
-4. NÃO use conhecimento externo além do conteúdo dos arquivos fornecidos
-5. Se o título da avaliação menciona um tema mas os arquivos contêm outro tema, SIGA O CONTEÚDO DOS ARQUIVOS
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
+3. NÃO invente informações que não estão no material fornecido
+4. NÃO use conhecimento externo além do conteúdo fornecido
+5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
 6. Crie questões que sigam o contexto acadêmico especificado
-7. Se NENHUM arquivo foi fornecido, retorne um erro informando que arquivos são necessários
+7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
 
 REGRAS OBRIGATÓRIAS:
 1. Cada questão DEVE ter exatamente 5 alternativas
@@ -151,12 +171,13 @@ Gere as questões agora:`,
 
 export async function generateMcqQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
     const questionContextDescription = getContextDescription(input.questionContext);
-    const filesContext = buildFilesContext(input.files);
+    console.log(input);
+    const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
 
     return await generateMcqFlow({
         ...input,
         questionContextDescription,
-        filesContext,
+        documentContext,
     } as any);
 }
 
@@ -165,12 +186,13 @@ const generateMcqFlow = ai.defineFlow(
         name: "generateMcqFlow",
         inputSchema: GenerateQuestionsInputSchema.extend({
             questionContextDescription: z.string(),
-            filesContext: z.string(),
+            documentContext: z.string(),
         }),
         outputSchema: QuestionsResponseSchema,
     },
     async (input: any) => {
-        const { output } = await generateMcqPrompt(input);
+        const model = getGoogleAIModel(input.aiModel || "gemini-2.0-flash-exp");
+        const { output } = await generateMcqPrompt(input, { model });
         return output!;
     }
 );
@@ -193,18 +215,18 @@ const generateTfPrompt = ai.definePrompt({
 CONTEXTO ACADÊMICO: {{questionContextDescription}}
 
 MATERIAL DE REFERÊNCIA:
-{{filesContext}}
+{{documentContext}}
 
 TAREFA: Gere {{count}} questões de verdadeiro/falso sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
 INSTRUÇÕES:
-1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido nos arquivos acima
-2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente nos arquivos
-3. NÃO invente informações que não estão nos arquivos
-4. NÃO use conhecimento externo além do conteúdo dos arquivos fornecidos
-5. Se o título da avaliação menciona um tema mas os arquivos contêm outro tema, SIGA O CONTEÚDO DOS ARQUIVOS
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
+3. NÃO invente informações que não estão no material fornecido
+4. NÃO use conhecimento externo além do conteúdo fornecido
+5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
 6. Crie questões que sigam o contexto acadêmico especificado
-7. Se NENHUM arquivo foi fornecido, retorne um erro informando que arquivos são necessários
+7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
 
 REGRAS OBRIGATÓRIAS:
 1. Cada questão DEVE ter exatamente 5 afirmações
@@ -238,12 +260,12 @@ Gere as questões agora:`,
 
 export async function generateTfQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
     const questionContextDescription = getContextDescription(input.questionContext);
-    const filesContext = buildFilesContext(input.files);
+    const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
 
     return await generateTfFlow({
         ...input,
         questionContextDescription,
-        filesContext,
+        documentContext,
     } as any);
 }
 
@@ -252,12 +274,13 @@ const generateTfFlow = ai.defineFlow(
         name: "generateTfFlow",
         inputSchema: GenerateQuestionsInputSchema.extend({
             questionContextDescription: z.string(),
-            filesContext: z.string(),
+            documentContext: z.string(),
         }),
         outputSchema: QuestionsResponseSchema,
     },
     async (input: any) => {
-        const { output } = await generateTfPrompt(input);
+        const model = getGoogleAIModel(input.aiModel || "gemini-2.0-flash-exp");
+        const { output } = await generateTfPrompt(input, { model });
         return output!;
     }
 );
@@ -280,18 +303,18 @@ const generateDissertativePrompt = ai.definePrompt({
 CONTEXTO ACADÊMICO: {{questionContextDescription}}
 
 MATERIAL DE REFERÊNCIA:
-{{filesContext}}
+{{documentContext}}
 
 TAREFA: Gere {{count}} questões dissertativas sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
 INSTRUÇÕES:
-1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido nos arquivos acima
-2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente nos arquivos
-3. NÃO invente informações que não estão nos arquivos
-4. NÃO use conhecimento externo além do conteúdo dos arquivos fornecidos
-5. Se o título da avaliação menciona um tema mas os arquivos contêm outro tema, SIGA O CONTEÚDO DOS ARQUIVOS
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
+3. NÃO invente informações que não estão no material fornecido
+4. NÃO use conhecimento externo além do conteúdo fornecido
+5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
 6. Crie questões que sigam o contexto acadêmico especificado
-7. Se NENHUM arquivo foi fornecido, retorne um erro informando que arquivos são necessários
+7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
 
 REGRAS OBRIGATÓRIAS:
 1. Cada questão deve ter UMA pergunta aberta que estimule reflexão
@@ -321,12 +344,12 @@ Gere as questões agora:`,
 
 export async function generateDissertativeQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
     const questionContextDescription = getContextDescription(input.questionContext);
-    const filesContext = buildFilesContext(input.files);
+    const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
 
     return await generateDissertativeFlow({
         ...input,
         questionContextDescription,
-        filesContext,
+        documentContext,
     } as any);
 }
 
@@ -335,12 +358,13 @@ const generateDissertativeFlow = ai.defineFlow(
         name: "generateDissertativeFlow",
         inputSchema: GenerateQuestionsInputSchema.extend({
             questionContextDescription: z.string(),
-            filesContext: z.string(),
+            documentContext: z.string(),
         }),
         outputSchema: QuestionsResponseSchema,
     },
     async (input: any) => {
-        const { output } = await generateDissertativePrompt(input);
+        const model = getGoogleAIModel(input.aiModel || "gemini-2.0-flash-exp");
+        const { output } = await generateDissertativePrompt(input, { model });
         return output!;
     }
 );
@@ -363,18 +387,18 @@ const generateSumPrompt = ai.definePrompt({
 CONTEXTO ACADÊMICO: {{questionContextDescription}}
 
 MATERIAL DE REFERÊNCIA:
-{{filesContext}}
+{{documentContext}}
 
 TAREFA: Gere {{count}} questões de somatória sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
 INSTRUÇÕES:
-1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido nos arquivos acima
-2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente nos arquivos
-3. NÃO invente informações que não estão nos arquivos
-4. NÃO use conhecimento externo além do conteúdo dos arquivos fornecidos
-5. Se o título da avaliação menciona um tema mas os arquivos contêm outro tema, SIGA O CONTEÚDO DOS ARQUIVOS
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
+3. NÃO invente informações que não estão no material fornecido
+4. NÃO use conhecimento externo além do conteúdo fornecido
+5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
 6. Crie questões que sigam o contexto acadêmico especificado
-7. Se NENHUM arquivo foi fornecido, retorne um erro informando que arquivos são necessários
+7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
 
 REGRAS OBRIGATÓRIAS PARA QUESTÕES DE SOMATÓRIA:
 1. Cada questão deve ter entre 1 e 7 afirmações
@@ -411,12 +435,12 @@ Gere as questões agora:`,
 
 export async function generateSumQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
     const questionContextDescription = getContextDescription(input.questionContext);
-    const filesContext = buildFilesContext(input.files);
+    const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
 
     return await generateSumFlow({
         ...input,
         questionContextDescription,
-        filesContext,
+        documentContext,
     } as any);
 }
 
@@ -425,12 +449,13 @@ const generateSumFlow = ai.defineFlow(
         name: "generateSumFlow",
         inputSchema: GenerateQuestionsInputSchema.extend({
             questionContextDescription: z.string(),
-            filesContext: z.string(),
+            documentContext: z.string(),
         }),
         outputSchema: QuestionsResponseSchema,
     },
     async (input: any) => {
-        const { output } = await generateSumPrompt(input);
+        const model = getGoogleAIModel(input.aiModel || "gemini-2.0-flash-exp");
+        const { output } = await generateSumPrompt(input, { model });
         return output!;
     }
 );

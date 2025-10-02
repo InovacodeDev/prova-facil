@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from '@vercel/analytics/next';
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +17,8 @@ export const metadata: Metadata = {
 
 // Force dynamic rendering to avoid pre-rendering issues with client components
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-cache";
+export const revalidate = 3600; // 1 hour
 
 export default function RootLayout({
     children,

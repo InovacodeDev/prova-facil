@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, ArrowLeft, User, Camera, Loader2, Trash2 } from "lucide-react";
+import { ProvaFacilIcon } from "@/assets/logo";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -161,7 +162,7 @@ export default function ProfilePage() {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="text-center">
-                    <BookOpen className="h-8 w-8 text-primary mx-auto mb-4 animate-pulse" />
+                    <ProvaFacilIcon className="h-8 w-8 mx-auto mb-4 animate-pulse" />
                     <p className="text-muted-foreground">Carregando perfil...</p>
                 </div>
             </div>

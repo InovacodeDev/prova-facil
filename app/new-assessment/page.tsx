@@ -10,11 +10,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BookOpen, Upload, ArrowLeft, FileText, Loader2, X, Check, Lock, AlertCircle } from "lucide-react";
+import { ProvaFacilLogo } from "@/assets/logo";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { invalidateDashboardCache } from "@/lib/cache";
 import { track } from "@vercel/analytics";
+import {
+    extractTextFromFiles,
+    formatExtractedTextForAPI,
+    validateFiles,
+    ACCEPTED_FILE_EXTENSIONS,
+    MAX_FILE_SIZE,
+    MAX_TOTAL_SIZE,
+    type ExtractedText,
+} from "@/lib/document-extractor";
 
 const SUBJECTS = [
     { value: "mathematics", label: "Matemática" },
@@ -50,26 +60,31 @@ const QUESTION_CONTEXTS = [
     { value: "pesquisa", label: "Prompt para Pesquisa (Nível Pós-Doc)" },
 ];
 
-const PLAN_LIMITS: Record<string, { questionLimit: number; allowedTypes: string[] }> = {
+const PLAN_LIMITS: Record<string, { monthlyQuestionLimit: number; allowedTypes: string[]; allowPdfUpload: boolean }> = {
     starter: {
-        questionLimit: 20,
+        monthlyQuestionLimit: 30, // 20 * 1.5
         allowedTypes: ["multiple_choice"],
+        allowPdfUpload: false,
     },
     basic: {
-        questionLimit: 50,
+        monthlyQuestionLimit: 75, // 50 * 1.5
         allowedTypes: ["multiple_choice", "open"],
+        allowPdfUpload: false,
     },
     essentials: {
-        questionLimit: 100,
+        monthlyQuestionLimit: 150, // 100 * 1.5
         allowedTypes: ["multiple_choice", "true_false", "open"],
+        allowPdfUpload: false,
     },
     plus: {
-        questionLimit: 300,
+        monthlyQuestionLimit: 450, // 300 * 1.5
         allowedTypes: ["multiple_choice", "true_false", "open", "sum"],
+        allowPdfUpload: true,
     },
     advanced: {
-        questionLimit: 300,
+        monthlyQuestionLimit: 450, // 300 * 1.5
         allowedTypes: ["multiple_choice", "true_false", "open", "sum"],
+        allowPdfUpload: true,
     },
 };
 
@@ -79,14 +94,17 @@ export default function NewAssessmentPage() {
     const [subject, setSubject] = useState("");
     const [questionContext, setQuestionContext] = useState("");
     const [files, setFiles] = useState<File[]>([]);
+    const [extractedTexts, setExtractedTexts] = useState<ExtractedText[]>([]);
+    const [extracting, setExtracting] = useState(false);
+    const [extractionProgress, setExtractionProgress] = useState({ current: 0, total: 0, fileName: "" });
     const [questionTypes, setQuestionTypes] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
     const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
     const [filteredTitleSuggestions, setFilteredTitleSuggestions] = useState<string[]>([]);
     const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
     const [userPlan, setUserPlan] = useState<string>("starter");
-    const [subjectUsage, setSubjectUsage] = useState<number>(0);
-    const [maxQuestions, setMaxQuestions] = useState<number>(20);
+    const [monthlyUsage, setMonthlyUsage] = useState<number>(0);
+    const [maxQuestions, setMaxQuestions] = useState<number>(30);
     const router = useRouter();
     const { toast } = useToast();
     const supabase = createClient();
@@ -118,14 +136,9 @@ export default function NewAssessmentPage() {
         fetchUserPlanAndUsage();
     }, [supabase]);
 
-    // Atualizar uso ao selecionar matéria
+    // Atualizar uso mensal total ao carregar componente
     useEffect(() => {
-        const fetchSubjectUsage = async () => {
-            if (!subject) {
-                setSubjectUsage(0);
-                return;
-            }
-
+        const fetchMonthlyUsage = async () => {
             try {
                 const {
                     data: { user },
@@ -137,48 +150,42 @@ export default function NewAssessmentPage() {
 
                 if (!profile) return;
 
-                // Buscar subject_id
-                const { data: subjectData } = await supabase.from("subjects").select("id").eq("name", subject).single();
-
-                if (!subjectData) return;
-
                 // Calcular início do mês atual
                 const startOfMonth = new Date();
                 startOfMonth.setDate(1);
                 startOfMonth.setHours(0, 0, 0, 0);
 
-                // Buscar quantas questões foram geradas nesta matéria neste mês
+                // Buscar TODAS as questões geradas neste mês (independente da matéria)
                 const { data: questionsData } = await supabase
                     .from("questions")
                     .select(
                         `
                         id,
                         assessments!inner (
-                            id,
                             user_id,
-                            subject_id,
                             created_at
                         )
                     `
                     )
                     .eq("assessments.user_id", profile.id)
-                    .eq("assessments.subject_id", subjectData.id)
                     .gte("assessments.created_at", startOfMonth.toISOString());
 
                 const usage = questionsData?.length || 0;
-                setSubjectUsage(usage);
+                setMonthlyUsage(usage);
 
                 // Calcular máximo disponível
-                const planLimit = PLAN_LIMITS[userPlan]?.questionLimit || 20;
+                const planLimit = PLAN_LIMITS[userPlan]?.monthlyQuestionLimit || 30;
                 const available = Math.max(0, planLimit - usage);
                 setMaxQuestions(available);
             } catch (error) {
-                console.error("Erro ao buscar uso:", error);
+                console.error("Erro ao buscar uso mensal:", error);
             }
         };
 
-        fetchSubjectUsage();
-    }, [subject, userPlan, supabase]);
+        if (userPlan) {
+            fetchMonthlyUsage();
+        }
+    }, [userPlan, supabase]);
 
     // Buscar títulos distintos de avaliações existentes
     useEffect(() => {
@@ -215,45 +222,88 @@ export default function NewAssessmentPage() {
         }
     }, [title, titleSuggestions]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
-        const validTypes = [
-            "application/pdf",
-            "application/vnd.ms-powerpoint",
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ];
 
-        const validFiles = selectedFiles.filter((file) => validTypes.includes(file.type));
+        if (selectedFiles.length === 0) return;
 
-        if (validFiles.length !== selectedFiles.length) {
+        // Verificar se tem PDFs e se o plano permite
+        const hasPDFs = selectedFiles.some((file) => file.type === "application/pdf");
+        const allowPdfUpload = PLAN_LIMITS[userPlan]?.allowPdfUpload;
+
+        if (hasPDFs && !allowPdfUpload) {
             toast({
-                title: "Erro",
-                description: "Apenas arquivos PDF, PPT, PPTX, DOC e DOCX são permitidos.",
+                title: "PDF não permitido",
+                description: "PDFs são permitidos apenas para planos Plus e Advanced. Use arquivos DOCX.",
                 variant: "destructive",
             });
+            e.target.value = "";
             return;
         }
 
-        const totalSize = [...files, ...validFiles].reduce((acc, file) => acc + file.size, 0);
-        const maxSize = 50 * 1024 * 1024; // 50MB
+        // Validar arquivos
+        const newFiles = [...files, ...selectedFiles];
+        const validation = validateFiles(newFiles);
 
-        if (totalSize > maxSize) {
+        if (!validation.valid) {
             toast({
                 title: "Erro",
-                description: "O tamanho total dos arquivos não pode exceder 50MB.",
+                description: validation.error,
                 variant: "destructive",
             });
+            e.target.value = "";
             return;
         }
 
-        setFiles([...files, ...validFiles]);
+        setFiles(newFiles);
         e.target.value = "";
+
+        // Extrair texto apenas de arquivos DOCX/DOC
+        // PDFs em planos plus/advanced são enviados completos para a IA
+        setExtracting(true);
+        try {
+            const filesToExtract = selectedFiles.filter((file) => file.type !== "application/pdf" || !allowPdfUpload);
+
+            if (filesToExtract.length > 0) {
+                const extracted = await extractTextFromFiles(filesToExtract, (current, total, fileName) => {
+                    setExtractionProgress({ current, total, fileName });
+                });
+
+                setExtractedTexts([...extractedTexts, ...extracted]);
+
+                const totalWords = extracted.reduce((sum, item) => sum + item.wordCount, 0);
+                const avgTime = extracted.reduce((sum, item) => sum + item.extractionTime, 0) / extracted.length;
+
+                toast({
+                    title: "Texto extraído com sucesso!",
+                    description: `${extracted.length} arquivo(s) processado(s). ${totalWords} palavras extraídas em ${(
+                        avgTime / 1000
+                    ).toFixed(1)}s em média.`,
+                });
+            } else if (hasPDFs && allowPdfUpload) {
+                toast({
+                    title: "PDFs adicionados",
+                    description: `${selectedFiles.length} PDF(s) serão enviados completos para a IA (sem transcrição prévia).`,
+                });
+            }
+        } catch (error: any) {
+            console.error("Erro ao extrair texto:", error);
+            toast({
+                title: "Erro na extração",
+                description: error.message || "Não foi possível extrair o texto dos arquivos.",
+                variant: "destructive",
+            });
+            // Remover arquivos que falharam
+            setFiles(files);
+        } finally {
+            setExtracting(false);
+            setExtractionProgress({ current: 0, total: 0, fileName: "" });
+        }
     };
 
     const removeFile = (index: number) => {
         setFiles(files.filter((_, i) => i !== index));
+        setExtractedTexts(extractedTexts.filter((_, i) => i !== index));
     };
 
     const toggleQuestionType = (typeId: string) => {
@@ -342,18 +392,29 @@ export default function NewAssessmentPage() {
 
             const academicLevel = (profile as any)?.academic_levels?.name;
 
-            // Preparar arquivos em base64 para enviar à IA
-            const fileContents = await Promise.all(
-                files.map(async (file) => {
-                    const buffer = await file.arrayBuffer();
-                    const base64 = Buffer.from(buffer).toString("base64");
-                    return {
-                        name: file.name,
-                        type: file.type,
-                        data: `data:${file.type};base64,${base64}`,
-                    };
-                })
-            );
+            // Preparar dados de documentos
+            const allowPdfUpload = PLAN_LIMITS[userPlan]?.allowPdfUpload;
+            const pdfFiles = files.filter((f) => f.type === "application/pdf");
+            const nonPdfFiles = files.filter((f) => f.type !== "application/pdf");
+
+            // Para planos plus/advanced: enviar PDFs como arquivos base64
+            let pdfFilesData: Array<{ name: string; type: string; data: string }> = [];
+            if (allowPdfUpload && pdfFiles.length > 0) {
+                pdfFilesData = await Promise.all(
+                    pdfFiles.map(async (file) => {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const base64 = Buffer.from(arrayBuffer).toString("base64");
+                        return {
+                            name: file.name,
+                            type: file.type,
+                            data: `data:${file.type};base64,${base64}`,
+                        };
+                    })
+                );
+            }
+
+            // Para DOCX: enviar texto transcrito
+            const documentContent = formatExtractedTextForAPI(extractedTexts);
 
             // Chamar API de geração de questões
             const response = await fetch("/api/generate-questions", {
@@ -362,14 +423,15 @@ export default function NewAssessmentPage() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    title,
+                    title: title.trim(),
                     questionCount: parseInt(questionCount),
                     subject,
                     subjectId: subjectData.id,
                     questionTypes,
                     questionContext,
                     academicLevel,
-                    files: fileContents,
+                    documentContent, // Texto extraído de DOCX
+                    pdfFiles: pdfFilesData, // PDFs completos (apenas plus/advanced)
                 }),
             });
 
@@ -413,9 +475,9 @@ export default function NewAssessmentPage() {
     const getBlockReason = () => {
         if (files.length === 0) return "Você precisa selecionar pelo menos um documento para gerar questões.";
         if (maxQuestions === 0)
-            return `Você atingiu o limite de ${
-                PLAN_LIMITS[userPlan]?.questionLimit || 20
-            } questões por matéria neste mês. Tente novamente no próximo mês ou faça upgrade do seu plano.`;
+            return `Você atingiu o limite mensal de ${
+                PLAN_LIMITS[userPlan]?.monthlyQuestionLimit || 30
+            } questões. Tente novamente no próximo mês ou faça upgrade do seu plano.`;
         if (!title.trim()) return "Preencha o título da avaliação.";
         if (!subject) return "Selecione uma matéria.";
         if (!questionContext) return "Selecione o contexto/nível da questão.";
@@ -433,10 +495,7 @@ export default function NewAssessmentPage() {
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Voltar
                         </Button>
-                        <div className="flex items-center gap-2">
-                            <BookOpen className="h-6 w-6 text-primary" />
-                            <span className="text-lg font-semibold">Criar Questões</span>
-                        </div>
+                        <ProvaFacilLogo className="h-6" />
                     </div>
                 </div>
             </header>
@@ -546,13 +605,11 @@ export default function NewAssessmentPage() {
                                             }}
                                             required
                                         />
-                                        {subject && (
-                                            <p className="text-xs text-muted-foreground">
-                                                Plano {userPlan}: {subjectUsage}/
-                                                {PLAN_LIMITS[userPlan]?.questionLimit || 20} questões usadas este mês em{" "}
-                                                {subject}. <strong>Disponível: {maxQuestions}</strong>
-                                            </p>
-                                        )}
+                                        <p className="text-xs text-muted-foreground">
+                                            Plano {userPlan}: {monthlyUsage}/
+                                            {PLAN_LIMITS[userPlan]?.monthlyQuestionLimit || 30} questões usadas este
+                                            mês. <strong>Disponível: {maxQuestions}</strong>
+                                        </p>
                                     </div>
 
                                     <div className="space-y-2">
@@ -594,48 +651,110 @@ export default function NewAssessmentPage() {
                                                 Arraste arquivos aqui ou clique para selecionar
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                PDF, PPT, PPTX, DOC ou DOCX - Máximo 50MB total
+                                                PDF, DOC ou DOCX - Máximo 10MB por arquivo, 30MB total
                                             </p>
                                             <Input
                                                 id="files"
                                                 type="file"
-                                                accept=".pdf,.ppt,.pptx,.doc,.docx"
+                                                accept={ACCEPTED_FILE_EXTENSIONS}
                                                 multiple
                                                 onChange={handleFileChange}
                                                 className="hidden"
+                                                disabled={extracting}
                                             />
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 onClick={() => document.getElementById("files")?.click()}
+                                                disabled={extracting}
                                             >
-                                                Selecionar Arquivos
+                                                {extracting ? (
+                                                    <>
+                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        Extraindo texto...
+                                                    </>
+                                                ) : (
+                                                    "Selecionar Arquivos"
+                                                )}
                                             </Button>
                                         </div>
 
-                                        {files.length > 0 && (
+                                        {/* Progresso de extração */}
+                                        {extracting && extractionProgress.total > 0 && (
                                             <div className="mt-4 space-y-2">
-                                                {files.map((file, index) => (
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">
+                                                        Processando {extractionProgress.current} de{" "}
+                                                        {extractionProgress.total}
+                                                    </span>
+                                                    <span className="text-muted-foreground">
+                                                        {Math.round(
+                                                            (extractionProgress.current / extractionProgress.total) *
+                                                                100
+                                                        )}
+                                                        %
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-secondary rounded-full h-2">
                                                     <div
-                                                        key={index}
-                                                        className="flex items-center justify-between bg-muted p-2 rounded"
-                                                    >
-                                                        <span className="text-sm truncate flex-1">{file.name}</span>
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => removeFile(index)}
+                                                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                                                        style={{
+                                                            width: `${
+                                                                (extractionProgress.current /
+                                                                    extractionProgress.total) *
+                                                                100
+                                                            }%`,
+                                                        }}
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-muted-foreground truncate">
+                                                    {extractionProgress.fileName}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {files.length > 0 && !extracting && (
+                                            <div className="mt-4 space-y-2">
+                                                {files.map((file, index) => {
+                                                    const extracted = extractedTexts[index];
+                                                    return (
+                                                        <div
+                                                            key={index}
+                                                            className="flex items-start justify-between bg-muted p-3 rounded gap-2"
                                                         >
-                                                            <X className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium truncate">
+                                                                    {file.name}
+                                                                </p>
+                                                                {extracted && (
+                                                                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                                                                        <span>{extracted.wordCount} palavras</span>
+                                                                        {extracted.pageCount && (
+                                                                            <span>{extracted.pageCount} páginas</span>
+                                                                        )}
+                                                                        <span className="text-green-600">
+                                                                            ✓ Texto extraído
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => removeFile(index)}
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
 
                                         <p className="text-xs text-muted-foreground mt-4 italic">
-                                            * Os documentos são usados para gerar as questões e não ficam salvos
+                                            * O texto é extraído no seu navegador e apenas o conteúdo textual é enviado
+                                            para a IA
                                         </p>
                                     </div>
                                 </div>
