@@ -1,23 +1,25 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-const plans = [
+export const plans = [
     {
         id: "starter",
         name: "Starter",
-        price: "Grátis",
-        description: "Para começar a criar questões",
+        monthlyPrice: 0,
+        annualPrice: 0,
+        description: "Ideal para testar a plataforma",
         aiLevel: "IA Básica",
         features: [
-            "Apenas múltipla escolha",
-            "Máximo de 20 questões por matéria/mês",
-            "Upload: TXT, PDF (até 5MB)",
-            "IA com capacidade fundamental",
+            "Até 30 questões/mês para suas primeiras turmas",
+            "Múltipla escolha e Verdadeiro/Falso",
+            "Upload de arquivos TXT e DOCX (10MB)",
+            "Entrada de texto direto",
             "Suporte por email",
         ],
         cta: "Começar Grátis",
@@ -26,16 +28,16 @@ const plans = [
     {
         id: "basic",
         name: "Basic",
-        price: "R$ 29,90",
-        period: "/mês",
-        description: "Para professores iniciantes",
+        monthlyPrice: 29.9,
+        annualPrice: 297.82,
+        description: "Perfeito para 2-3 turmas pequenas",
         aiLevel: "IA Básica",
         features: [
-            "Múltipla escolha e dissertativo",
-            "Máximo de 50 questões por matéria/mês",
-            "Upload: TXT, PDF, DOCX (até 10MB)",
-            "IA com capacidade fundamental",
-            "Suporte prioritário",
+            "Até 75 questões/mês, ideal para aulas semanais",
+            "4 tipos de questões incluindo abertas",
+            "Upload de arquivos TXT e DOCX (20MB)",
+            "Entrada de texto direto",
+            "Suporte prioritário com resposta em 24h",
         ],
         cta: "Começar Agora",
         highlighted: false,
@@ -43,17 +45,16 @@ const plans = [
     {
         id: "essentials",
         name: "Essentials",
-        price: "R$ 49,90",
-        period: "/mês",
-        description: "Para professores ativos",
+        monthlyPrice: 49.9,
+        annualPrice: 497.02,
+        description: "Ótimo para 4-5 turmas regulares",
         aiLevel: "IA Avançada",
         features: [
-            "Todos os tipos exceto somatória",
-            "Máximo de 100 questões por matéria/mês",
-            "Upload: TXT, PDF, DOCX, Links (até 20MB)",
-            "IA com processamento avançado",
-            "Suporte prioritário",
-            "Estatísticas avançadas",
+            "Até 150 questões/mês para diversas disciplinas",
+            "7 tipos de questões incluindo redação",
+            "Upload de PDF, DOCX, TXT e links externos (30MB)",
+            "IA avançada com maior precisão contextual",
+            "Suporte prioritário via email e WhatsApp",
         ],
         cta: "Começar Agora",
         highlighted: false,
@@ -61,17 +62,16 @@ const plans = [
     {
         id: "plus",
         name: "Plus",
-        price: "R$ 79,90",
-        period: "/mês",
-        description: "Para professores profissionais",
+        monthlyPrice: 79.9,
+        annualPrice: 795.42,
+        description: "Completo para múltiplas turmas",
         aiLevel: "IA Avançada",
         features: [
-            "Todos os tipos de questões",
-            "Máximo de 300 questões por matéria/mês",
-            "Upload: Todos os formatos (até 50MB)",
-            "IA com processamento avançado",
-            "Suporte prioritário VIP",
-            "Estatísticas avançadas",
+            "Até 300 questões/mês, liberdade para criar sem limites",
+            "Todos os 8 tipos de questões disponíveis",
+            "Upload de todos os formatos + links (40MB)",
+            "IA avançada otimizada para contextos técnicos",
+            "Suporte VIP com atendimento prioritário",
         ],
         cta: "Começar Agora",
         highlighted: false,
@@ -79,18 +79,16 @@ const plans = [
     {
         id: "advanced",
         name: "Advanced",
-        price: "R$ 129,90",
-        period: "/mês",
-        description: "Para professores universitários",
+        monthlyPrice: 129.9,
+        annualPrice: 1294.62,
+        description: "Máxima capacidade para instituições",
         aiLevel: "IA Premium",
         features: [
-            "Todos os tipos de questões",
-            "Máximo de 300 questões por matéria/mês",
-            "Upload: Todos os formatos (até 100MB)",
-            "IA com máxima capacidade e precisão",
-            "Matérias específicas por área",
-            "Suporte prioritário VIP",
-            "Estatísticas avançadas",
+            "Até 300 questões/mês com máxima qualidade",
+            "Todos os 8 tipos de questões disponíveis",
+            "Upload de PPTX, PDF, DOCX, TXT + links (100MB)",
+            "IA Premium com precisão máxima e contexto profundo",
+            "Suporte VIP dedicado com resposta imediata",
         ],
         cta: "Começar Agora",
         highlighted: true,
@@ -99,9 +97,22 @@ const plans = [
 
 export function Pricing() {
     const router = useRouter();
+    const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
 
     const handlePlanClick = (planId: string) => {
         router.push("/auth");
+    };
+
+    const formatPrice = (plan: (typeof plans)[0]) => {
+        if (plan.monthlyPrice === 0) return "Grátis";
+
+        const price = billingPeriod === "monthly" ? plan.monthlyPrice : plan.annualPrice;
+        return `R$ ${price.toFixed(2).replace(".", ",")}`;
+    };
+
+    const getPeriod = (plan: (typeof plans)[0]) => {
+        if (plan.monthlyPrice === 0) return "";
+        return billingPeriod === "monthly" ? "/mês" : "/ano";
     };
 
     return (
@@ -110,62 +121,102 @@ export function Pricing() {
                 <div className="text-center mb-12">
                     <h2 className="text-3xl md:text-4xl font-bold mb-4">Planos e Preços</h2>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                        Escolha o plano ideal para suas necessidades. Comece grátis e faça upgrade quando precisar.
+                        Escolha o plano que se encaixa no seu ritmo de trabalho. Todos com acesso completo às
+                        funcionalidades principais.
                     </p>
+
+                    {/* Billing Period Toggle */}
+                    <div className="flex items-center justify-center gap-4 mt-8">
+                        <Button
+                            variant={billingPeriod === "monthly" ? "default" : "outline"}
+                            onClick={() => setBillingPeriod("monthly")}
+                            className="min-w-[120px]"
+                        >
+                            Mensal
+                        </Button>
+                        <Button
+                            variant={billingPeriod === "annual" ? "default" : "outline"}
+                            onClick={() => setBillingPeriod("annual")}
+                            className="min-w-[120px] relative"
+                        >
+                            Anual
+                            <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">
+                                -17%
+                            </Badge>
+                        </Button>
+                    </div>
+                    {billingPeriod === "annual" && (
+                        <p className="text-sm text-green-600 mt-2 font-medium">
+                            🎉 Economize 2 meses ao escolher o plano anual!
+                        </p>
+                    )}
                 </div>
 
-                <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
-                    {plans.map((plan) => (
-                        <Card
-                            key={plan.id}
-                            className={`relative flex flex-col ${
-                                plan.highlighted ? "border-primary shadow-lg md:scale-105" : "border-border"
-                            }`}
-                        >
-                            {plan.highlighted && (
-                                <div className="absolute -top-4 left-0 right-0 text-center">
-                                    <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
-                                </div>
-                            )}
+                {/* Scroll horizontal container */}
+                <div className="overflow-x-auto py-8">
+                    <div
+                        className="flex gap-8 min-w-max px-4 mx-auto no-scrollbar"
+                        style={{ justifyContent: "center" }}
+                    >
+                        {plans.map((plan) => (
+                            <Card
+                                key={plan.id}
+                                className={`relative flex flex-col w-[280px] ${
+                                    plan.highlighted ? "border-primary shadow-lg scale-105" : "border-border"
+                                }`}
+                            >
+                                {plan.highlighted && (
+                                    <div className="absolute -top-4 left-0 right-0 text-center">
+                                        <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
+                                    </div>
+                                )}
 
-                            <CardHeader>
-                                <div className="flex items-center justify-between mb-2">
-                                    <CardTitle className="text-xl">{plan.name}</CardTitle>
-                                    <Badge variant="outline" className="text-xs">
-                                        {plan.aiLevel}
-                                    </Badge>
-                                </div>
-                                <CardDescription className="text-xs">{plan.description}</CardDescription>
-                                <div className="mt-4">
-                                    <span className="text-3xl font-bold">{plan.price}</span>
-                                    {plan.period && (
-                                        <span className="text-sm text-muted-foreground">{plan.period}</span>
-                                    )}
-                                </div>
-                            </CardHeader>
+                                <CardHeader className="pb-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <CardTitle className="text-xl">{plan.name}</CardTitle>
+                                        <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                            {plan.aiLevel}
+                                        </Badge>
+                                    </div>
+                                    <CardDescription className="text-xs min-h-[32px]">
+                                        {plan.description}
+                                    </CardDescription>
+                                    <div className="mt-4">
+                                        <span className="text-3xl font-bold">{formatPrice(plan)}</span>
+                                        {getPeriod(plan) && (
+                                            <span className="text-sm text-muted-foreground">{getPeriod(plan)}</span>
+                                        )}
+                                    </div>
+                                </CardHeader>
 
-                            <CardContent className="flex-grow">
-                                <ul className="space-y-2">
-                                    {plan.features.map((feature) => (
-                                        <li key={feature} className="flex items-start gap-2">
-                                            <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                            <span className="text-xs">{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
+                                <CardContent className="flex-grow pt-0">
+                                    <ul className="space-y-2.5">
+                                        {plan.features.map((feature) => (
+                                            <li key={feature} className="flex items-start gap-2">
+                                                <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                                <span className="text-xs leading-relaxed">{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CardContent>
 
-                            <CardFooter>
-                                <Button
-                                    className="w-full"
-                                    variant={plan.highlighted ? "default" : "outline"}
-                                    onClick={() => handlePlanClick(plan.id)}
-                                >
-                                    {plan.cta}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
+                                <CardFooter className="pt-4">
+                                    <Button
+                                        className="w-full"
+                                        variant={plan.highlighted ? "default" : "outline"}
+                                        onClick={() => handlePlanClick(plan.id)}
+                                    >
+                                        {plan.cta}
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Scroll hint for mobile */}
+                <div className="text-center mt-4 text-xs text-muted-foreground md:hidden">
+                    ← Deslize para ver todos os planos →
                 </div>
             </div>
         </section>

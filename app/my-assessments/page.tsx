@@ -107,10 +107,7 @@ export default function MyAssessmentsPage() {
             id,
             title,
             user_id,
-            subjects (
-              id,
-              name
-            )
+            subject
           )
         `
                 )
@@ -131,27 +128,23 @@ export default function MyAssessmentsPage() {
 
                 questionsData.forEach((q: any) => {
                     const assessment = q.assessments;
-                    const subjects = assessment?.subjects;
+                    const subject = assessment?.subject as string;
 
-                    if (!subjects) return;
-
-                    // Encontrar a matéria correspondente
-                    const subject = subjectsData.find((s) => s.id === subjects.id);
                     if (!subject) return;
 
-                    if (!grouped[subject.id]) {
-                        grouped[subject.id] = {
-                            subjectName: subject.name,
+                    if (!grouped[subject]) {
+                        grouped[subject] = {
+                            subjectName: subject,
                             assessments: {},
                         };
                     }
 
                     const title = assessment.title || "Sem título";
-                    if (!grouped[subject.id].assessments[title]) {
-                        grouped[subject.id].assessments[title] = [];
+                    if (!grouped[subject].assessments[title]) {
+                        grouped[subject].assessments[title] = [];
                     }
 
-                    grouped[subject.id].assessments[title].push({
+                    grouped[subject].assessments[title].push({
                         id: q.id,
                         question: q.question,
                         type: q.type || "multiple_choice",

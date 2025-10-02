@@ -9,88 +9,12 @@ import { ArrowLeft, Check, Crown, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { UserMenu } from "@/components/UserMenu";
-
-const PLANS = [
-    {
-        id: "starter",
-        name: "Starter",
-        price: "Grátis",
-        description: "Para começar a criar questões",
-        aiLevel: "IA Básica",
-        features: [
-            "Apenas múltipla escolha",
-            "Máximo de 20 questões por matéria/mês",
-            "Upload: TXT, PDF (até 5MB)",
-            "IA com capacidade fundamental",
-            "Suporte por email",
-        ],
-    },
-    {
-        id: "basic",
-        name: "Basic",
-        price: "R$ 29,90/mês",
-        description: "Para professores iniciantes",
-        aiLevel: "IA Básica",
-        features: [
-            "Múltipla escolha e dissertativo",
-            "Máximo de 50 questões por matéria/mês",
-            "Upload: TXT, PDF, DOCX (até 10MB)",
-            "IA com capacidade fundamental",
-            "Suporte prioritário",
-        ],
-    },
-    {
-        id: "essentials",
-        name: "Essentials",
-        price: "R$ 49,90/mês",
-        description: "Para professores ativos",
-        aiLevel: "IA Avançada",
-        features: [
-            "Todos os tipos exceto somatória",
-            "Máximo de 100 questões por matéria/mês",
-            "Upload: TXT, PDF, DOCX, Links (até 20MB)",
-            "IA com processamento avançado",
-            "Suporte prioritário",
-            "Estatísticas avançadas",
-        ],
-    },
-    {
-        id: "plus",
-        name: "Plus",
-        price: "R$ 79,90/mês",
-        description: "Para professores profissionais",
-        aiLevel: "IA Avançada",
-        features: [
-            "Todos os tipos de questões",
-            "Máximo de 300 questões por matéria/mês",
-            "Upload: Todos os formatos (até 50MB)",
-            "IA com processamento avançado",
-            "Suporte prioritário VIP",
-            "Estatísticas avançadas",
-        ],
-    },
-    {
-        id: "advanced",
-        name: "Advanced",
-        price: "R$ 129,90/mês",
-        description: "Para professores universitários",
-        aiLevel: "IA Premium",
-        features: [
-            "Todos os tipos de questões",
-            "Máximo de 300 questões por matéria/mês",
-            "Upload: Todos os formatos (até 100MB)",
-            "IA com máxima capacidade e precisão",
-            "Matérias específicas por área",
-            "Suporte prioritário VIP",
-            "Estatísticas avançadas",
-        ],
-        highlighted: true,
-    },
-];
+import { plans } from "@/components/Pricing";
 
 export default function PlanPage() {
     const [currentPlan, setCurrentPlan] = useState<string>("starter");
     const [loading, setLoading] = useState(true);
+    const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
     const router = useRouter();
     const { toast } = useToast();
     const supabase = createClient();
@@ -163,6 +87,18 @@ export default function PlanPage() {
         }
     };
 
+    const formatPrice = (plan: (typeof plans)[0]) => {
+        if (plan.monthlyPrice === 0) return "Grátis";
+
+        const price = billingPeriod === "monthly" ? plan.monthlyPrice : plan.annualPrice;
+        return `R$ ${price.toFixed(2).replace(".", ",")}`;
+    };
+
+    const getPeriod = (plan: (typeof plans)[0]) => {
+        if (plan.monthlyPrice === 0) return "";
+        return billingPeriod === "monthly" ? "/mês" : "/ano";
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
@@ -196,58 +132,105 @@ export default function PlanPage() {
             <main className="container mx-auto px-4 py-12">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl font-bold mb-4">Escolha seu plano</h1>
-                    <p className="text-xl text-muted-foreground">Selecione o plano ideal para suas necessidades</p>
+                    <p className="text-xl text-muted-foreground">
+                        Todos os planos incluem as funcionalidades principais. Escolha o que melhor atende seu ritmo.
+                    </p>
+
+                    {/* Billing Period Toggle */}
+                    <div className="flex items-center justify-center gap-4 mt-8">
+                        <Button
+                            variant={billingPeriod === "monthly" ? "default" : "outline"}
+                            onClick={() => setBillingPeriod("monthly")}
+                            className="min-w-[120px]"
+                        >
+                            Mensal
+                        </Button>
+                        <Button
+                            variant={billingPeriod === "annual" ? "default" : "outline"}
+                            onClick={() => setBillingPeriod("annual")}
+                            className="min-w-[120px] relative"
+                        >
+                            Anual
+                            <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">
+                                -17%
+                            </Badge>
+                        </Button>
+                    </div>
+                    {billingPeriod === "annual" && (
+                        <p className="text-sm text-green-600 mt-2 font-medium">
+                            🎉 Economize 2 meses ao escolher o plano anual!
+                        </p>
+                    )}
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
-                    {PLANS.map((plan) => (
-                        <Card
-                            key={plan.id}
-                            className={`relative ${plan.highlighted ? "border-primary shadow-lg scale-105" : ""}`}
-                        >
-                            {plan.highlighted && (
-                                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                                    <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
-                                </div>
-                            )}
+                {/* Scroll horizontal container */}
+                <div className="overflow-x-auto pb-4">
+                    <div className="flex gap-6 min-w-max px-4 mx-auto" style={{ justifyContent: "center" }}>
+                        {plans.map((plan) => (
+                            <Card
+                                key={plan.id}
+                                className={`relative flex flex-col w-[320px] ${
+                                    plan.highlighted ? "border-primary shadow-lg scale-105" : ""
+                                }`}
+                            >
+                                {plan.highlighted && (
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                                        <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
+                                    </div>
+                                )}
 
-                            <CardHeader>
-                                <CardTitle className="flex items-center justify-between mb-2">
-                                    <span>{plan.name}</span>
-                                    {currentPlan === plan.id && <Badge variant="secondary">Plano Atual</Badge>}
-                                </CardTitle>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Badge variant="outline" className="text-xs">
-                                        {plan.aiLevel}
-                                    </Badge>
-                                </div>
-                                <CardDescription>{plan.description}</CardDescription>
-                                <div className="mt-4">
-                                    <span className="text-3xl font-bold">{plan.price}</span>
-                                </div>
-                            </CardHeader>
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="flex items-center justify-between mb-2">
+                                        <span>{plan.name}</span>
+                                        {currentPlan === plan.id && (
+                                            <Badge variant="secondary" className="text-xs">
+                                                Atual
+                                            </Badge>
+                                        )}
+                                    </CardTitle>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                            {plan.aiLevel}
+                                        </Badge>
+                                    </div>
+                                    <CardDescription className="text-sm min-h-[40px]">
+                                        {plan.description}
+                                    </CardDescription>
+                                    <div className="mt-4">
+                                        <span className="text-3xl font-bold">{formatPrice(plan)}</span>
+                                        {getPeriod(plan) && (
+                                            <span className="text-sm text-muted-foreground">{getPeriod(plan)}</span>
+                                        )}
+                                    </div>
+                                </CardHeader>
 
-                            <CardContent className="space-y-4">
-                                <ul className="space-y-3">
-                                    {plan.features.map((feature, index) => (
-                                        <li key={index} className="flex items-start gap-2">
-                                            <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                                            <span className="text-sm">{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <CardContent className="space-y-4 pt-0">
+                                    <ul className="space-y-3">
+                                        {plan.features.map((feature, index) => (
+                                            <li key={index} className="flex items-start gap-2">
+                                                <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                                                <span className="text-sm leading-relaxed">{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
 
-                                <Button
-                                    className="w-full"
-                                    variant={currentPlan === plan.id ? "secondary" : "default"}
-                                    disabled={currentPlan === plan.id}
-                                    onClick={() => handleSelectPlan(plan.id)}
-                                >
-                                    {currentPlan === plan.id ? "Plano Atual" : "Selecionar Plano"}
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                    <Button
+                                        className="w-full"
+                                        variant={currentPlan === plan.id ? "secondary" : "default"}
+                                        disabled={currentPlan === plan.id}
+                                        onClick={() => handleSelectPlan(plan.id)}
+                                    >
+                                        {currentPlan === plan.id ? "Plano Atual" : "Selecionar Plano"}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Scroll hint for mobile */}
+                <div className="text-center mt-4 text-sm text-muted-foreground md:hidden">
+                    ← Deslize para ver todos os planos →
                 </div>
             </main>
         </div>

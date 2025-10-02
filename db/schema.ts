@@ -10,6 +10,7 @@ import {
     integer,
     serial,
     pgSequence,
+    jsonb,
 } from "drizzle-orm/pg-core";
 
 export const RenewStatus = {
@@ -31,6 +32,14 @@ export const PlanType = {
 } as const;
 
 export const planEnum = pgEnum("plan", ["starter", "basic", "essentials", "plus", "advanced"]);
+
+export const SupportType = {
+    email: "email",
+    whatsapp: "whatsapp",
+    vip: "vip",
+} as const;
+
+export const supportTypeEnum = pgEnum("support_type_enum", ["email", "whatsapp", "vip"]);
 
 export const QuestionType = {
     fill_in_the_blank: "fill_in_the_blank",
@@ -55,6 +64,9 @@ export const questionTypeEnum = pgEnum("question_type", [
     "matching_columns",
     "problem_solving",
     "essay",
+    "project_based",
+    "gamified",
+    "summative",
 ]);
 
 export const QuestionContext = {
@@ -145,6 +157,7 @@ export const profiles = pgTable("profiles", {
     plan_expire_at: timestamp("plan_expire_at", { mode: "date" }),
     renew_status: renewStatusEnum().notNull().default("none"),
     academic_level_id: uuid("academic_level_id").references(() => academicLevels.id),
+    allowed_cookies: text("allowed_cookies").array().notNull().default([]), // jsonb stored as text
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -164,6 +177,7 @@ export const questions = pgTable("questions", {
     assessment_id: uuid("assessment_id").references(() => assessments.id),
     type: questionTypeEnum().notNull().default("multiple_choice"),
     question: varchar("question", { length: 8192 }).notNull(),
+    metadata: jsonb("metadata").notNull().default("{}"),
     copy_count: integer("copy_count").notNull().default(0),
     copy_last_at: timestamp("copy_last_at"),
     created_at: timestamp("created_at").defaultNow().notNull(),
@@ -187,10 +201,14 @@ export const logs = pgTable("logs", {
     updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const planModels = pgTable("plan_models", {
-    id: uuid("id").defaultRandom().primaryKey().notNull(),
-    plan: planEnum().notNull().unique(),
+export const plans = pgTable("plans", {
+    id: planEnum("id").notNull().primaryKey(),
     model: varchar("model", { length: 255 }).notNull(),
+    questions_month: integer("questions_month").notNull().default(30),
+    doc_type: text("doc_type").array().notNull(),
+    docs_size: integer("docs_size").notNull().default(10),
+    allowed_questions: questionTypeEnum("allowed_questions").array().notNull(),
+    support: supportTypeEnum("support").array().notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
 });

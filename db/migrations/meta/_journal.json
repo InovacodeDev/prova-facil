@@ -57,6 +57,27 @@
       "when": 1759421201447,
       "tag": "0007_bizarre_malcolm_colcord",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1759422820510,
+      "tag": "0008_big_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1759422934697,
+      "tag": "0009_magical_zombie",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1759433038179,
+      "tag": "0010_previous_molten_man",
+      "breakpoints": true
     }
   ]
 }

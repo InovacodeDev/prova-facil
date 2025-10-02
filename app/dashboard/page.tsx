@@ -125,10 +125,7 @@ export default function DashboardPage() {
                         id,
                         title,
                         user_id,
-                        subjects (
-                            id,
-                            name
-                        )
+                        subject
                     )
                 `
                 )

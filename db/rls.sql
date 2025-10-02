@@ -234,7 +234,6 @@ CREATE POLICY logs_delete_auth
   TO authenticated
   USING (auth.uid() IS NOT NULL);
 
-
 -- ================================
 -- academic_levels
 -- ================================
@@ -292,6 +291,35 @@ CREATE POLICY academic_levels_delete_admin
       WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
     )
   );
+
+-- ================================
+-- plans
+-- ================================
+ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for plans table
+-- Allow public read access (anyone can see plan configurations)
+CREATE POLICY "Allow public read access to plans"
+    ON public.plans
+    FOR SELECT
+    TO public
+    USING (true);
+
+-- Allow admin write access only
+CREATE POLICY "Allow admin to manage plans"
+    ON public.plans
+    FOR ALL
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.user_id = auth.uid()
+            AND profiles.is_admin = true
+        )
+    );
+
+-- Create index for faster lookups
+CREATE INDEX idx_plans_id ON public.plans(id);
 
 -- ================================
 -- Notes:
