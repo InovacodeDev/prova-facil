@@ -11,6 +11,18 @@
         --background: 0 0% 100%;
         --foreground: 214 19% 13%;
 
+        /* MD3 Surface System */
+        --surface: 0 0% 100%;
+        --surface-dim: 210 17% 96%;
+        --surface-bright: 0 0% 100%;
+        --surface-container-lowest: 0 0% 100%;
+        --surface-container-low: 210 17% 98%;
+        --surface-container: 210 17% 96%;
+        --surface-container-high: 210 17% 94%;
+        --surface-container-highest: 210 17% 92%;
+        --on-surface: 214 19% 13%;
+        --on-surface-variant: 214 16% 46%;
+
         /* Card and surfaces */
         --card: 0 0% 100%;
         --card-foreground: 214 19% 13%;
@@ -25,12 +37,18 @@
         --primary-hover: 214 84% 51%;
         --primary-foreground: 0 0% 100%;
         --primary-muted: 214 84% 96%;
+        --primary-container: 214 84% 90%;
+        --on-primary: 0 0% 100%;
+        --on-primary-container: 214 84% 16%;
 
         /* Secondary - Success green for positive actions */
         --secondary: 142 76% 36%;
         --secondary-hover: 142 76% 31%;
         --secondary-foreground: 0 0% 100%;
         --secondary-muted: 142 76% 95%;
+        --secondary-container: 142 76% 90%;
+        --on-secondary: 0 0% 100%;
+        --on-secondary-container: 142 76% 16%;
 
         /* Neutral tones */
         --muted: 210 17% 96%;
@@ -42,10 +60,24 @@
         --accent-hover: 25 95% 48%;
         --accent-foreground: 0 0% 100%;
         --accent-muted: 25 95% 95%;
+        --accent-container: 25 95% 90%;
+        --on-accent: 0 0% 100%;
+        --on-accent-container: 25 95% 16%;
+
+        /* Tertiary colors for additional variety */
+        --tertiary: 280 65% 60%;
+        --tertiary-hover: 280 65% 55%;
+        --tertiary-container: 280 65% 90%;
+        --on-tertiary: 0 0% 100%;
+        --on-tertiary-container: 280 65% 20%;
 
         /* Status colors */
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
+        --error: 0 84% 60%;
+        --error-container: 0 84% 90%;
+        --on-error: 0 0% 100%;
+        --on-error-container: 0 84% 16%;
         --warning: 38 92% 50%;
         --warning-foreground: 0 0% 100%;
         --success: 142 76% 36%;
@@ -56,11 +88,19 @@
         --input: 214 20% 92%;
         --input-focus: 214 84% 56%;
         --ring: 214 84% 56%;
+        --outline: 214 20% 80%;
+        --outline-variant: 214 20% 90%;
 
-        /* Layout */
-        --radius: 0.75rem;
+        /* MD3 Shape System */
+        --radius-none: 0rem;
+        --radius-xs: 0.25rem;
         --radius-sm: 0.5rem;
+        --radius: 0.75rem;
+        --radius-md: 0.75rem;
         --radius-lg: 1rem;
+        --radius-xl: 1.5rem;
+        --radius-2xl: 2rem;
+        --radius-full: 9999px;
 
         /* Sidebar */
         --sidebar-background: 214 19% 4%;
@@ -78,7 +118,13 @@
         --gradient-accent: linear-gradient(135deg, hsl(25 95% 53%), hsl(25 95% 63%));
         --gradient-hero: linear-gradient(135deg, hsl(214 84% 56%) 0%, hsl(214 84% 66%) 50%, hsl(25 95% 53%) 100%);
 
-        /* Shadows */
+        /* MD3 Elevation System - Shadows */
+        --elevation-0: none;
+        --elevation-1: 0 1px 2px 0 hsl(214 19% 13% / 0.05), 0 1px 3px 1px hsl(214 19% 13% / 0.05);
+        --elevation-2: 0 1px 2px 0 hsl(214 19% 13% / 0.08), 0 2px 6px 2px hsl(214 19% 13% / 0.06);
+        --elevation-3: 0 1px 3px 0 hsl(214 19% 13% / 0.1), 0 4px 8px 3px hsl(214 19% 13% / 0.08);
+        --elevation-4: 0 2px 3px 0 hsl(214 19% 13% / 0.12), 0 6px 10px 4px hsl(214 19% 13% / 0.09);
+        --elevation-5: 0 4px 4px 0 hsl(214 19% 13% / 0.14), 0 8px 12px 6px hsl(214 19% 13% / 0.1);
         --shadow-sm: 0 1px 2px 0 hsl(214 19% 13% / 0.05);
         --shadow-md: 0 4px 6px -1px hsl(214 19% 13% / 0.1), 0 2px 4px -1px hsl(214 19% 13% / 0.06);
         --shadow-lg: 0 10px 15px -3px hsl(214 19% 13% / 0.1), 0 4px 6px -2px hsl(214 19% 13% / 0.05);
@@ -86,15 +132,43 @@
         --shadow-primary: 0 10px 30px -10px hsl(214 84% 56% / 0.3);
         --shadow-accent: 0 10px 30px -10px hsl(25 95% 53% / 0.3);
 
-        /* Animations */
+        /* MD3 Motion System - Standard Easing */
         --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
         --transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
         --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+        --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+        --easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+        --easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+        --easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+        --duration-short-1: 50ms;
+        --duration-short-2: 100ms;
+        --duration-short-3: 150ms;
+        --duration-short-4: 200ms;
+        --duration-medium-1: 250ms;
+        --duration-medium-2: 300ms;
+        --duration-medium-3: 350ms;
+        --duration-medium-4: 400ms;
+        --duration-long-1: 450ms;
+        --duration-long-2: 500ms;
+        --duration-long-3: 550ms;
+        --duration-long-4: 600ms;
     }
 
     .dark {
         --background: 214 19% 4%;
         --foreground: 214 15% 95%;
+
+        /* MD3 Surface System - Dark Mode */
+        --surface: 214 19% 4%;
+        --surface-dim: 214 19% 2%;
+        --surface-bright: 214 19% 10%;
+        --surface-container-lowest: 214 19% 2%;
+        --surface-container-low: 214 19% 4%;
+        --surface-container: 214 19% 6%;
+        --surface-container-high: 214 19% 8%;
+        --surface-container-highest: 214 19% 12%;
+        --on-surface: 214 15% 95%;
+        --on-surface-variant: 214 15% 65%;
 
         --card: 214 19% 6%;
         --card-foreground: 214 15% 95%;
@@ -107,11 +181,17 @@
         --primary-hover: 214 84% 61%;
         --primary-foreground: 0 0% 100%;
         --primary-muted: 214 84% 12%;
+        --primary-container: 214 84% 20%;
+        --on-primary: 0 0% 100%;
+        --on-primary-container: 214 84% 90%;
 
         --secondary: 142 76% 36%;
         --secondary-hover: 142 76% 41%;
         --secondary-foreground: 0 0% 100%;
         --secondary-muted: 142 76% 12%;
+        --secondary-container: 142 76% 20%;
+        --on-secondary: 0 0% 100%;
+        --on-secondary-container: 142 76% 90%;
 
         --muted: 214 19% 8%;
         --muted-foreground: 214 15% 65%;
@@ -121,14 +201,29 @@
         --accent-hover: 25 95% 58%;
         --accent-foreground: 0 0% 100%;
         --accent-muted: 25 95% 12%;
+        --accent-container: 25 95% 20%;
+        --on-accent: 0 0% 100%;
+        --on-accent-container: 25 95% 90%;
+
+        --tertiary: 280 65% 60%;
+        --tertiary-hover: 280 65% 65%;
+        --tertiary-container: 280 65% 20%;
+        --on-tertiary: 0 0% 100%;
+        --on-tertiary-container: 280 65% 90%;
 
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
+        --error: 0 84% 60%;
+        --error-container: 0 84% 20%;
+        --on-error: 0 0% 100%;
+        --on-error-container: 0 84% 90%;
 
         --border: 214 19% 12%;
         --input: 214 19% 12%;
         --input-focus: 214 84% 56%;
         --ring: 214 84% 56%;
+        --outline: 214 19% 20%;
+        --outline-variant: 214 19% 12%;
 
         --sidebar-background: 214 19% 2%;
         --sidebar-foreground: 214 15% 85%;
@@ -138,6 +233,14 @@
         --sidebar-accent-foreground: 214 15% 85%;
         --sidebar-border: 214 19% 8%;
         --sidebar-ring: 214 84% 56%;
+
+        /* MD3 Elevation System - Dark Mode Shadows */
+        --elevation-0: none;
+        --elevation-1: 0 1px 2px 0 hsl(0 0% 0% / 0.3), 0 1px 3px 1px hsl(0 0% 0% / 0.15);
+        --elevation-2: 0 1px 2px 0 hsl(0 0% 0% / 0.3), 0 2px 6px 2px hsl(0 0% 0% / 0.15);
+        --elevation-3: 0 1px 3px 0 hsl(0 0% 0% / 0.3), 0 4px 8px 3px hsl(0 0% 0% / 0.15);
+        --elevation-4: 0 2px 3px 0 hsl(0 0% 0% / 0.3), 0 6px 10px 4px hsl(0 0% 0% / 0.15);
+        --elevation-5: 0 4px 4px 0 hsl(0 0% 0% / 0.3), 0 8px 12px 6px hsl(0 0% 0% / 0.15);
     }
 }
 
