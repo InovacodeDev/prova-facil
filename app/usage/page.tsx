@@ -118,6 +118,13 @@ export default function UsagePage() {
                     </p>
                 </div>
 
+                {usageStats.totalQuestions === 0 && (
+                    <div className="mb-8 rounded-lg border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-600">
+                        Nenhuma questão foi gerada neste ciclo ainda. Assim que criar suas primeiras questões, o consumo
+                        aparecerá aqui.
+                    </div>
+                )}
+
                 {/* Usage Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <Card>

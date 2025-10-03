@@ -30,63 +30,62 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
     try {
         const supabase = await createClient();
 
-        // Get user's profile and plan
-        const { data: userProfile } = await supabase.from("profiles").select("plan").eq("id", userId).single();
+        const { data: userProfile, error: profileError } = await supabase
+            .from("profiles")
+            .select("plan")
+            .eq("id", userId)
+            .single();
 
-        if (!userProfile) {
+        if (profileError || !userProfile) {
             return null;
         }
 
-        const { data: plan } = await supabase
+        const { data: planData, error: planError } = await supabase
             .from("plans")
             .select("questions_month")
             .eq("id", userProfile.plan)
             .single();
 
-        if (!plan) {
+        if (planError || !planData) {
             return null;
         }
 
-        const { questions_month } = plan;
-        const totalQuota = questions_month || 30; // Default to 30 if not found
-
-        // Get current month start date
+        const totalQuota = planData.questions_month ?? 30;
         const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const currentMonth = monthStart.toISOString().substring(0, 7); // YYYY-MM
+        const cycle = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-        // Count total questions created this month using Supabase
-        const { count: totalQuestions } = await supabase
-            .from("questions")
-            .select("*", { count: "exact", head: true })
-            .eq("assessments.user_id", userId)
-            .gte("created_at", monthStart.toISOString());
+        const { data: cycleLog, error: cycleError } = await supabase
+            .from("profile_logs_cycle")
+            .select("total_questions, subjects_breakdown")
+            .eq("user_id", userId)
+            .eq("cycle", cycle)
+            .maybeSingle();
 
-        // Get breakdown by subject using RPC function
-        const { data: subjectBreakdownResult } = await supabase.rpc("get_user_questions_by_subject", {
-            p_user_id: userId,
-            p_month_start: monthStart.toISOString(),
-        });
+        if (cycleError && cycleError.code !== "PGRST116") {
+            throw cycleError;
+        }
 
-        // Calculate percentages for each subject
-        const subjectBreakdown: SubjectUsage[] = (subjectBreakdownResult || []).map((row: any) => ({
-            subject: row.subject,
-            count: row.count,
-            percentage: totalQuestions && totalQuestions > 0 ? Math.round((row.count / totalQuestions) * 100) : 0,
+        const totalQuestions = cycleLog?.total_questions ?? 0;
+        const subjectsBreakdownRaw =
+            (cycleLog?.subjects_breakdown as Array<{ subject: string; count: number }> | null) ?? [];
+
+        const subjectBreakdown: SubjectUsage[] = subjectsBreakdownRaw.map((entry) => ({
+            subject: entry.subject,
+            count: entry.count,
+            percentage: totalQuestions > 0 ? Math.round((entry.count / totalQuestions) * 100) : 0,
         }));
 
-        // Calculate remaining quota and percentage used
-        const remainingQuota = Math.max(0, totalQuota - (totalQuestions || 0));
-        const percentageUsed = totalQuota > 0 ? Math.round(((totalQuestions || 0) / totalQuota) * 100) : 0;
+        const remainingQuota = Math.max(0, totalQuota - totalQuestions);
+        const percentageUsed = totalQuota > 0 ? Math.round((totalQuestions / totalQuota) * 100) : 0;
 
         return {
             userId,
-            totalQuestions: totalQuestions || 0,
+            totalQuestions,
             totalQuota,
             remainingQuota,
             percentageUsed,
             subjectBreakdown,
-            currentMonth,
+            currentMonth: cycle,
         };
     } catch (error) {
         console.error("Error getting user usage stats:", error);
@@ -120,16 +119,22 @@ export async function updateProfileLogsCycle(userId: string, subject: string, co
         const cycle = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`; // YYYY-MM
 
         // Get existing log for this cycle
-        const { data: existingLog } = await supabase
+        const { data: existingLog, error: existingError } = await supabase
             .from("profile_logs_cycle")
-            .select("*")
+            .select("id, total_questions, subjects_breakdown")
             .eq("user_id", userId)
             .eq("cycle", cycle)
-            .single();
+            .maybeSingle();
+
+        if (existingError && existingError.code !== "PGRST116") {
+            throw existingError;
+        }
 
         if (existingLog) {
             // Update existing log
-            const subjectsBreakdown = existingLog.subjects_breakdown as Array<{ subject: string; count: number }>;
+            const subjectsBreakdown = Array.isArray(existingLog.subjects_breakdown)
+                ? [...(existingLog.subjects_breakdown as Array<{ subject: string; count: number }>)]
+                : [];
             const subjectIndex = subjectsBreakdown.findIndex((s) => s.subject === subject);
 
             if (subjectIndex >= 0) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { invalidateDashboardCache } from "@/lib/cache";
 import { track } from "@vercel/analytics";
-import { SubjectAutocomplete } from "@/components/ui/subject-autocomplete";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { QUESTION_TYPES } from "@/lib/question-types";
 import {
     extractTextFromFiles,
@@ -53,62 +53,51 @@ const QUESTION_CONTEXTS = [
     { value: "pesquisa", label: "Prompt para Pesquisa (Nível Pós-Doc)" },
 ];
 
-const PLAN_LIMITS: Record<
-    string,
-    { monthlyQuestionLimit: number; allowedTypes: string[]; allowPdfUpload: boolean; allowedDocModes: string[] }
-> = {
-    starter: {
-        monthlyQuestionLimit: 30, // 20 * 1.5
-        allowedTypes: ["multiple_choice"],
-        allowPdfUpload: false,
-        allowedDocModes: ["text"], // Only text input
-    },
-    basic: {
-        monthlyQuestionLimit: 75, // 50 * 1.5
-        allowedTypes: ["multiple_choice", "open", "true_false"],
-        allowPdfUpload: false,
-        allowedDocModes: ["text", "file"], // Text + DOCX files
-    },
-    essentials: {
-        monthlyQuestionLimit: 150, // 100 * 1.5
-        allowedTypes: ["multiple_choice", "true_false", "open", "sum", "fill_in_the_blank"],
-        allowPdfUpload: false,
-        allowedDocModes: ["text", "file", "url"], // Text + Files + URLs
-    },
-    plus: {
-        monthlyQuestionLimit: 450, // 300 * 1.5
-        allowedTypes: [
-            "multiple_choice",
-            "true_false",
-            "open",
-            "sum",
-            "fill_in_the_blank",
-            "matching_columns",
-            "problem_solving",
-            "essay",
-        ],
-        allowPdfUpload: true,
-        allowedDocModes: ["text", "file", "url"], // All modes + PDF support
-    },
-    advanced: {
-        monthlyQuestionLimit: 450, // 300 * 1.5
-        allowedTypes: [
-            "multiple_choice",
-            "true_false",
-            "open",
-            "sum",
-            "fill_in_the_blank",
-            "matching_columns",
-            "problem_solving",
-            "essay",
-            "project_based",
-            "gamified",
-            "summative",
-        ],
-        allowPdfUpload: true,
-        allowedDocModes: ["text", "file", "url"], // All modes + PDF support
-    },
+type DocumentMode = "file" | "url" | "text";
+
+type PlanConfig = {
+    id: string;
+    monthlyQuestionLimit: number;
+    docTypes: string[];
+    maxQuestionTypes: number;
 };
+
+const DEFAULT_PLAN_CONFIG: PlanConfig = {
+    id: "starter",
+    monthlyQuestionLimit: 30,
+    docTypes: ["text", "docx", "txt"],
+    maxQuestionTypes: 1,
+};
+
+function mapDocTypesToModes(docTypes: string[]): { modes: DocumentMode[]; allowPdf: boolean } {
+    if (!docTypes || docTypes.length === 0) {
+        return { modes: ["text"], allowPdf: false };
+    }
+
+    const normalized = docTypes.map((type) => type.toLowerCase());
+    const modes = new Set<DocumentMode>();
+
+    if (normalized.includes("text")) {
+        modes.add("text");
+    }
+
+    if (normalized.includes("link") || normalized.includes("url")) {
+        modes.add("url");
+    }
+
+    if (normalized.some((type) => ["txt", "doc", "docx", "ppt", "pptx", "pdf"].includes(type))) {
+        modes.add("file");
+    }
+
+    if (modes.size === 0) {
+        modes.add("text");
+    }
+
+    return {
+        modes: Array.from(modes),
+        allowPdf: normalized.includes("pdf"),
+    };
+}
 
 export default function NewAssessmentPage() {
     const [title, setTitle] = useState("");
@@ -118,7 +107,7 @@ export default function NewAssessmentPage() {
     const [questionContext, setQuestionContext] = useState("");
 
     // Document input modes - supports multiple documents of each type
-    const [documentMode, setDocumentMode] = useState<"file" | "url" | "text">("file");
+    const [documentMode, setDocumentMode] = useState<DocumentMode>("file");
     const [documentUrls, setDocumentUrls] = useState<string[]>([""]);
     const [documentTexts, setDocumentTexts] = useState<string[]>([""]);
 
@@ -129,15 +118,50 @@ export default function NewAssessmentPage() {
     const [questionTypes, setQuestionTypes] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
     const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
-    const [filteredTitleSuggestions, setFilteredTitleSuggestions] = useState<string[]>([]);
-    const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
     const [userPlan, setUserPlan] = useState<string>("starter");
     const [allowedQuestionTypes, setAllowedQuestionTypes] = useState<string[]>([]);
+    const [planConfig, setPlanConfig] = useState<PlanConfig>(DEFAULT_PLAN_CONFIG);
+    const [planConfigId, setPlanConfigId] = useState<string>(DEFAULT_PLAN_CONFIG.id);
     const [monthlyUsage, setMonthlyUsage] = useState<number>(0);
-    const [maxQuestions, setMaxQuestions] = useState<number>(30);
+    const [maxQuestions, setMaxQuestions] = useState<number>(DEFAULT_PLAN_CONFIG.monthlyQuestionLimit);
     const router = useRouter();
     const { toast } = useToast();
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
+    const { modes: allowedDocModes, allowPdf: canUploadPdf } = useMemo(
+        () => mapDocTypesToModes(planConfig.docTypes),
+        [planConfig]
+    );
+
+    useEffect(() => {
+        if (allowedDocModes.length === 0) return;
+
+        if (!allowedDocModes.includes(documentMode)) {
+            const fallbackMode = allowedDocModes[0] ?? "text";
+            setDocumentMode(fallbackMode);
+        }
+    }, [allowedDocModes]); // Removido documentMode das dependências para evitar loop
+
+    const titleOptions = useMemo(
+        () => titleSuggestions.map((item) => ({ value: item, label: item })),
+        [titleSuggestions]
+    );
+
+    const subjectOptions = useMemo(() => {
+        const normalized = new Map<string, string>();
+
+        SUBJECTS.forEach((subjectName) => {
+            normalized.set(subjectName.toLowerCase(), subjectName);
+        });
+
+        subjectSuggestions.forEach((subjectName) => {
+            const key = subjectName.toLowerCase();
+            if (!normalized.has(key)) {
+                normalized.set(key, subjectName);
+            }
+        });
+
+        return Array.from(normalized.values()).map((subjectName) => ({ value: subjectName, label: subjectName }));
+    }, [subjectSuggestions]);
 
     // Buscar plano do usuário e uso atual
     useEffect(() => {
@@ -149,18 +173,43 @@ export default function NewAssessmentPage() {
                 if (!user) return;
 
                 // Buscar plano e tipos selecionados do usuário
-                const { data: profile } = await supabase
+                const { data: profile, error: profileError } = await supabase
                     .from("profiles")
                     .select("id, plan, selected_question_types")
                     .eq("user_id", user.id)
                     .single();
 
+                if (profileError) throw profileError;
+
                 if (profile) {
                     setUserPlan(profile.plan);
                     setAllowedQuestionTypes(profile.selected_question_types || []);
+
+                    const { data: planData, error: planError } = await supabase
+                        .from("plans")
+                        .select("id, questions_month, doc_type, max_question_types")
+                        .eq("id", profile.plan)
+                        .single();
+
+                    if (planError) throw planError;
+
+                    if (planData) {
+                        setPlanConfig({
+                            id: planData.id,
+                            monthlyQuestionLimit: planData.questions_month ?? DEFAULT_PLAN_CONFIG.monthlyQuestionLimit,
+                            docTypes: planData.doc_type ?? DEFAULT_PLAN_CONFIG.docTypes,
+                            maxQuestionTypes: planData.max_question_types ?? DEFAULT_PLAN_CONFIG.maxQuestionTypes,
+                        });
+                        setPlanConfigId(planData.id);
+                    } else {
+                        setPlanConfig(DEFAULT_PLAN_CONFIG);
+                        setPlanConfigId(DEFAULT_PLAN_CONFIG.id);
+                    }
                 }
             } catch (error) {
                 console.error("Erro ao buscar plano:", error);
+                setPlanConfig(DEFAULT_PLAN_CONFIG);
+                setPlanConfigId(DEFAULT_PLAN_CONFIG.id);
             }
         };
 
@@ -176,47 +225,64 @@ export default function NewAssessmentPage() {
                 } = await supabase.auth.getUser();
                 if (!user) return;
 
-                // Buscar profile
-                const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
+                const { data: profile, error: profileError } = await supabase
+                    .from("profiles")
+                    .select("id")
+                    .eq("user_id", user.id)
+                    .single();
 
+                if (profileError) throw profileError;
                 if (!profile) return;
 
-                // Calcular início do mês atual
-                const startOfMonth = new Date();
-                startOfMonth.setDate(1);
-                startOfMonth.setHours(0, 0, 0, 0);
+                const now = new Date();
+                const cycle = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-                // Buscar TODAS as questões geradas neste mês (independente da matéria)
-                const { data: questionsData } = await supabase
-                    .from("questions")
-                    .select(
-                        `
-                        id,
-                        assessments!inner (
-                            user_id,
-                            created_at
-                        )
-                    `
-                    )
-                    .eq("assessments.user_id", profile.id)
-                    .gte("assessments.created_at", startOfMonth.toISOString());
+                const { data: cycleUsage, error: usageError } = await supabase
+                    .from("profile_logs_cycle")
+                    .select("total_questions")
+                    .eq("user_id", profile.id)
+                    .eq("cycle", cycle)
+                    .maybeSingle();
 
-                const usage = questionsData?.length || 0;
+                if (usageError && usageError.code !== "PGRST116") {
+                    throw usageError;
+                }
+
+                const usage = cycleUsage?.total_questions ?? 0;
                 setMonthlyUsage(usage);
 
-                // Calcular máximo disponível
-                const planLimit = PLAN_LIMITS[userPlan]?.monthlyQuestionLimit || 30;
+                const planLimit = planConfig?.monthlyQuestionLimit ?? DEFAULT_PLAN_CONFIG.monthlyQuestionLimit;
                 const available = Math.max(0, planLimit - usage);
                 setMaxQuestions(available);
+
+                setQuestionCount((prev) => {
+                    const parsed = parseInt(prev, 10);
+                    const currentValue = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+
+                    if (available === 0) {
+                        return "0";
+                    }
+
+                    if (currentValue === 0) {
+                        const defaultValue = Math.min(10, available);
+                        return defaultValue.toString();
+                    }
+
+                    if (currentValue > available) {
+                        return available.toString();
+                    }
+
+                    return prev;
+                });
             } catch (error) {
                 console.error("Erro ao buscar uso mensal:", error);
             }
         };
 
-        if (userPlan) {
+        if (planConfigId) {
             fetchMonthlyUsage();
         }
-    }, [userPlan, supabase]);
+    }, [planConfigId, planConfig.monthlyQuestionLimit, supabase]);
 
     // Buscar títulos distintos de avaliações existentes
     useEffect(() => {
@@ -264,18 +330,6 @@ export default function NewAssessmentPage() {
         fetchSubjectSuggestions();
     }, [supabase]);
 
-    // Filtrar sugestões de título baseado no input
-    useEffect(() => {
-        if (title.trim()) {
-            const filtered = titleSuggestions.filter((suggestion) =>
-                suggestion.toLowerCase().includes(title.toLowerCase())
-            );
-            setFilteredTitleSuggestions(filtered);
-        } else {
-            setFilteredTitleSuggestions([]);
-        }
-    }, [title, titleSuggestions]);
-
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
 
@@ -283,9 +337,8 @@ export default function NewAssessmentPage() {
 
         // Verificar se tem PDFs e se o plano permite
         const hasPDFs = selectedFiles.some((file) => file.type === "application/pdf");
-        const allowPdfUpload = PLAN_LIMITS[userPlan]?.allowPdfUpload;
 
-        if (hasPDFs && !allowPdfUpload) {
+        if (hasPDFs && !canUploadPdf) {
             toast({
                 title: "PDF não permitido",
                 description: "PDFs são permitidos apenas para planos Plus e Advanced. Use arquivos DOCX.",
@@ -316,7 +369,7 @@ export default function NewAssessmentPage() {
         // PDFs em planos plus/advanced são enviados completos para a IA
         setExtracting(true);
         try {
-            const filesToExtract = selectedFiles.filter((file) => file.type !== "application/pdf" || !allowPdfUpload);
+            const filesToExtract = selectedFiles.filter((file) => file.type !== "application/pdf" || !canUploadPdf);
 
             if (filesToExtract.length > 0) {
                 const extracted = await extractTextFromFiles(filesToExtract, (current, total, fileName) => {
@@ -334,7 +387,7 @@ export default function NewAssessmentPage() {
                         avgTime / 1000
                     ).toFixed(1)}s em média.`,
                 });
-            } else if (hasPDFs && allowPdfUpload) {
+            } else if (hasPDFs && canUploadPdf) {
                 toast({
                     title: "PDFs adicionados",
                     description: `${selectedFiles.length} PDF(s) serão enviados completos para a IA (sem transcrição prévia).`,
@@ -492,7 +545,7 @@ export default function NewAssessmentPage() {
 
             // Processar arquivos
             if (files.length > 0) {
-                const allowPdfUpload = PLAN_LIMITS[userPlan]?.allowPdfUpload;
+                const allowPdfUpload = canUploadPdf;
                 const pdfFiles = files.filter((f) => f.type === "application/pdf");
 
                 // Para planos plus/advanced: enviar PDFs como arquivos base64
@@ -587,9 +640,7 @@ export default function NewAssessmentPage() {
             return "Você precisa fornecer material de referência (arquivo, texto ou link).";
         }
         if (maxQuestions === 0)
-            return `Você atingiu o limite mensal de ${
-                PLAN_LIMITS[userPlan]?.monthlyQuestionLimit || 30
-            } questões. Tente novamente no próximo mês ou faça upgrade do seu plano.`;
+            return `Você atingiu o limite mensal de ${planConfig.monthlyQuestionLimit} questões. Tente novamente no próximo mês ou faça upgrade do seu plano.`;
         if (!title.trim()) return "Preencha o título da avaliação.";
         if (!subject) return "Selecione uma matéria.";
         if (!questionContext) return "Selecione o contexto/nível da questão.";
@@ -631,51 +682,15 @@ export default function NewAssessmentPage() {
                                 {/* Título da Avaliação com Autocomplete */}
                                 <div className="space-y-2">
                                     <Label htmlFor="title">Título da Avaliação *</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="title"
-                                            value={title}
-                                            onChange={(e) => {
-                                                setTitle(e.target.value);
-                                                setShowTitleSuggestions(true);
-                                            }}
-                                            onFocus={() => setShowTitleSuggestions(true)}
-                                            onBlur={() => {
-                                                // Delay para permitir click nas sugestões
-                                                setTimeout(() => setShowTitleSuggestions(false), 200);
-                                            }}
-                                            placeholder="Ex: Revolução Francesa, Equações do 2º Grau..."
-                                            required
-                                            autoComplete="off"
-                                        />
-                                        {showTitleSuggestions && filteredTitleSuggestions.length > 0 && (
-                                            <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md">
-                                                <div className="p-1 max-h-[200px] overflow-y-auto">
-                                                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                                                        Títulos usados anteriormente
-                                                    </div>
-                                                    {filteredTitleSuggestions.slice(0, 5).map((suggestion, index) => (
-                                                        <div
-                                                            key={index}
-                                                            className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-                                                            onClick={() => {
-                                                                setTitle(suggestion);
-                                                                setShowTitleSuggestions(false);
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    title === suggestion ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {suggestion}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <Autocomplete
+                                        id="title"
+                                        value={title}
+                                        onValueChange={setTitle}
+                                        options={titleOptions}
+                                        placeholder="Selecione ou digite o título da avaliação"
+                                        emptyText="Nenhum título encontrado. Digite para criar um novo."
+                                        searchPlaceholder="Buscar título..."
+                                    />
                                     <div className="flex items-start gap-2 p-2 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
                                         <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                                         <p className="text-xs text-blue-800 dark:text-blue-300">
@@ -712,33 +727,31 @@ export default function NewAssessmentPage() {
                                         <Input
                                             id="questionCount"
                                             type="number"
-                                            min="1"
-                                            max={maxQuestions}
+                                            min={maxQuestions === 0 ? 0 : 1}
+                                            max={Math.max(0, maxQuestions)}
                                             value={questionCount}
                                             onChange={(e) => {
                                                 const val = parseInt(e.target.value) || 0;
-                                                setQuestionCount(Math.min(val, maxQuestions).toString());
+                                                const capped =
+                                                    maxQuestions === 0 ? 0 : Math.max(1, Math.min(val, maxQuestions));
+                                                setQuestionCount(capped.toString());
                                             }}
                                             required
+                                            disabled={maxQuestions === 0}
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            Plano {userPlan}: {monthlyUsage}/
-                                            {PLAN_LIMITS[userPlan]?.monthlyQuestionLimit || 30} questões usadas este
-                                            mês. <strong>Disponível: {maxQuestions}</strong>
+                                            Plano {userPlan}: {monthlyUsage}/{planConfig.monthlyQuestionLimit} questões
+                                            usadas este mês. <strong>Disponível: {maxQuestions}</strong>
                                         </p>
                                     </div>
 
                                     <div className="space-y-2">
                                         <Label htmlFor="subject">Conteúdo das Questões *</Label>
-                                        <SubjectAutocomplete
+                                        <Autocomplete
+                                            id="subject"
                                             value={subject}
                                             onValueChange={setSubject}
-                                            options={[
-                                                ...SUBJECTS.map((s) => ({ value: s, label: s })),
-                                                ...subjectSuggestions
-                                                    .filter((s) => !SUBJECTS.includes(s))
-                                                    .map((s) => ({ value: s, label: s })),
-                                            ]}
+                                            options={subjectOptions}
                                             placeholder="Selecione ou digite a matéria/tema"
                                             emptyText="Nenhuma matéria encontrada. Digite para criar uma nova."
                                             searchPlaceholder="Buscar matéria ou tema..."
@@ -763,7 +776,7 @@ export default function NewAssessmentPage() {
                                                 )}
                                         </Label>
                                         <div className="flex gap-1">
-                                            {PLAN_LIMITS[userPlan]?.allowedDocModes.includes("text") && (
+                                            {allowedDocModes.includes("text") && (
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
@@ -786,7 +799,7 @@ export default function NewAssessmentPage() {
                                                 </TooltipProvider>
                                             )}
 
-                                            {PLAN_LIMITS[userPlan]?.allowedDocModes.includes("url") && (
+                                            {allowedDocModes.includes("url") && (
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
@@ -807,7 +820,7 @@ export default function NewAssessmentPage() {
                                                 </TooltipProvider>
                                             )}
 
-                                            {PLAN_LIMITS[userPlan]?.allowedDocModes.includes("file") && (
+                                            {allowedDocModes.includes("file") && (
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
@@ -826,7 +839,7 @@ export default function NewAssessmentPage() {
                                                         <TooltipContent>
                                                             <p>
                                                                 Enviar arquivo (DOC/DOCX
-                                                                {PLAN_LIMITS[userPlan]?.allowPdfUpload ? "/PDF" : ""})
+                                                                {canUploadPdf ? "/PDF" : ""})
                                                             </p>
                                                         </TooltipContent>
                                                     </Tooltip>
@@ -944,7 +957,7 @@ export default function NewAssessmentPage() {
                                                 🔗 Insira links para artigos, PDFs online, páginas da web ou recursos
                                                 educacionais
                                             </p>
-                                            {!PLAN_LIMITS[userPlan]?.allowedDocModes.includes("url") && (
+                                            {!allowedDocModes.includes("url") && (
                                                 <div className="flex items-start gap-2 p-3 rounded-lg bg-muted border border-border">
                                                     <Lock className="h-4 w-4 text-muted-foreground mt-0.5" />
                                                     <div className="text-xs text-muted-foreground">
@@ -974,7 +987,7 @@ export default function NewAssessmentPage() {
                                                     Arraste arquivos aqui ou clique para selecionar
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {PLAN_LIMITS[userPlan]?.allowPdfUpload
+                                                    {canUploadPdf
                                                         ? "PDF, DOC ou DOCX - Máximo 10MB por arquivo, 30MB total"
                                                         : "DOC ou DOCX - Máximo 10MB por arquivo, 30MB total"}
                                                 </p>

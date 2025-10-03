@@ -15,6 +15,7 @@ import {
     GenerateQuestionsInput,
 } from "@/lib/genkit/prompts";
 import { QuestionType } from "@/db/schema";
+import { checkUserQuota, updateProfileLogsCycle } from "@/lib/usage-tracking";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 segundos para chamadas de IA
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
         const body: GenerateQuestionsRequest = await request.json();
         const {
             title,
-            questionCount,
+            questionCount: requestedQuestionCount,
             subject,
             subjectId,
             questionTypes,
@@ -83,10 +84,29 @@ export async function POST(request: NextRequest) {
             pdfFiles,
         } = body;
 
+        const normalizedQuestionCount = Number(requestedQuestionCount);
+
+        if (!Number.isFinite(normalizedQuestionCount) || normalizedQuestionCount <= 0) {
+            return NextResponse.json({ error: "Quantidade de questões inválida" }, { status: 400 });
+        }
+
+        const totalRequestedQuestions = Math.max(1, Math.floor(normalizedQuestionCount));
+
         // Validações
         console.log(body);
         if (!title || !subject || !subjectId || !questionTypes || questionTypes.length === 0 || !questionContext) {
             return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+        }
+
+        const hasQuota = await checkUserQuota(profile.id, totalRequestedQuestions);
+
+        if (!hasQuota) {
+            return NextResponse.json(
+                {
+                    error: "Você atingiu o limite mensal de geração de questões do seu plano. Aguarde o próximo ciclo ou faça upgrade.",
+                },
+                { status: 403 }
+            );
         }
 
         // 3. Criar o assessment
@@ -107,8 +127,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 4. Distribuir questões pelos tipos
-        const questionsPerType = Math.floor(questionCount / questionTypes.length);
-        const remainder = questionCount % questionTypes.length;
+        const questionsPerType = Math.floor(totalRequestedQuestions / questionTypes.length);
+        const remainder = totalRequestedQuestions % questionTypes.length;
 
         const allGeneratedQuestions: any[] = [];
 
@@ -228,6 +248,10 @@ export async function POST(request: NextRequest) {
                     console.error("Erro ao inserir respostas:", answersError);
                 }
             }
+        }
+
+        if (allGeneratedQuestions.length > 0) {
+            await updateProfileLogsCycle(profile.id, subject.trim() || "Geral", allGeneratedQuestions.length);
         }
 
         // 8. Retornar sucesso
