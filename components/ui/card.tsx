@@ -5,14 +5,14 @@ import { cn } from "@/lib/utils";
 
 // MD3 Card Variants
 const cardVariants = cva(
-  "rounded-lg transition-shadow duration-medium-1 ease-standard",
+  "rounded-lg",
   {
     variants: {
       variant: {
         // Default variant with border
         default: "border bg-card text-card-foreground shadow-sm",
         // MD3 Elevated variant
-        elevated: "bg-surface-container shadow-elevation-1 hover:shadow-elevation-2",
+        elevated: "bg-surface-container shadow-elevation-1 hover:shadow-elevation-2 transition-shadow duration-medium-1 ease-standard",
         // MD3 Filled variant
         filled: "bg-surface-container-highest",
         // MD3 Outlined variant
