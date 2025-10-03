@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -48,86 +48,21 @@ export default function DashboardPage() {
   // Combined loading state
   const loading = profileLoading || planLoading || usageLoading;
 
-  // Derived values from cache
-  const monthlyUsage = usage;
-  const monthlyLimit = plan?.questions_month || 30;
-  const planName = plan?.id ? plan.id.charAt(0).toUpperCase() + plan.id.slice(1) : 'Starter';
+  // Derived values from cache (memoized to prevent unnecessary re-renders)
+  const monthlyUsage = useMemo(() => usage ?? 0, [usage]);
+  const monthlyLimit = useMemo(() => plan?.questions_month ?? 30, [plan?.questions_month]);
+  const planName = useMemo(
+    () => (plan?.id ? plan.id.charAt(0).toUpperCase() + plan.id.slice(1) : 'Starter'),
+    [plan?.id]
+  );
 
   // Cache configuration for stats
   const CACHE_KEY = 'dashboard_stats_cache';
   const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
 
-  useEffect(() => {
-    // Verificar se veio da confirmação de email
-    const searchParams = new URLSearchParams(window.location.search);
-    const confirmed = searchParams.get('confirmed');
-
-    if (confirmed === 'true') {
-      toast({
-        title: 'Email confirmado com sucesso!',
-        description: 'Bem-vindo à plataforma Prova Fácil. Agora você pode começar a criar suas avaliações.',
-        duration: 8000,
-      });
-      // Limpar o parâmetro da URL
-      window.history.replaceState({}, '', '/dashboard');
-    }
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-
-      if (!session) {
-        router.push('/auth');
-      }
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (!session) {
-        router.push('/auth');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
-
-  // Fetch stats when profile loads
-  useEffect(() => {
-    if (profile?.id) {
-      fetchStatsWithCache();
-    }
-  }, [profile?.id]);
-
-  const fetchStatsWithCache = async () => {
-    if (!profile?.id) return; // Wait for profile to load
-
-    try {
-      // Verificar cache
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        const now = Date.now();
-
-        // Se cache válido (menos de 10 minutos), usar dados cacheados
-        if (now - timestamp < CACHE_DURATION) {
-          setStats(data);
-          return;
-        }
-      }
-
-      // Se cache inválido ou inexistente, buscar novos dados
-      await fetchStats();
-    } catch (error) {
-      console.error('Erro ao carregar cache:', error);
-      await fetchStats();
-    }
-  };
-
-  const fetchStats = async () => {
-    if (!profile?.id) return; // Guard clause
+  // Memoized fetchStats to prevent infinite loops
+  const fetchStats = useCallback(async () => {
+    if (!profile?.id) return;
 
     try {
       // Buscar todas as questões com copy_count e informações de cópia
@@ -154,12 +89,9 @@ export default function DashboardPage() {
       if (error) throw error;
 
       const total = questionsData?.length || 0;
-
-      // Calcular estatísticas de cópias
-      const totalCopies = questionsData?.reduce((sum, q: any) => sum + (q.copy_count || 0), 0) || 0;
+      const totalCopies = questionsData?.reduce((sum: number, q: any) => sum + (q.copy_count || 0), 0) || 0;
       const uniqueQuestionsCopied = questionsData?.filter((q: any) => (q.copy_count || 0) > 0).length || 0;
 
-      // Encontrar questão mais copiada
       const mostCopied = questionsData?.reduce((max: any, q: any) => {
         return (q.copy_count || 0) > (max?.copy_count || 0) ? q : max;
       }, null);
@@ -173,7 +105,6 @@ export default function DashboardPage() {
             }
           : undefined;
 
-      // Agrupar por matéria (subject é uma string, não um objeto)
       const bySubject: Record<string, { count: number; name: string }> = {};
       questionsData?.forEach((q: any) => {
         const subject = q.assessments?.subject;
@@ -185,41 +116,121 @@ export default function DashboardPage() {
         }
       });
 
-      // Agrupar por tipo
       const byType: Record<string, number> = {};
       questionsData?.forEach((q: any) => {
         const type = q.type || 'unknown';
         byType[type] = (byType[type] || 0) + 1;
       });
 
-      setStats({
+      const newStats = {
         total,
         bySubject,
         byType,
         totalCopies,
         uniqueQuestionsCopied,
         mostCopiedQuestion,
+      };
+
+      // Use functional setState to avoid unnecessary updates
+      setStats((prev) => {
+        const prevJson = JSON.stringify(prev);
+        const nextJson = JSON.stringify(newStats);
+        if (prevJson === nextJson) return prev;
+        return newStats;
       });
 
-      // Salvar no cache
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({
-          data: {
-            total,
-            bySubject,
-            byType,
-            totalCopies,
-            uniqueQuestionsCopied,
-            mostCopiedQuestion,
-          },
-          timestamp: Date.now(),
-        })
-      );
+      // Salvar no cache de forma segura
+      try {
+        localStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            data: newStats,
+            timestamp: Date.now(),
+          })
+        );
+      } catch (e) {
+        console.warn('Não foi possível salvar cache:', e);
+      }
     } catch (error: any) {
       console.error('Erro ao carregar estatísticas:', error);
     }
-  };
+  }, [profile?.id, supabase]);
+
+  const fetchStatsWithCache = useCallback(async () => {
+    if (!profile?.id) return;
+
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const now = Date.now();
+        if (now - timestamp < CACHE_DURATION) {
+          setStats((prev) => {
+            const prevJson = JSON.stringify(prev);
+            const nextJson = JSON.stringify(data);
+            if (prevJson === nextJson) return prev;
+            return data;
+          });
+          return;
+        }
+      }
+      await fetchStats();
+    } catch (error) {
+      console.error('Erro ao carregar cache:', error);
+      await fetchStats();
+    }
+  }, [profile?.id, fetchStats]);
+
+  useEffect(() => {
+    // Verificar se veio da confirmação de email
+    const searchParams = new URLSearchParams(window.location.search);
+    const confirmed = searchParams.get('confirmed');
+
+    if (confirmed === 'true') {
+      toast({
+        title: 'Email confirmado com sucesso!',
+        description: 'Bem-vindo à plataforma Prova Fácil. Agora você pode começar a criar suas avaliações.',
+        duration: 8000,
+      });
+      window.history.replaceState({}, '', '/dashboard');
+    }
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser((prev) => {
+        const newUser = session?.user ?? null;
+        if (prev?.id === newUser?.id) return prev;
+        return newUser;
+      });
+
+      if (!session) {
+        router.push('/auth');
+      }
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser((prev) => {
+        const newUser = session?.user ?? null;
+        if (prev?.id === newUser?.id) return prev;
+        return newUser;
+      });
+      if (!session) {
+        router.push('/auth');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router, supabase, toast]);
+
+  // Fetch stats when profile loads
+  useEffect(() => {
+    if (profile?.id) {
+      fetchStatsWithCache();
+    }
+  }, [profile?.id, fetchStatsWithCache]);
 
   if (loading) {
     return (
