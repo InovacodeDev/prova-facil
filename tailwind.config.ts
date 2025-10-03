@@ -214,6 +214,9 @@ export default {
                 xl: "var(--radius-xl)",
                 "2xl": "var(--radius-2xl)",
                 full: "var(--radius-full)",
+                // Legacy calculated values for backward compatibility
+                "legacy-calc-sm": "calc(var(--radius) - 2px)",
+                "legacy-calc-md": "calc(var(--radius) - 4px)",
             },
             keyframes: {
                 "accordion-down": {
