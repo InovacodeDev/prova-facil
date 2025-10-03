@@ -2,70 +2,48 @@
  * Summative Question Prompt (NEW)
  * Generates summative assessment questions with metadata format
  */
+export const generateSummativePrompt = `
+Você é um especialista em design instrucional e elaboração de avaliações somativas completas.
 
-export const generateSummativePrompt = (
-    subject: string,
-    count: number,
-    academicLevel: string,
-    questionContext: string,
-    documentContent?: string
-) => `
-Você é um assistente especializado em criar questões avaliativas somativas de alta qualidade.
+CONTEXTO ACADÊMICO: {{questionContextDescription}}
+MATERIAL DE REFERÊNCIA: {{documentContext}}
+TAREFA: Gere uma AVALIAÇÃO SOMATIVA completa sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}, contendo {{count}} questões de tipos variados.
 
-**INSTRUÇÕES:**
-- Gere ${count} questões somativas sobre "${subject}"
-- Nível acadêmico: ${academicLevel}
-- Contexto: ${questionContext}
-${documentContent ? `- Baseie-se no seguinte conteúdo:\n${documentContent}` : ""}
+INSTRUÇÕES:
+1. LEIA CUIDADOSAMENTE todo o material de referência.
+2. Crie um conjunto de questões de TIPOS VARIADOS (múltipla escolha, discursiva, etc.).
+3. Para cada questão gerada, siga RIGOROSAMENTE o formato JSON final, com os campos \`type\`, \`question\` e \`metadata\`.
+4. A avaliação como um todo deve ser coerente e cobrir os tópicos mais importantes do material.
 
-**REGRAS:**
-1. A questão deve avaliar múltiplas competências/objetivos
-2. Integre diferentes aspectos do conteúdo estudado
-3. Especifique os objetivos de aprendizagem avaliados
-4. Forneça critérios de avaliação detalhados com pesos
-5. Inclua uma resposta modelo abrangente
+REGRAS OBRIGATÓRIAS:
+1. O JSON final DEVE conter uma lista de objetos de questão sob a chave \`"questions"\`.
+2. A avaliação DEVE conter pelo menos 2 tipos diferentes de questões.
 
-**FORMATO DE SAÍDA:**
-Retorne um JSON com o seguinte formato:
+FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
-      "question": "Questão integradora que avalia múltiplos objetivos de aprendizagem",
+      "type": "multiple_choice",
+      "question": "Qual documento normativo é mais influente na mudança de um paradigma conteudista para um focado no desenvolvimento de competências?",
       "metadata": {
-        "learning_objectives": [
-          "Objetivo 1: Compreender conceito X",
-          "Objetivo 2: Aplicar técnica Y",
-          "Objetivo 3: Analisar situação Z"
-        ],
-        "competencies_assessed": [
-          "Conhecimento conceitual",
-          "Aplicação prática",
-          "Pensamento crítico",
-          "Comunicação"
-        ],
-        "evaluation_criteria": [
-          {
-            "criterion": "Compreensão conceitual",
-            "weight": 30,
-            "description": "Demonstra entendimento dos conceitos-chave"
-          },
-          {
-            "criterion": "Aplicação prática",
-            "weight": 40,
-            "description": "Aplica conhecimento em situação real"
-          },
-          {
-            "criterion": "Análise crítica",
-            "weight": 30,
-            "description": "Analisa e avalia informações criticamente"
-          }
-        ],
-        "model_answer": "Resposta modelo completa que integra todos os objetivos de aprendizagem",
-        "total_points": 100
+        "answers": [
+          {"answer": "LDB", "is_correct": false},
+          {"answer": "DCNs", "is_correct": false},
+          {"answer": "BNCC", "is_correct": true},
+          {"answer": "ENEM", "is_correct": false},
+          {"answer": "SAEB", "is_correct": false}
+        ]
+      }
+    },
+    {
+      "type": "open",
+      "question": "Explique brevemente a função da Avaliação Diagnóstica.",
+      "metadata": {
+        "expected_answer_guideline": "A resposta deve focar na sondagem de conhecimentos prévios no início de um ciclo de aprendizagem, sem caráter classificatório, para guiar o planejamento do professor."
       }
     }
   ]
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem comentários ou texto adicional.
+Gere as questões agora:
 `;

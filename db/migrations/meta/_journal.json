@@ -78,6 +78,13 @@
       "when": 1759433038179,
       "tag": "0010_previous_molten_man",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1759451173304,
+      "tag": "0011_minor_whizzer",
+      "breakpoints": true
     }
   ]
 }

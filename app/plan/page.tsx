@@ -152,13 +152,13 @@ export default function PlanPage() {
                         >
                             Anual
                             <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">
-                                -17%
+                                -25%
                             </Badge>
                         </Button>
                     </div>
                     {billingPeriod === "annual" && (
                         <p className="text-sm text-green-600 mt-2 font-medium">
-                            🎉 Economize 2 meses ao escolher o plano anual!
+                            🎉 Economize ~75 dias (equivalente a 2,5 meses) ao escolher o plano anual!
                         </p>
                     )}
                 </div>
@@ -169,8 +169,8 @@ export default function PlanPage() {
                         {plans.map((plan) => (
                             <Card
                                 key={plan.id}
-                                className={`relative flex flex-col w-[320px] ${
-                                    plan.highlighted ? "border-primary shadow-lg scale-105" : ""
+                                className={`relative flex flex-col w-[320px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+                                    plan.highlighted ? "border-primary border-2 shadow-lg" : ""
                                 }`}
                             >
                                 {plan.highlighted && (

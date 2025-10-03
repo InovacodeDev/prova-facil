@@ -2,47 +2,35 @@
  * Problem Solving Question Prompt
  * Generates problem-solving questions with metadata format
  */
+export const generateProblemSolvingPrompt = `
+Você é um especialista em criar questões-problema que avaliam a aplicação prática de conhecimento.
 
-export const generateProblemSolvingPrompt = (
-    subject: string,
-    count: number,
-    academicLevel: string,
-    questionContext: string,
-    documentContent?: string
-) => `
-Você é um assistente especializado em criar questões de resolução de problemas de alta qualidade.
+CONTEXTO ACADÊMICO: {{questionContextDescription}}
+MATERIAL DE REFERÊNCIA: {{documentContext}}
+TAREFA: Gere {{count}} questões-problema sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
-**INSTRUÇÕES:**
-- Gere ${count} questões de resolução de problemas sobre "${subject}"
-- Nível acadêmico: ${academicLevel}
-- Contexto: ${questionContext}
-${documentContent ? `- Baseie-se no seguinte conteúdo:\n${documentContent}` : ""}
+INSTRUÇÕES:
+1. LEIA CUIDADOSAMENTE todo o material de referência.
+2. Elabore um CENÁRIO prático e uma TAREFA clara. Juntos, eles formam o enunciado no campo \`question\`.
+3. O guia de resolução detalhado vai no campo \`metadata.solution_guideline\`.
 
-**REGRAS:**
-1. Apresente um problema real ou situação prática
-2. Forneça uma solução detalhada passo a passo
-3. Inclua o raciocínio usado na resolução
-4. Use linguagem técnica apropriada
-5. O problema deve ser desafiador mas adequado ao nível
+REGRAS OBRIGATÓRIAS:
+1. O campo \`type\` DEVE ser "problem_solving".
+2. O problema DEVE ser solucionável com base no material fornecido.
+3. O guia de resolução em \`metadata\` deve explicar os passos lógicos para a solução.
 
-**FORMATO DE SAÍDA:**
-Retorne um JSON com o seguinte formato:
+FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
-      "question": "Descrição detalhada do problema a ser resolvido.",
+      "type": "problem_solving",
+      "question": "CENÁRIO: Um desenvolvedor está criando um sistema de provas e precisa decidir quais tipos de questão priorizar para o Ensino Fundamental (Anos Iniciais).\n\nTAREFA: Com base na análise de prevalência do material, liste os dois tipos de questão de 'alta prevalência' ou 'essenciais' para este segmento e explique brevemente sua função pedagógica.",
       "metadata": {
-        "solution_steps": [
-          "Passo 1: Identificar os dados do problema",
-          "Passo 2: Aplicar a fórmula X",
-          "Passo 3: Calcular o resultado"
-        ],
-        "final_answer": "Resposta final com unidades/conclusão",
-        "reasoning": "Explicação do raciocínio usado"
+        "solution_guideline": "A resposta deve identificar 'Completar Lacunas' e 'Associação de Colunas' como os tipos de maior prevalência. A explicação deve mencionar que 'Completar Lacunas' é eficaz para avaliar vocabulário e memorização, enquanto 'Associação de Colunas' mede a capacidade de relacionar conceitos."
       }
     }
   ]
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem comentários ou texto adicional.
+Gere as questões agora:
 `;

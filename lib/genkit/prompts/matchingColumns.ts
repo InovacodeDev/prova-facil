@@ -2,52 +2,49 @@
  * Matching Columns Question Prompt
  * Generates matching columns questions with metadata format
  */
+export const generateMatchingColumnsPrompt = `
+Você é um especialista em criar questões de associação de colunas para avaliações educacionais.
 
-export const generateMatchingColumnsPrompt = (
-    subject: string,
-    count: number,
-    academicLevel: string,
-    questionContext: string,
-    documentContent?: string
-) => `
-Você é um assistente especializado em criar questões de associação de colunas de alta qualidade.
+CONTEXTO ACADÊMICO: {{questionContextDescription}}
+MATERIAL DE REFERÊNCIA: {{documentContext}}
+TAREFA: Gere {{count}} questões de associação de colunas sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
-**INSTRUÇÕES:**
-- Gere ${count} questões de associação de colunas sobre "${subject}"
-- Nível acadêmico: ${academicLevel}
-- Contexto: ${questionContext}
-${documentContent ? `- Baseie-se no seguinte conteúdo:\n${documentContent}` : ""}
+INSTRUÇÕES:
+1. LEIA CUIDADOSAMENTE todo o material de referência.
+2. A instrução da questão vai no campo \`question\`.
+3. No campo \`metadata\`, estruture as duas colunas (\`column_a\`, \`column_b\`) e a lista de correspondências corretas (\`correct_matches\`).
 
-**REGRAS:**
-1. Coluna A contém os conceitos/perguntas (use letras: a, b, c...)
-2. Coluna B contém as definições/respostas (use números: 1, 2, 3...)
-3. Use entre 4 e 6 itens em cada coluna
-4. Pode haver mais itens em uma coluna que na outra
-5. As correspondências devem ser claras
+REGRAS OBRIGATÓRIAS:
+1. O campo \`type\` DEVE ser "matching_columns".
+2. Cada item nas colunas DEVE ter um \`id\` único.
+3. A lista \`metadata.correct_matches\` DEVE usar os IDs para indicar os pares corretos.
 
-**FORMATO DE SAÍDA:**
-Retorne um JSON com o seguinte formato:
+FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
-      "question": "Associe os conceitos da coluna A com as definições da coluna B:",
+      "type": "matching_columns",
+      "question": "Associe os documentos normativos da educação brasileira (Coluna A) com suas principais contribuições (Coluna B).",
       "metadata": {
         "column_a": [
-          {"id": "a", "text": "Fotossíntese"},
-          {"id": "b", "text": "Respiração"}
+          {"id": "A1", "text": "LDB"},
+          {"id": "A2", "text": "DCNs"},
+          {"id": "A3", "text": "BNCC"}
         ],
         "column_b": [
-          {"id": "1", "text": "Produção de energia"},
-          {"id": "2", "text": "Produção de glicose"}
+          {"id": "B1", "text": "Detalha as aprendizagens essenciais e foca no desenvolvimento de competências."},
+          {"id": "B2", "text": "Estabelece o princípio da prevalência dos aspectos qualitativos sobre os quantitativos."},
+          {"id": "B3", "text": "Traduz os princípios da lei em normas para o planejamento curricular das escolas."}
         ],
         "correct_matches": [
-          {"column_a_id": "a", "column_b_id": "2"},
-          {"column_a_id": "b", "column_b_id": "1"}
+          {"from_id": "A1", "to_id": "B2"},
+          {"from_id": "A2", "to_id": "B3"},
+          {"from_id": "A3", "to_id": "B1"}
         ]
       }
     }
   ]
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem comentários ou texto adicional.
+Gere as questões agora:
 `;

@@ -2,64 +2,43 @@
  * Gamified Question Prompt (NEW)
  * Generates gamified questions with metadata format
  */
+export const generateGamifiedPrompt = `
+Você é um especialista em criar quizzes interativos e gamificados.
 
-export const generateGamifiedPrompt = (
-    subject: string,
-    count: number,
-    academicLevel: string,
-    questionContext: string,
-    documentContent?: string
-) => `
-Você é um assistente especializado em criar questões gamificadas de alta qualidade.
+CONTEXTO ACADÊMICO: {{questionContextDescription}}
+MATERIAL DE REFERÊNCIA: {{documentContext}}
+TAREFA: Gere {{count}} questões rápidas para um quiz gamificado sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
-**INSTRUÇÕES:**
-- Gere ${count} questões gamificadas sobre "${subject}"
-- Nível acadêmico: ${academicLevel}
-- Contexto: ${questionContext}
-${documentContent ? `- Baseie-se no seguinte conteúdo:\n${documentContent}` : ""}
+INSTRUÇÕES:
+1. LEIA CUIDADOSAMENTE todo o material de referência.
+2. A pergunta rápida vai no campo \`question\`.
+3. As alternativas e o feedback opcional vão dentro do campo \`metadata\`.
 
-**REGRAS:**
-1. Crie uma narrativa envolvente (história, desafio, missão)
-2. Divida o desafio em níveis/fases progressivas
-3. Cada nível deve ter um objetivo claro
-4. Defina pontuação para cada nível
-5. Especifique condições de sucesso e feedback
+REGRAS OBRIGATÓRIAS:
+1. O campo \`type\` DEVE ser "gamified".
+2. As perguntas devem ser concisas e diretas.
+3. A lista \`metadata.answers\` DEVE ter 4 alternativas.
+4. Apenas UMA alternativa DEVE ser correta.
 
-**FORMATO DE SAÍDA:**
-Retorne um JSON com o seguinte formato:
+FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
-      "question": "Narrativa/contexto da questão gamificada",
+      "type": "gamified",
+      "question": "Qual instrumento é considerado o principal na documentação do desenvolvimento na Educação Infantil?",
       "metadata": {
-        "narrative": "História ou contexto que envolve o aluno",
-        "game_type": "quiz_adventure / escape_room / simulation / puzzle",
-        "levels": [
-          {
-            "level_number": 1,
-            "objective": "O que o aluno deve fazer neste nível",
-            "challenge": "Descrição do desafio ou pergunta",
-            "points": 100,
-            "success_condition": "Critério para avançar"
-          },
-          {
-            "level_number": 2,
-            "objective": "Objetivo do segundo nível",
-            "challenge": "Desafio mais complexo",
-            "points": 200,
-            "success_condition": "Critério para completar"
-          }
+        "answers": [
+          {"answer": "Prova com nota", "is_correct": false},
+          {"answer": "Simulado", "is_correct": false},
+          {"answer": "Portfólio", "is_correct": true},
+          {"answer": "Redação", "is_correct": false}
         ],
-        "total_points": 300,
-        "feedback": {
-          "success": "Mensagem de sucesso motivadora",
-          "partial": "Mensagem para progresso parcial",
-          "failure": "Mensagem de encorajamento para tentar novamente"
-        }
+        "feedback_after_answer": "Isso mesmo! O portfólio conta a história da aprendizagem da criança, valorizando todo o processo.",
+        "time_limit_seconds": 20
       }
     }
   ]
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem comentários ou texto adicional.
+Gere as questões agora:
 `;

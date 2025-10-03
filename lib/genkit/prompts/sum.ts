@@ -2,47 +2,54 @@
  * Sum Question Prompt (Brazilian style - powers of 2)
  * Generates sum questions with metadata format
  */
+export const generateSumPrompt = `
+Você é um especialista em criar questões de somatória para avaliações educacionais.
 
-export const generateSumPrompt = (
-    subject: string,
-    count: number,
-    academicLevel: string,
-    questionContext: string,
-    documentContent?: string
-) => `
-Você é um assistente especializado em criar questões de soma (estilo ENEM brasileiro) de alta qualidade.
+CONTEXTO ACADÊMICO: {{questionContextDescription}}
 
-**INSTRUÇÕES:**
-- Gere ${count} questões de soma sobre "${subject}"
-- Nível acadêmico: ${academicLevel}
-- Contexto: ${questionContext}
-${documentContent ? `- Baseie-se no seguinte conteúdo:\n${documentContent}` : ""}
+MATERIAL DE REFERÊNCIA:
+{{documentContext}}
 
-**REGRAS:**
-1. Cada afirmativa deve ter um valor em potência de 2 (01, 02, 04, 08, 16, 32, 64, 128)
-2. Algumas afirmativas devem estar corretas, outras incorretas
-3. A resposta final é a SOMA dos valores das afirmativas corretas
-4. Use entre 4 e 6 afirmativas por questão
-5. As afirmativas devem ser claras e objetivas
+TAREFA: Gere {{count}} questões de somatória sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
-**FORMATO DE SAÍDA:**
-Retorne um JSON com o seguinte formato:
+INSTRUÇÕES:
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
+3. NÃO invente informações que não estão no material fornecido
+4. NÃO use conhecimento externo além do conteúdo fornecido
+5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
+6. Crie questões que sigam o contexto acadêmico especificado
+7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
+
+REGRAS OBRIGATÓRIAS PARA QUESTÕES DE SOMATÓRIA:
+1. Cada questão deve ter entre 1 e 7 afirmações
+2. Os números das alternativas DEVEM SER em ordem: 1, 2, 4, 8, 16, 32, 64 (potências de 2)
+3. NUNCA repita números, NUNCA pule números na sequência
+4. A soma das alternativas corretas NÃO PODE ultrapassar 99
+5. Cada afirmação deve ser independente e clara
+6. O enunciado deve pedir para "Assinale as alternativas corretas" ou similar
+7. Use o campo "number" com os valores exatos: 1, 2, 4, 8, 16, 32 ou 64
+
+FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
-      "question": "Enunciado da questão aqui. Assinale o que for correto:",
+      "type": "sum",
+      "question": "Sobre os instrumentos e funções da avaliação na Educação Básica, assinale o que for correto:",
       "metadata": {
-        "statements": [
-          {"value": 1, "statement": "Primeira afirmativa.", "is_correct": true},
-          {"value": 2, "statement": "Segunda afirmativa.", "is_correct": false},
-          {"value": 4, "statement": "Terceira afirmativa.", "is_correct": true},
-          {"value": 8, "statement": "Quarta afirmativa.", "is_correct": false}
-        ],
-        "correct_sum": 5
+        "propositions": [
+          {"answer": "A avaliação diagnóstica é aplicada ao final do ciclo letivo para classificar os alunos.", "number": 1, "is_correct": false},
+          {"answer": "O parecer descritivo é um instrumento qualitativo chave na Educação Infantil.", "number": 2, "is_correct": true},
+          {"answer": "O ENEM utiliza predominantemente questões de somatória em sua primeira fase.", "number": 4, "is_correct": false},
+          {"answer": "Rubricas são ferramentas que aumentam a transparência dos critérios de avaliação.", "number": 8, "is_correct": true},
+          {"answer": "A LDB determina a prevalência dos aspectos quantitativos sobre os qualitativos.", "number": 16, "is_correct": false}
+        ]
       }
     }
   ]
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem comentários ou texto adicional.
+IMPORTANTE: Verifique que a soma das alternativas corretas é <= 99!
+
+Gere as questões agora:
 `;

@@ -2,45 +2,39 @@
  * Fill in the Blank Question Prompt
  * Generates fill-in-the-blank questions with metadata format (supports multiple blanks)
  */
+export const generateFillInTheBlankPrompt = `
+Você é um especialista em criar questões de completar lacunas para avaliações educacionais.
 
-export const generateFillInTheBlankPrompt = (
-    subject: string,
-    count: number,
-    academicLevel: string,
-    questionContext: string,
-    documentContent?: string
-) => `
-Você é um assistente especializado em criar questões de preencher lacunas de alta qualidade.
+CONTEXTO ACADÊMICO: {{questionContextDescription}}
+MATERIAL DE REFERÊNCIA: {{documentContext}}
+TAREFA: Gere {{count}} questões de completar lacunas sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
-**INSTRUÇÕES:**
-- Gere ${count} questões de preencher lacunas sobre "${subject}"
-- Nível acadêmico: ${academicLevel}
-- Contexto: ${questionContext}
-${documentContent ? `- Baseie-se no seguinte conteúdo:\n${documentContent}` : ""}
+INSTRUÇÕES:
+1. LEIA CUIDADOSAMENTE todo o material de referência.
+2. Crie uma frase com UMA OU MAIS lacunas, marcadas como \`[BLANK_1]\`, \`[BLANK_2]\`, etc. Esta frase vai no campo \`question\`.
+3. No campo \`metadata\`, crie uma lista \`blanks\` contendo a identificação e a resposta correta para cada lacuna.
+4. Opcionalmente, adicione uma lista \`options_bank\` em \`metadata\` com as respostas corretas e alguns distratores.
 
-**REGRAS:**
-1. Cada questão pode ter 1 ou mais lacunas (use BLANK_1, BLANK_2, etc.)
-2. Forneça as respostas corretas para cada lacuna
-3. Opcionalmente, forneça um banco de opções para os alunos
-4. As lacunas devem testar conhecimento chave
-5. Use linguagem técnica apropriada
+REGRAS OBRIGATÓRIAS:
+1. O campo \`type\` DEVE ser "fill_in_the_blank".
+2. Os IDs na lista \`metadata.blanks\` DEVEM corresponder aos marcadores no texto da questão.
 
-**FORMATO DE SAÍDA:**
-Retorne um JSON com o seguinte formato:
+FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
-      "question": "O BLANK_1 é responsável pela BLANK_2 nas células.",
+      "type": "fill_in_the_blank",
+      "question": "A avaliação na Educação Infantil opera sob um paradigma de [BLANK_1], utilizando instrumentos qualitativos como observação e [BLANK_2], sem o objetivo de promoção.",
       "metadata": {
         "blanks": [
-          {"id": "BLANK_1", "correct_answer": "mitocôndria"},
-          {"id": "BLANK_2", "correct_answer": "respiração celular"}
+          {"id": "BLANK_1", "correct_answer": "não classificação"},
+          {"id": "BLANK_2", "correct_answer": "portfólios"}
         ],
-        "options_bank": ["mitocôndria", "núcleo", "respiração celular", "fotossíntese"]
+        "options_bank": ["não classificação", "somatória", "portfólios", "provas", "diagnóstico"]
       }
     }
   ]
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem comentários ou texto adicional.
+Gere as questões agora:
 `;

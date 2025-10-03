@@ -7,11 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, ArrowLeft, User, Camera, Loader2, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BookOpen, ArrowLeft, User, Camera, Loader2, Trash2, AlertCircle, CheckCircle2, Lock } from "lucide-react";
 import { ProvaFacilIcon } from "@/assets/logo";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { QUESTION_TYPES } from "@/lib/question-types";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -28,13 +31,27 @@ interface Profile {
     id: string;
     user_id: string;
     full_name: string | null;
+    plan: string;
+    selected_question_types: string[];
+    question_types_updated_at: string | null;
 }
+
+const PLAN_LIMITS: Record<string, { max_question_types: number }> = {
+    starter: { max_question_types: 1 },
+    basic: { max_question_types: 3 },
+    essentials: { max_question_types: 5 },
+    plus: { max_question_types: 8 },
+    advanced: { max_question_types: 11 },
+};
 
 export default function ProfilePage() {
     const [user, setUser] = useState<SupabaseUser | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
+    const [selectedQuestionTypes, setSelectedQuestionTypes] = useState<string[]>([]);
+    const [canUpdateTypes, setCanUpdateTypes] = useState(true);
+    const [nextUpdateDate, setNextUpdateDate] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -65,6 +82,24 @@ export default function ProfilePage() {
             if (profileData) {
                 setProfile(profileData);
                 setFullName(profileData.full_name || "");
+                setSelectedQuestionTypes(profileData.selected_question_types || []);
+
+                // Check if user can update question types
+                const { data: canUpdate } = await supabase.rpc("can_update_question_types", {
+                    user_id: profileData.id,
+                });
+
+                setCanUpdateTypes(canUpdate ?? false);
+
+                // Calculate next update date
+                if (profileData.question_types_updated_at) {
+                    const lastUpdate = new Date(profileData.question_types_updated_at);
+                    const nextUpdate = new Date(lastUpdate);
+                    nextUpdate.setMonth(nextUpdate.getMonth() + 1);
+                    setNextUpdateDate(
+                        nextUpdate.toLocaleDateString("pt-BR", { year: "numeric", month: "long", day: "numeric" })
+                    );
+                }
             }
         } catch (error: any) {
             console.error("Erro ao carregar dados do usuário:", error);
@@ -79,7 +114,7 @@ export default function ProfilePage() {
     };
 
     const handleSave = async () => {
-        if (!user) return;
+        if (!user || !profile) return;
 
         setSaving(true);
         try {
@@ -91,17 +126,55 @@ export default function ProfilePage() {
                 if (emailError) throw emailError;
             }
 
-            // Update profile
-            const { error: profileError } = await supabase.from("profiles").upsert({
+            // Check if question types changed
+            const typesChanged =
+                JSON.stringify([...selectedQuestionTypes].sort()) !==
+                JSON.stringify([...(profile.selected_question_types || [])].sort());
+
+            // Prepare update object
+            const updateData: any = {
                 user_id: user.id,
+                email,
                 full_name: fullName.trim() || null,
-            });
+            };
+
+            // Only update question types if changed and allowed
+            if (typesChanged) {
+                if (!canUpdateTypes) {
+                    toast({
+                        title: "Mudança não permitida",
+                        description: `Você só pode alterar os tipos de questões uma vez por mês. Próxima alteração disponível em: ${nextUpdateDate}`,
+                        variant: "destructive",
+                    });
+                    setSaving(false);
+                    return;
+                }
+
+                const maxTypes = PLAN_LIMITS[profile.plan]?.max_question_types || 1;
+                if (selectedQuestionTypes.length > maxTypes) {
+                    toast({
+                        title: "Limite excedido",
+                        description: `Seu plano permite no máximo ${maxTypes} tipos de questões.`,
+                        variant: "destructive",
+                    });
+                    setSaving(false);
+                    return;
+                }
+
+                updateData.selected_question_types = selectedQuestionTypes;
+                // Timestamp will be automatically updated by trigger
+            }
+
+            // Update profile
+            const { error: profileError } = await supabase.from("profiles").upsert({ ...profile, ...updateData });
 
             if (profileError) throw profileError;
 
             toast({
                 title: "Sucesso",
-                description: "Perfil atualizado com sucesso!",
+                description: typesChanged
+                    ? "Perfil e tipos de questões atualizados com sucesso!"
+                    : "Perfil atualizado com sucesso!",
             });
 
             await fetchUserData();
@@ -114,6 +187,28 @@ export default function ProfilePage() {
             });
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleToggleQuestionType = (typeId: string) => {
+        if (!profile) return;
+
+        const maxTypes = PLAN_LIMITS[profile.plan]?.max_question_types || 1;
+
+        if (selectedQuestionTypes.includes(typeId)) {
+            // Remove type
+            setSelectedQuestionTypes(selectedQuestionTypes.filter((t) => t !== typeId));
+        } else {
+            // Add type if within limit
+            if (selectedQuestionTypes.length < maxTypes) {
+                setSelectedQuestionTypes([...selectedQuestionTypes, typeId]);
+            } else {
+                toast({
+                    title: "Limite atingido",
+                    description: `Seu plano ${profile.plan} permite no máximo ${maxTypes} tipos de questões. Desmarque outro tipo primeiro.`,
+                    variant: "destructive",
+                });
+            }
         }
     };
 
@@ -240,6 +335,88 @@ export default function ProfilePage() {
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Question Types Selection */}
+                            {profile && (
+                                <div className="space-y-4 pt-4 border-t border-border">
+                                    <div>
+                                        <Label className="text-base">Tipos de Questões Disponíveis</Label>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            Selecione até {PLAN_LIMITS[profile.plan]?.max_question_types || 1} tipos de
+                                            questões para usar ({selectedQuestionTypes.length}/
+                                            {PLAN_LIMITS[profile.plan]?.max_question_types || 1} selecionados)
+                                        </p>
+                                    </div>
+
+                                    {!canUpdateTypes && (
+                                        <Alert>
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertTitle>Limite de Alterações Mensal</AlertTitle>
+                                            <AlertDescription>
+                                                Você só pode alterar os tipos de questões uma vez por mês. Próxima
+                                                alteração disponível em: <strong>{nextUpdateDate}</strong>
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {QUESTION_TYPES.map((type) => {
+                                            const isSelected = selectedQuestionTypes.includes(type.id);
+                                            const isDisabled = !canUpdateTypes;
+
+                                            return (
+                                                <div
+                                                    key={type.id}
+                                                    className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${
+                                                        isSelected
+                                                            ? "bg-primary/5 border-primary"
+                                                            : "border-border hover:border-primary/50"
+                                                    } ${
+                                                        isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                                                    }`}
+                                                    onClick={() => !isDisabled && handleToggleQuestionType(type.id)}
+                                                >
+                                                    <Checkbox
+                                                        id={type.id}
+                                                        checked={isSelected}
+                                                        disabled={isDisabled}
+                                                        onCheckedChange={() => handleToggleQuestionType(type.id)}
+                                                        className="mt-1"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <Label
+                                                            htmlFor={type.id}
+                                                            className={`font-medium cursor-pointer ${
+                                                                isDisabled ? "cursor-not-allowed" : ""
+                                                            }`}
+                                                        >
+                                                            {type.label}
+                                                        </Label>
+                                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                                            {type.description}
+                                                        </p>
+                                                    </div>
+                                                    {isSelected && (
+                                                        <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                                        <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        <AlertTitle className="text-blue-900 dark:text-blue-300">
+                                            Dica de Uso
+                                        </AlertTitle>
+                                        <AlertDescription className="text-blue-800 dark:text-blue-400">
+                                            Escolha os tipos de questões que você mais utiliza. Você poderá alterá-los
+                                            novamente após 30 dias. Para desbloquear mais tipos, considere fazer upgrade
+                                            do seu plano.
+                                        </AlertDescription>
+                                    </Alert>
+                                </div>
+                            )}
 
                             {/* Actions */}
                             <div className="flex gap-3 pt-4">

@@ -2,56 +2,39 @@
  * Essay Question Prompt
  * Generates essay/redação questions with metadata format
  */
+export const generateEssayPrompt = `
+Você é um especialista em elaborar propostas de redação para vestibulares e exames.
 
-export const generateEssayPrompt = (
-    subject: string,
-    count: number,
-    academicLevel: string,
-    questionContext: string,
-    documentContent?: string
-) => `
-Você é um assistente especializado em criar propostas de redação/dissertação de alta qualidade.
+CONTEXTO ACADÊMICO: {{questionContextDescription}}
+MATERIAL DE REFERÊNCIA: {{documentContext}}
+TAREFA: Gere {{count}} propostas de redação sobre a problemática central de {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
-**INSTRUÇÕES:**
-- Gere ${count} propostas de redação sobre "${subject}"
-- Nível acadêmico: ${academicLevel}
-- Contexto: ${questionContext}
-${documentContent ? `- Baseie-se no seguinte conteúdo:\n${documentContent}` : ""}
+INSTRUÇÕES:
+1. LEIA CUIDADOSAMENTE todo o material de referência.
+2. A frase-tema da redação vai no campo \`question\`.
+3. Os textos motivadores e as instruções para o aluno vão dentro do campo \`metadata\`.
 
-**REGRAS:**
-1. Apresente um tema relevante e atual
-2. Forneça orientações claras de desenvolvimento
-3. Especifique os requisitos (gênero textual, extensão, etc.)
-4. Inclua critérios de avaliação
-5. O tema deve ser apropriado ao nível acadêmico
+REGRAS OBRIGATÓRIAS:
+1. O campo \`type\` DEVE ser "essay".
+2. O tema deve ser uma questão complexa que permita argumentação.
+3. Os textos em \`metadata.supporting_texts\` devem ser curtos e de gêneros variados.
 
-**FORMATO DE SAÍDA:**
-Retorne um JSON com o seguinte formato:
+FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
-      "question": "Tema da redação: [Título do tema]",
+      "type": "essay",
+      "question": "O dilema da avaliação no Ensino Médio brasileiro: entre a formação para a vida e o treinamento para o vestibular",
       "metadata": {
-        "theme": "Descrição detalhada do tema",
-        "guidelines": [
-          "Apresente sua tese",
-          "Desenvolva argumentos",
-          "Conclua sua redação"
+        "supporting_texts": [
+          {"source": "LDB, Art. 24", "content": "A avaliação deve ser 'contínua e cumulativa do desempenho do aluno, com prevalência dos aspectos qualitativos sobre os quantitativos...'"},
+          {"source": "Análise Pedagógica", "content": "A 'vestibularização' do Ensino Médio exerce uma pressão que, na prática, dita as regras do jogo pedagógico, forçando escolas a 'treinar' seus alunos para um tipo específico de prova."}
         ],
-        "requirements": {
-          "text_type": "Dissertativo-argumentativo",
-          "min_words": 300,
-          "max_words": 500
-        },
-        "evaluation_criteria": [
-          "Coerência e coesão textual",
-          "Argumentação",
-          "Domínio da norma culta"
-        ]
+        "instructions": "A partir da leitura dos textos motivadores e com base nos conhecimentos construídos, redija um texto dissertativo-argumentativo em modalidade escrita formal sobre o tema, apresentando proposta de intervenção que respeite os direitos humanos."
       }
     }
   ]
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem comentários ou texto adicional.
+Gere as questões agora:
 `;

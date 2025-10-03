@@ -1,17 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-    pgTable,
-    varchar,
-    text,
-    timestamp,
-    boolean,
-    uuid,
-    pgEnum,
-    integer,
-    serial,
-    pgSequence,
-    jsonb,
-} from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, boolean, uuid, pgEnum, integer, jsonb } from "drizzle-orm/pg-core";
 
 export const RenewStatus = {
     monthly: "monthly",
@@ -158,6 +146,8 @@ export const profiles = pgTable("profiles", {
     renew_status: renewStatusEnum().notNull().default("none"),
     academic_level_id: uuid("academic_level_id").references(() => academicLevels.id),
     allowed_cookies: text("allowed_cookies").array().notNull().default([]), // jsonb stored as text
+    selected_question_types: questionTypeEnum("selected_question_types").array().notNull().default([]),
+    question_types_updated_at: timestamp("question_types_updated_at"),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -183,16 +173,6 @@ export const questions = pgTable("questions", {
     created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const answers = pgTable("answers", {
-    id: uuid("id").defaultRandom().primaryKey().notNull(),
-    question_id: uuid("question_id")
-        .references(() => questions.id)
-        .notNull(),
-    answer: varchar("answer", { length: 8192 }).notNull(),
-    number: integer("number"),
-    is_correct: boolean("is_correct").notNull().default(false),
-});
-
 export const logs = pgTable("logs", {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
     action: actionTypeEnum().notNull(),
@@ -207,15 +187,28 @@ export const plans = pgTable("plans", {
     questions_month: integer("questions_month").notNull().default(30),
     doc_type: text("doc_type").array().notNull(),
     docs_size: integer("docs_size").notNull().default(10),
-    allowed_questions: questionTypeEnum("allowed_questions").array().notNull(),
+    max_question_types: integer("max_question_types").notNull().default(1),
     support: supportTypeEnum("support").array().notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const profileLogsCycle = pgTable("profile_logs_cycle", {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    user_id: uuid("user_id")
+        .references(() => profiles.id)
+        .notNull(),
+    cycle: varchar("cycle", { length: 7 }).notNull(), // Format: YYYY-MM
+    total_questions: integer("total_questions").notNull().default(0),
+    subjects_breakdown: jsonb("subjects_breakdown").notNull().default("[]"), // Array of {subject: string, count: number}
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
-export const profilesRelations = relations(profiles, ({ one }) => ({
+export const profilesRelations = relations(profiles, ({ one, many }) => ({
     academicLevel: one(academicLevels, { fields: [profiles.academic_level_id], references: [academicLevels.id] }),
+    logsCycles: many(profileLogsCycle),
 }));
 
 export const assessmentsRelations = relations(assessments, ({ one, many }) => ({
@@ -223,15 +216,14 @@ export const assessmentsRelations = relations(assessments, ({ one, many }) => ({
     user: one(profiles, { fields: [assessments.user_id], references: [profiles.id] }),
 }));
 
-export const questionsRelations = relations(questions, ({ one, many }) => ({
+export const questionsRelations = relations(questions, ({ one }) => ({
     assessment: one(assessments, { fields: [questions.assessment_id], references: [assessments.id] }),
-    answers: many(answers),
-}));
-
-export const answersRelations = relations(answers, ({ one }) => ({
-    question: one(questions, { fields: [answers.question_id], references: [questions.id] }),
 }));
 
 export const academicLevelsRelations = relations(academicLevels, ({ many }) => ({
     profiles: many(profiles),
+}));
+
+export const profileLogsCycleRelations = relations(profileLogsCycle, ({ one }) => ({
+    user: one(profiles, { fields: [profileLogsCycle.user_id], references: [profiles.id] }),
 }));

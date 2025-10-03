@@ -26,6 +26,7 @@ interface Question {
     question: string;
     type: string;
     copy_count: number;
+    metadata?: any;
     answers: Answer[];
 }
 
@@ -61,8 +62,15 @@ export default function MyAssessmentsPage() {
         { id: "all", label: "Todos os tipos" },
         { id: "multiple_choice", label: "Múltipla Escolha" },
         { id: "true_false", label: "Verdadeiro/Falso" },
-        { id: "open", label: "Dissertativa" },
+        { id: "open", label: "Aberta/Dissertativa" },
         { id: "sum", label: "Somatória" },
+        { id: "fill_in_the_blank", label: "Preencher Lacunas" },
+        { id: "matching_columns", label: "Associação de Colunas" },
+        { id: "problem_solving", label: "Resolução de Problemas" },
+        { id: "essay", label: "Redação" },
+        { id: "project_based", label: "Baseada em Projeto" },
+        { id: "gamified", label: "Gamificada" },
+        { id: "summative", label: "Avaliação Somativa" },
     ];
 
     // Função para filtrar questões por tipo
@@ -88,7 +96,7 @@ export default function MyAssessmentsPage() {
 
             const { data } = await supabase.from("profiles").select("id").eq("user_id", user.id).single();
 
-            // Buscar todas as questões com suas respostas e avaliações
+            // Buscar todas as questões com suas respostas, avaliações e metadata
             const { data: questionsData, error: questionsError } = await supabase
                 .from("questions")
                 .select(
@@ -97,6 +105,7 @@ export default function MyAssessmentsPage() {
           question,
           type,
           copy_count,
+          metadata,
           answers (
             id,
             answer,
@@ -115,16 +124,19 @@ export default function MyAssessmentsPage() {
 
             if (questionsError) throw questionsError;
 
-            // Buscar todas as matérias
-            const { data: subjectsData, error: subjectsError } = await supabase.from("subjects").select("id, name");
-
-            if (subjectsError) throw subjectsError;
-
             // Agrupar dados por matéria e título de avaliação
             const grouped: GroupedData = {};
 
-            if (questionsData && subjectsData) {
-                setSubjects(subjectsData);
+            console.log("Questions Data:", questionsData);
+            if (questionsData) {
+                // Buscar todas as matérias
+                const subjectsData = [];
+                questionsData.forEach((q: any) => {
+                    const s = q.assessments.subject as string;
+                    if (s && !subjectsData.includes(s)) subjectsData.push(s);
+                });
+
+                setSubjects(subjectsData.map((s) => ({ id: s, name: s })));
 
                 questionsData.forEach((q: any) => {
                     const assessment = q.assessments;
@@ -149,11 +161,13 @@ export default function MyAssessmentsPage() {
                         question: q.question,
                         type: q.type || "multiple_choice",
                         copy_count: q.copy_count || 0,
+                        metadata: q.metadata || {},
                         answers: q.answers || [],
                     });
                 });
             }
 
+            console.log("Grouped Data:", grouped);
             setGroupedData(grouped);
         } catch (error: any) {
             console.error("Erro ao carregar questões:", error);
@@ -268,8 +282,8 @@ export default function MyAssessmentsPage() {
                                                         </span>
                                                     </div>
                                                 </AccordionTrigger>
-                                                <AccordionContent className="pt-4">
-                                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                                <AccordionContent className="pt-6 pl-2">
+                                                    <div className="masonry-grid">
                                                         {filteredQuestions.map((question) => (
                                                             <QuestionCard key={question.id} question={question} />
                                                         ))}

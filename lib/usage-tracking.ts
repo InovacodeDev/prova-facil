@@ -106,3 +106,83 @@ export async function checkUserQuota(userId: string, requestedCount: number = 1)
 
     return stats.remainingQuota >= requestedCount;
 }
+
+/**
+ * Update or create profile_logs_cycle for current month
+ * @param userId - The user's UUID
+ * @param subject - The subject of the questions
+ * @param count - Number of questions created
+ */
+export async function updateProfileLogsCycle(userId: string, subject: string, count: number): Promise<void> {
+    try {
+        const supabase = await createClient();
+        const now = new Date();
+        const cycle = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`; // YYYY-MM
+
+        // Get existing log for this cycle
+        const { data: existingLog } = await supabase
+            .from("profile_logs_cycle")
+            .select("*")
+            .eq("user_id", userId)
+            .eq("cycle", cycle)
+            .single();
+
+        if (existingLog) {
+            // Update existing log
+            const subjectsBreakdown = existingLog.subjects_breakdown as Array<{ subject: string; count: number }>;
+            const subjectIndex = subjectsBreakdown.findIndex((s) => s.subject === subject);
+
+            if (subjectIndex >= 0) {
+                subjectsBreakdown[subjectIndex].count += count;
+            } else {
+                subjectsBreakdown.push({ subject, count });
+            }
+
+            await supabase
+                .from("profile_logs_cycle")
+                .update({
+                    total_questions: existingLog.total_questions + count,
+                    subjects_breakdown: subjectsBreakdown,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", existingLog.id);
+        } else {
+            // Create new log
+            await supabase.from("profile_logs_cycle").insert({
+                user_id: userId,
+                cycle,
+                total_questions: count,
+                subjects_breakdown: [{ subject, count }],
+            });
+        }
+    } catch (error) {
+        console.error("Error updating profile logs cycle:", error);
+        throw error;
+    }
+}
+
+/**
+ * Get historical usage data for a user
+ * @param userId - The user's UUID
+ * @param limit - Number of months to retrieve
+ * @returns Array of usage logs
+ */
+export async function getUserUsageHistory(userId: string, limit: number = 12): Promise<any[]> {
+    try {
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from("profile_logs_cycle")
+            .select("*")
+            .eq("user_id", userId)
+            .order("cycle", { ascending: false })
+            .limit(limit);
+
+        if (error) throw error;
+
+        return data || [];
+    } catch (error) {
+        console.error("Error getting user usage history:", error);
+        return [];
+    }
+}

@@ -2,47 +2,60 @@
  * Multiple Choice Question Prompt
  * Generates multiple choice questions with metadata format
  */
+export const generateMultipleChoicePrompt = `
+Você é um especialista em criar questões de múltipla escolha para avaliações educacionais.
 
-export const generateMultipleChoicePrompt = (
-    subject: string,
-    count: number,
-    academicLevel: string,
-    questionContext: string,
-    documentContent?: string
-) => `
-Você é um assistente especializado em criar questões educacionais de múltipla escolha de alta qualidade.
+CONTEXTO ACADÊMICO: {{questionContextDescription}}
 
-**INSTRUÇÕES:**
-- Gere ${count} questões de múltipla escolha sobre "${subject}"
-- Nível acadêmico: ${academicLevel}
-- Contexto: ${questionContext}
-${documentContent ? `- Baseie-se no seguinte conteúdo:\n${documentContent}` : ""}
+MATERIAL DE REFERÊNCIA:
+{{documentContext}}
 
-**REGRAS:**
-1. Cada questão deve ter 4 alternativas (A, B, C, D)
-2. Apenas UMA alternativa deve estar correta
-3. Todas as alternativas devem ser plausíveis
-4. Evite alternativas como "Todas as anteriores" ou "Nenhuma das anteriores"
-5. As questões devem ser claras, objetivas e adequadas ao nível acadêmico
-6. Use linguagem formal e técnica apropriada
+TAREFA: Gere {{count}} questões de múltipla escolha sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
 
-**FORMATO DE SAÍDA:**
-Retorne um JSON com o seguinte formato:
+INSTRUÇÕES:
+1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
+2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
+3. NÃO invente informações que não estão no material fornecido
+4. NÃO use conhecimento externo além do conteúdo fornecido
+5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
+6. Crie questões que sigam o contexto acadêmico especificado
+7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
+
+REGRAS OBRIGATÓRIAS:
+1. Cada questão DEVE ter exatamente 5 alternativas
+2. Apenas UMA alternativa deve estar correta (is_correct: true)
+3. A alternativa correta deve estar em uma posição ALEATÓRIA (não apenas na primeira posição)
+4. As alternativas incorretas devem ser plausíveis mas claramente erradas
+5. A questão deve ser clara e objetiva
+6. Evite pegadinhas, foque em avaliar conhecimento real
+7. Use linguagem apropriada para o nível acadêmico
+8. IMPORTANTE: Varie a posição da resposta correta - ela pode ser a primeira, segunda, terceira, quarta ou quinta alternativa
+
+FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
-      "question": "Texto da pergunta aqui?",
+      "type": "multiple_choice",
+      "question": "De acordo com a LDB, a avaliação na educação básica deve ter a prevalência de quais aspectos?",
       "metadata": {
         "answers": [
-          {"answer": "Alternativa A", "is_correct": true},
-          {"answer": "Alternativa B", "is_correct": false},
-          {"answer": "Alternativa C", "is_correct": false},
-          {"answer": "Alternativa D", "is_correct": false}
+          {"answer": "Quantitativos sobre os qualitativos.", "is_correct": false},
+          {"answer": "Qualitativos sobre os quantitativos.", "is_correct": true},
+          {"answer": "Somente os resultados de provas finais.", "is_correct": false},
+          {"answer": "Punitivos sobre os formativos.", "is_correct": false},
+          {"answer": "Individuais sobre os coletivos.", "is_correct": false}
         ]
       }
     }
   ]
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem comentários ou texto adicional.
+EXEMPLO DE BOA PRÁTICA - Varie a posição da resposta correta:
+- Questão 1: resposta correta na posição 2
+- Questão 2: resposta correta na posição 4
+- Questão 3: resposta correta na posição 1
+- Questão 4: resposta correta na posição 5
+- Questão 5: resposta correta na posição 3
+
+Gere as questões agora:
 `;

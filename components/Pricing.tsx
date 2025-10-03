@@ -17,7 +17,7 @@ export const plans = [
         aiLevel: "IA Básica",
         features: [
             "Até 30 questões/mês para suas primeiras turmas",
-            "Múltipla escolha e Verdadeiro/Falso",
+            "1 tipo de questão personalizável",
             "Upload de arquivos TXT e DOCX (10MB)",
             "Entrada de texto direto",
             "Suporte por email",
@@ -29,12 +29,12 @@ export const plans = [
         id: "basic",
         name: "Basic",
         monthlyPrice: 29.9,
-        annualPrice: 297.82,
+        annualPrice: 269.1, // 29.9 * 12 * 0.75 = 25% desconto
         description: "Perfeito para 2-3 turmas pequenas",
         aiLevel: "IA Básica",
         features: [
             "Até 75 questões/mês, ideal para aulas semanais",
-            "4 tipos de questões incluindo abertas",
+            "3 tipos de questões personalizáveis",
             "Upload de arquivos TXT e DOCX (20MB)",
             "Entrada de texto direto",
             "Suporte prioritário com resposta em 24h",
@@ -46,12 +46,12 @@ export const plans = [
         id: "essentials",
         name: "Essentials",
         monthlyPrice: 49.9,
-        annualPrice: 497.02,
+        annualPrice: 449.1, // 49.9 * 12 * 0.75 = 25% desconto
         description: "Ótimo para 4-5 turmas regulares",
         aiLevel: "IA Avançada",
         features: [
             "Até 150 questões/mês para diversas disciplinas",
-            "7 tipos de questões incluindo redação",
+            "5 tipos de questões personalizáveis",
             "Upload de PDF, DOCX, TXT e links externos (30MB)",
             "IA avançada com maior precisão contextual",
             "Suporte prioritário via email e WhatsApp",
@@ -63,12 +63,12 @@ export const plans = [
         id: "plus",
         name: "Plus",
         monthlyPrice: 79.9,
-        annualPrice: 795.42,
+        annualPrice: 719.1, // 79.9 * 12 * 0.75 = 25% desconto
         description: "Completo para múltiplas turmas",
         aiLevel: "IA Avançada",
         features: [
             "Até 300 questões/mês, liberdade para criar sem limites",
-            "Todos os 8 tipos de questões disponíveis",
+            "8 tipos de questões personalizáveis",
             "Upload de todos os formatos + links (40MB)",
             "IA avançada otimizada para contextos técnicos",
             "Suporte VIP com atendimento prioritário",
@@ -80,12 +80,12 @@ export const plans = [
         id: "advanced",
         name: "Advanced",
         monthlyPrice: 129.9,
-        annualPrice: 1294.62,
+        annualPrice: 1169.1, // 129.9 * 12 * 0.75 = 25% desconto
         description: "Máxima capacidade para instituições",
         aiLevel: "IA Premium",
         features: [
             "Até 300 questões/mês com máxima qualidade",
-            "Todos os 8 tipos de questões disponíveis",
+            "Todos os 11 tipos de questões disponíveis",
             "Upload de PPTX, PDF, DOCX, TXT + links (100MB)",
             "IA Premium com precisão máxima e contexto profundo",
             "Suporte VIP dedicado com resposta imediata",
@@ -141,13 +141,13 @@ export function Pricing() {
                         >
                             Anual
                             <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">
-                                -17%
+                                -25%
                             </Badge>
                         </Button>
                     </div>
                     {billingPeriod === "annual" && (
                         <p className="text-sm text-green-600 mt-2 font-medium">
-                            🎉 Economize 2 meses ao escolher o plano anual!
+                            🎉 Economize ~75 dias (equivalente a 2,5 meses) ao escolher o plano anual!
                         </p>
                     )}
                 </div>
@@ -161,8 +161,8 @@ export function Pricing() {
                         {plans.map((plan) => (
                             <Card
                                 key={plan.id}
-                                className={`relative flex flex-col w-[280px] ${
-                                    plan.highlighted ? "border-primary shadow-lg scale-105" : "border-border"
+                                className={`relative flex flex-col w-[280px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+                                    plan.highlighted ? "border-primary border-2 shadow-lg" : "border-border"
                                 }`}
                             >
                                 {plan.highlighted && (

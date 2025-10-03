@@ -9,45 +9,38 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { BookOpen, Upload, ArrowLeft, FileText, Loader2, X, Check, Lock, AlertCircle } from "lucide-react";
+import { Upload, ArrowLeft, FileText, Loader2, X, Check, Lock, AlertCircle, Link, Type } from "lucide-react";
 import { ProvaFacilLogo } from "@/assets/logo";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { invalidateDashboardCache } from "@/lib/cache";
 import { track } from "@vercel/analytics";
+import { SubjectAutocomplete } from "@/components/ui/subject-autocomplete";
+import { QUESTION_TYPES } from "@/lib/question-types";
 import {
     extractTextFromFiles,
     formatExtractedTextForAPI,
     validateFiles,
     ACCEPTED_FILE_EXTENSIONS,
-    MAX_FILE_SIZE,
-    MAX_TOTAL_SIZE,
     type ExtractedText,
 } from "@/lib/document-extractor";
 
 const SUBJECTS = [
-    { value: "mathematics", label: "Matemática" },
-    { value: "portuguese", label: "Português" },
-    { value: "history", label: "História" },
-    { value: "geography", label: "Geografia" },
-    { value: "science", label: "Ciências" },
-    { value: "arts", label: "Artes" },
-    { value: "english", label: "Inglês" },
-    { value: "literature", label: "Literatura" },
-    { value: "physics", label: "Física" },
-    { value: "chemistry", label: "Química" },
-    { value: "biology", label: "Biologia" },
-    { value: "philosophy", label: "Filosofia" },
-    { value: "sociology", label: "Sociologia" },
-    { value: "spanish", label: "Espanhol" },
-];
-
-const QUESTION_TYPES = [
-    { id: "multiple_choice", label: "Múltipla escolha" },
-    { id: "true_false", label: "Verdadeiro ou Falso" },
-    { id: "open", label: "Aberta ou Dissertativa" },
-    { id: "sum", label: "Somatória" },
+    "Matemática",
+    "Português",
+    "História",
+    "Geografia",
+    "Ciências",
+    "Artes",
+    "Inglês",
+    "Literatura",
+    "Física",
+    "Química",
+    "Biologia",
+    "Filosofia",
+    "Sociologia",
+    "Espanhol",
 ];
 
 const QUESTION_CONTEXTS = [
@@ -60,31 +53,60 @@ const QUESTION_CONTEXTS = [
     { value: "pesquisa", label: "Prompt para Pesquisa (Nível Pós-Doc)" },
 ];
 
-const PLAN_LIMITS: Record<string, { monthlyQuestionLimit: number; allowedTypes: string[]; allowPdfUpload: boolean }> = {
+const PLAN_LIMITS: Record<
+    string,
+    { monthlyQuestionLimit: number; allowedTypes: string[]; allowPdfUpload: boolean; allowedDocModes: string[] }
+> = {
     starter: {
         monthlyQuestionLimit: 30, // 20 * 1.5
         allowedTypes: ["multiple_choice"],
         allowPdfUpload: false,
+        allowedDocModes: ["text"], // Only text input
     },
     basic: {
         monthlyQuestionLimit: 75, // 50 * 1.5
-        allowedTypes: ["multiple_choice", "open"],
+        allowedTypes: ["multiple_choice", "open", "true_false"],
         allowPdfUpload: false,
+        allowedDocModes: ["text", "file"], // Text + DOCX files
     },
     essentials: {
         monthlyQuestionLimit: 150, // 100 * 1.5
-        allowedTypes: ["multiple_choice", "true_false", "open"],
+        allowedTypes: ["multiple_choice", "true_false", "open", "sum", "fill_in_the_blank"],
         allowPdfUpload: false,
+        allowedDocModes: ["text", "file", "url"], // Text + Files + URLs
     },
     plus: {
         monthlyQuestionLimit: 450, // 300 * 1.5
-        allowedTypes: ["multiple_choice", "true_false", "open", "sum"],
+        allowedTypes: [
+            "multiple_choice",
+            "true_false",
+            "open",
+            "sum",
+            "fill_in_the_blank",
+            "matching_columns",
+            "problem_solving",
+            "essay",
+        ],
         allowPdfUpload: true,
+        allowedDocModes: ["text", "file", "url"], // All modes + PDF support
     },
     advanced: {
         monthlyQuestionLimit: 450, // 300 * 1.5
-        allowedTypes: ["multiple_choice", "true_false", "open", "sum"],
+        allowedTypes: [
+            "multiple_choice",
+            "true_false",
+            "open",
+            "sum",
+            "fill_in_the_blank",
+            "matching_columns",
+            "problem_solving",
+            "essay",
+            "project_based",
+            "gamified",
+            "summative",
+        ],
         allowPdfUpload: true,
+        allowedDocModes: ["text", "file", "url"], // All modes + PDF support
     },
 };
 
@@ -92,7 +114,14 @@ export default function NewAssessmentPage() {
     const [title, setTitle] = useState("");
     const [questionCount, setQuestionCount] = useState("10");
     const [subject, setSubject] = useState("");
+    const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
     const [questionContext, setQuestionContext] = useState("");
+
+    // Document input modes - supports multiple documents of each type
+    const [documentMode, setDocumentMode] = useState<"file" | "url" | "text">("file");
+    const [documentUrls, setDocumentUrls] = useState<string[]>([""]);
+    const [documentTexts, setDocumentTexts] = useState<string[]>([""]);
+
     const [files, setFiles] = useState<File[]>([]);
     const [extractedTexts, setExtractedTexts] = useState<ExtractedText[]>([]);
     const [extracting, setExtracting] = useState(false);
@@ -103,6 +132,7 @@ export default function NewAssessmentPage() {
     const [filteredTitleSuggestions, setFilteredTitleSuggestions] = useState<string[]>([]);
     const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
     const [userPlan, setUserPlan] = useState<string>("starter");
+    const [allowedQuestionTypes, setAllowedQuestionTypes] = useState<string[]>([]);
     const [monthlyUsage, setMonthlyUsage] = useState<number>(0);
     const [maxQuestions, setMaxQuestions] = useState<number>(30);
     const router = useRouter();
@@ -118,15 +148,16 @@ export default function NewAssessmentPage() {
                 } = await supabase.auth.getUser();
                 if (!user) return;
 
-                // Buscar plano do usuário
+                // Buscar plano e tipos selecionados do usuário
                 const { data: profile } = await supabase
                     .from("profiles")
-                    .select("id, plan")
+                    .select("id, plan, selected_question_types")
                     .eq("user_id", user.id)
                     .single();
 
                 if (profile) {
                     setUserPlan(profile.plan);
+                    setAllowedQuestionTypes(profile.selected_question_types || []);
                 }
             } catch (error) {
                 console.error("Erro ao buscar plano:", error);
@@ -208,6 +239,29 @@ export default function NewAssessmentPage() {
         };
 
         fetchAssessmentTitles();
+    }, [supabase]);
+
+    // Buscar matérias distintas já utilizadas
+    useEffect(() => {
+        const fetchSubjectSuggestions = async () => {
+            try {
+                const { data, error } = await supabase.from("assessments").select("subject").not("subject", "is", null);
+
+                if (error) throw error;
+
+                const subjects = data
+                    .map((item) => item.subject)
+                    .filter((subject): subject is string => subject !== null && subject.trim() !== "");
+
+                // Remove duplicatas (DISTINCT)
+                const uniqueSubjects = Array.from(new Set(subjects));
+                setSubjectSuggestions(uniqueSubjects);
+            } catch (error) {
+                console.error("Erro ao buscar matérias:", error);
+            }
+        };
+
+        fetchSubjectSuggestions();
     }, [supabase]);
 
     // Filtrar sugestões de título baseado no input
@@ -366,21 +420,37 @@ export default function NewAssessmentPage() {
                 return;
             }
 
-            // Buscar subject_id pelo nome da matéria
-            const { data: subjectData, error: subjectError } = await supabase
+            // Buscar ou criar subject_id pelo nome da matéria
+            let subjectId: string;
+
+            // Primeiro tenta buscar matéria existente
+            const { data: existingSubject } = await supabase
                 .from("subjects")
                 .select("id")
                 .eq("name", subject)
-                .single();
+                .maybeSingle();
 
-            if (subjectError || !subjectData) {
-                toast({
-                    title: "Erro",
-                    description: "Matéria inválida.",
-                    variant: "destructive",
-                });
-                setUploading(false);
-                return;
+            if (existingSubject) {
+                subjectId = existingSubject.id;
+            } else {
+                // Se não existe, cria nova matéria
+                const { data: newSubject, error: createError } = await supabase
+                    .from("subjects")
+                    .insert({ name: subject })
+                    .select("id")
+                    .single();
+
+                if (createError || !newSubject) {
+                    toast({
+                        title: "Erro",
+                        description: "Não foi possível criar a matéria. Tente novamente.",
+                        variant: "destructive",
+                    });
+                    setUploading(false);
+                    return;
+                }
+
+                subjectId = newSubject.id;
             }
 
             // Buscar academic level do usuário
@@ -392,29 +462,62 @@ export default function NewAssessmentPage() {
 
             const academicLevel = (profile as any)?.academic_levels?.name;
 
-            // Preparar dados de documentos
-            const allowPdfUpload = PLAN_LIMITS[userPlan]?.allowPdfUpload;
-            const pdfFiles = files.filter((f) => f.type === "application/pdf");
-            const nonPdfFiles = files.filter((f) => f.type !== "application/pdf");
-
-            // Para planos plus/advanced: enviar PDFs como arquivos base64
+            // Preparar dados de documentos - agora suporta múltiplos de cada tipo simultaneamente
+            let documentContent = "";
             let pdfFilesData: Array<{ name: string; type: string; data: string }> = [];
-            if (allowPdfUpload && pdfFiles.length > 0) {
-                pdfFilesData = await Promise.all(
-                    pdfFiles.map(async (file) => {
-                        const arrayBuffer = await file.arrayBuffer();
-                        const base64 = Buffer.from(arrayBuffer).toString("base64");
-                        return {
-                            name: file.name,
-                            type: file.type,
-                            data: `data:${file.type};base64,${base64}`,
-                        };
-                    })
-                );
+            const documentUrlsToSend: string[] = [];
+
+            // Coletar todos os textos não vazios
+            const validTexts = documentTexts.filter((t) => t.trim().length > 0);
+            if (validTexts.length > 0) {
+                documentContent = validTexts
+                    .map((text, index) => `\n--- Texto ${index + 1} ---\n${text.trim()}`)
+                    .join("\n\n");
             }
 
-            // Para DOCX: enviar texto transcrito
-            const documentContent = formatExtractedTextForAPI(extractedTexts);
+            // Coletar todas as URLs não vazias
+            const validUrls = documentUrls.filter((u) => u.trim().length > 0);
+            if (validUrls.length > 0) {
+                documentUrlsToSend.push(...validUrls);
+                const urlsText = validUrls
+                    .map(
+                        (url, index) =>
+                            `\n--- URL ${
+                                index + 1
+                            } ---\n${url}\n\nNOTA: Extraia o conteúdo desta URL para gerar as questões.`
+                    )
+                    .join("\n\n");
+                documentContent = documentContent ? `${documentContent}\n\n${urlsText}` : urlsText;
+            }
+
+            // Processar arquivos
+            if (files.length > 0) {
+                const allowPdfUpload = PLAN_LIMITS[userPlan]?.allowPdfUpload;
+                const pdfFiles = files.filter((f) => f.type === "application/pdf");
+
+                // Para planos plus/advanced: enviar PDFs como arquivos base64
+                if (allowPdfUpload && pdfFiles.length > 0) {
+                    pdfFilesData = await Promise.all(
+                        pdfFiles.map(async (file) => {
+                            const arrayBuffer = await file.arrayBuffer();
+                            const base64 = Buffer.from(arrayBuffer).toString("base64");
+                            return {
+                                name: file.name,
+                                type: file.type,
+                                data: `data:${file.type};base64,${base64}`,
+                            };
+                        })
+                    );
+                }
+
+                // Para DOCX: adicionar texto transcrito ao conteúdo
+                const extractedContent = formatExtractedTextForAPI(extractedTexts);
+                if (extractedContent) {
+                    documentContent = documentContent
+                        ? `${documentContent}\n\n--- Arquivos Transcritos ---\n${extractedContent}`
+                        : extractedContent;
+                }
+            }
 
             // Chamar API de geração de questões
             const response = await fetch("/api/generate-questions", {
@@ -426,11 +529,12 @@ export default function NewAssessmentPage() {
                     title: title.trim(),
                     questionCount: parseInt(questionCount),
                     subject,
-                    subjectId: subjectData.id,
+                    subjectId: subjectId,
                     questionTypes,
                     questionContext,
                     academicLevel,
-                    documentContent, // Texto extraído de DOCX
+                    documentContent, // Todos os conteúdos combinados
+                    documentUrls: documentUrlsToSend.length > 0 ? documentUrlsToSend : undefined, // Array de URLs
                     pdfFiles: pdfFilesData, // PDFs completos (apenas plus/advanced)
                 }),
             });
@@ -469,11 +573,19 @@ export default function NewAssessmentPage() {
         }
     };
 
-    const isFormValid = title.trim() && subject && questionContext && questionTypes.length > 0 && files.length > 0;
+    // Check if user has provided content in any mode (files, texts, or URLs)
+    const hasDocumentContent =
+        files.length > 0 ||
+        documentTexts.some((t) => t.trim().length > 0) ||
+        documentUrls.some((u) => u.trim().length > 0);
+
+    const isFormValid = title.trim() && subject && questionContext && questionTypes.length > 0 && hasDocumentContent;
     const canGenerate = isFormValid && maxQuestions > 0;
 
     const getBlockReason = () => {
-        if (files.length === 0) return "Você precisa selecionar pelo menos um documento para gerar questões.";
+        if (!hasDocumentContent) {
+            return "Você precisa fornecer material de referência (arquivo, texto ou link).";
+        }
         if (maxQuestions === 0)
             return `Você atingiu o limite mensal de ${
                 PLAN_LIMITS[userPlan]?.monthlyQuestionLimit || 30
@@ -502,7 +614,7 @@ export default function NewAssessmentPage() {
 
             {/* Main Content */}
             <main className="container mx-auto px-4 py-8">
-                <div className="max-w-2xl mx-auto">
+                <div className="max-w-[920px] mx-auto">
                     <Card className="overflow-visible">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -564,9 +676,13 @@ export default function NewAssessmentPage() {
                                             </div>
                                         )}
                                     </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Use o mesmo título para agrupar questões sobre o mesmo tema
-                                    </p>
+                                    <div className="flex items-start gap-2 p-2 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                                        <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                                        <p className="text-xs text-blue-800 dark:text-blue-300">
+                                            <strong>Dica:</strong> Use o mesmo título para agrupar questões
+                                            relacionadas. Isso facilita encontrar e filtrar suas questões depois!
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Contexto/Nível da Questão */}
@@ -590,7 +706,7 @@ export default function NewAssessmentPage() {
                                 </div>
 
                                 {/* Quantidade e Matéria */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="questionCount">Quantidade de Questões *</Label>
                                         <Input
@@ -613,195 +729,444 @@ export default function NewAssessmentPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="subject">Matéria *</Label>
-                                        <Select value={subject} onValueChange={setSubject}>
-                                            <SelectTrigger id="subject">
-                                                <SelectValue placeholder="Selecione a matéria" />
-                                            </SelectTrigger>
-                                            <SelectContent position="popper" sideOffset={5}>
-                                                {SUBJECTS.map((subj) => (
-                                                    <SelectItem key={subj.value} value={subj.value}>
-                                                        {subj.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Label htmlFor="subject">Conteúdo das Questões *</Label>
+                                        <SubjectAutocomplete
+                                            value={subject}
+                                            onValueChange={setSubject}
+                                            options={[
+                                                ...SUBJECTS.map((s) => ({ value: s, label: s })),
+                                                ...subjectSuggestions
+                                                    .filter((s) => !SUBJECTS.includes(s))
+                                                    .map((s) => ({ value: s, label: s })),
+                                            ]}
+                                            placeholder="Selecione ou digite a matéria/tema"
+                                            emptyText="Nenhuma matéria encontrada. Digite para criar uma nova."
+                                            searchPlaceholder="Buscar matéria ou tema..."
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Escolha uma matéria comum ou digite um tema específico
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Upload de Arquivos */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="files" className="flex items-center gap-2">
-                                        Importar Documentos *
-                                        {files.length === 0 && (
-                                            <span className="text-xs text-destructive font-normal">(Obrigatório)</span>
-                                        )}
-                                    </Label>
-                                    <div
-                                        className={cn(
-                                            "border-2 border-dashed rounded-lg p-6 transition-colors",
-                                            files.length === 0
-                                                ? "border-destructive/50 bg-destructive/5"
-                                                : "border-border"
-                                        )}
-                                    >
-                                        <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                                        <div className="space-y-2 text-center">
-                                            <p className="text-sm text-muted-foreground">
-                                                Arraste arquivos aqui ou clique para selecionar
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                PDF, DOC ou DOCX - Máximo 10MB por arquivo, 30MB total
-                                            </p>
-                                            <Input
-                                                id="files"
-                                                type="file"
-                                                accept={ACCEPTED_FILE_EXTENSIONS}
-                                                multiple
-                                                onChange={handleFileChange}
-                                                className="hidden"
-                                                disabled={extracting}
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => document.getElementById("files")?.click()}
-                                                disabled={extracting}
-                                            >
-                                                {extracting ? (
-                                                    <>
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                        Extraindo texto...
-                                                    </>
-                                                ) : (
-                                                    "Selecionar Arquivos"
+                                {/* Upload de Arquivos / Documentos */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="flex items-center gap-2">
+                                            Material de Referência *
+                                            {files.length === 0 &&
+                                                documentTexts.every((t) => !t.trim()) &&
+                                                documentUrls.every((u) => !u.trim()) && (
+                                                    <span className="text-xs text-destructive font-normal">
+                                                        (Obrigatório)
+                                                    </span>
                                                 )}
-                                            </Button>
+                                        </Label>
+                                        <div className="flex gap-1">
+                                            {PLAN_LIMITS[userPlan]?.allowedDocModes.includes("text") && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                type="button"
+                                                                variant={
+                                                                    documentMode === "text" ? "default" : "outline"
+                                                                }
+                                                                size="sm"
+                                                                className="h-8 px-2"
+                                                                onClick={() => setDocumentMode("text")}
+                                                            >
+                                                                <Type className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Digitar texto direto</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
+
+                                            {PLAN_LIMITS[userPlan]?.allowedDocModes.includes("url") && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                type="button"
+                                                                variant={documentMode === "url" ? "default" : "outline"}
+                                                                size="sm"
+                                                                className="h-8 px-2"
+                                                                onClick={() => setDocumentMode("url")}
+                                                            >
+                                                                <Link className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Inserir link/URL</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
+
+                                            {PLAN_LIMITS[userPlan]?.allowedDocModes.includes("file") && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                type="button"
+                                                                variant={
+                                                                    documentMode === "file" ? "default" : "outline"
+                                                                }
+                                                                size="sm"
+                                                                className="h-8 px-2"
+                                                                onClick={() => setDocumentMode("file")}
+                                                            >
+                                                                <Upload className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>
+                                                                Enviar arquivo (DOC/DOCX
+                                                                {PLAN_LIMITS[userPlan]?.allowPdfUpload ? "/PDF" : ""})
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
                                         </div>
+                                    </div>
 
-                                        {/* Progresso de extração */}
-                                        {extracting && extractionProgress.total > 0 && (
-                                            <div className="mt-4 space-y-2">
-                                                <div className="flex items-center justify-between text-sm">
-                                                    <span className="text-muted-foreground">
-                                                        Processando {extractionProgress.current} de{" "}
-                                                        {extractionProgress.total}
-                                                    </span>
-                                                    <span className="text-muted-foreground">
-                                                        {Math.round(
-                                                            (extractionProgress.current / extractionProgress.total) *
-                                                                100
-                                                        )}
-                                                        %
-                                                    </span>
-                                                </div>
-                                                <div className="w-full bg-secondary rounded-full h-2">
-                                                    <div
-                                                        className="bg-primary h-2 rounded-full transition-all duration-300"
-                                                        style={{
-                                                            width: `${
-                                                                (extractionProgress.current /
-                                                                    extractionProgress.total) *
-                                                                100
-                                                            }%`,
-                                                        }}
-                                                    />
-                                                </div>
-                                                <p className="text-xs text-muted-foreground truncate">
-                                                    {extractionProgress.fileName}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {files.length > 0 && !extracting && (
-                                            <div className="mt-4 space-y-2">
-                                                {files.map((file, index) => {
-                                                    const extracted = extractedTexts[index];
-                                                    return (
-                                                        <div
-                                                            key={index}
-                                                            className="flex items-start justify-between bg-muted p-3 rounded gap-2"
-                                                        >
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-medium truncate">
-                                                                    {file.name}
-                                                                </p>
-                                                                {extracted && (
-                                                                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                                                                        <span>{extracted.wordCount} palavras</span>
-                                                                        {extracted.pageCount && (
-                                                                            <span>{extracted.pageCount} páginas</span>
-                                                                        )}
-                                                                        <span className="text-green-600">
-                                                                            ✓ Texto extraído
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                    {/* Text Mode - Multiple Texts */}
+                                    {documentMode === "text" && (
+                                        <div className="space-y-3">
+                                            {documentTexts.map((text, index) => (
+                                                <div key={index} className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-xs text-muted-foreground">
+                                                            Texto {index + 1}
+                                                        </Label>
+                                                        {documentTexts.length > 1 && (
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => removeFile(index)}
+                                                                onClick={() => {
+                                                                    setDocumentTexts(
+                                                                        documentTexts.filter((_, i) => i !== index)
+                                                                    );
+                                                                }}
+                                                                className="h-6 px-2 text-xs"
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                    <div className="relative">
+                                                        <textarea
+                                                            placeholder="Cole ou digite o conteúdo do material de referência aqui..."
+                                                            value={text}
+                                                            onChange={(e) => {
+                                                                const newTexts = [...documentTexts];
+                                                                newTexts[index] = e.target.value;
+                                                                setDocumentTexts(newTexts);
+                                                            }}
+                                                            className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                                                            rows={6}
+                                                        />
+                                                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-1 rounded">
+                                                            {text.split(/\s+/).filter((w) => w.length > 0).length}{" "}
+                                                            palavras
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setDocumentTexts([...documentTexts, ""])}
+                                                className="w-full"
+                                            >
+                                                <Type className="h-4 w-4 mr-2" />
+                                                Adicionar outro texto
+                                            </Button>
+                                            <p className="text-xs text-muted-foreground">
+                                                💡 Cole textos, trechos de livros, artigos ou qualquer conteúdo textual
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* URL Mode - Multiple URLs */}
+                                    {documentMode === "url" && (
+                                        <div className="space-y-3">
+                                            {documentUrls.map((url, index) => (
+                                                <div key={index} className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Input
+                                                            type="url"
+                                                            placeholder={`https://exemplo.com/artigo-${index + 1}`}
+                                                            value={url}
+                                                            onChange={(e) => {
+                                                                const newUrls = [...documentUrls];
+                                                                newUrls[index] = e.target.value;
+                                                                setDocumentUrls(newUrls);
+                                                            }}
+                                                            className="flex-1"
+                                                        />
+                                                        {documentUrls.length > 1 && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setDocumentUrls(
+                                                                        documentUrls.filter((_, i) => i !== index)
+                                                                    );
+                                                                }}
+                                                                className="h-10 px-3"
                                                             >
                                                                 <X className="h-4 w-4" />
                                                             </Button>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setDocumentUrls([...documentUrls, ""])}
+                                                className="w-full"
+                                            >
+                                                <Link className="h-4 w-4 mr-2" />
+                                                Adicionar outro link
+                                            </Button>
+                                            <p className="text-xs text-muted-foreground">
+                                                🔗 Insira links para artigos, PDFs online, páginas da web ou recursos
+                                                educacionais
+                                            </p>
+                                            {!PLAN_LIMITS[userPlan]?.allowedDocModes.includes("url") && (
+                                                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted border border-border">
+                                                    <Lock className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                    <div className="text-xs text-muted-foreground">
+                                                        <p className="font-semibold">
+                                                            Links não disponíveis no plano {userPlan}
+                                                        </p>
+                                                        <p>Faça upgrade para Essentials ou superior para usar URLs</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
-                                        <p className="text-xs text-muted-foreground mt-4 italic">
-                                            * O texto é extraído no seu navegador e apenas o conteúdo textual é enviado
-                                            para a IA
-                                        </p>
-                                    </div>
+                                    {/* File Mode */}
+                                    {documentMode === "file" && (
+                                        <div
+                                            className={cn(
+                                                "border-2 border-dashed rounded-lg p-6 transition-colors",
+                                                files.length === 0
+                                                    ? "border-destructive/50 bg-destructive/5"
+                                                    : "border-border"
+                                            )}
+                                        >
+                                            <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                            <div className="space-y-2 text-center">
+                                                <p className="text-sm text-muted-foreground">
+                                                    Arraste arquivos aqui ou clique para selecionar
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {PLAN_LIMITS[userPlan]?.allowPdfUpload
+                                                        ? "PDF, DOC ou DOCX - Máximo 10MB por arquivo, 30MB total"
+                                                        : "DOC ou DOCX - Máximo 10MB por arquivo, 30MB total"}
+                                                </p>
+                                                <Input
+                                                    id="files"
+                                                    type="file"
+                                                    accept={ACCEPTED_FILE_EXTENSIONS}
+                                                    multiple
+                                                    onChange={handleFileChange}
+                                                    className="hidden"
+                                                    disabled={extracting}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() => document.getElementById("files")?.click()}
+                                                    disabled={extracting}
+                                                >
+                                                    {extracting ? (
+                                                        <>
+                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            Extraindo texto...
+                                                        </>
+                                                    ) : (
+                                                        "Selecionar Arquivos"
+                                                    )}
+                                                </Button>
+                                            </div>
+
+                                            {/* Progresso de extração */}
+                                            {extracting && extractionProgress.total > 0 && (
+                                                <div className="mt-4 space-y-2">
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-muted-foreground">
+                                                            Processando {extractionProgress.current} de{" "}
+                                                            {extractionProgress.total}
+                                                        </span>
+                                                        <span className="text-muted-foreground">
+                                                            {Math.round(
+                                                                (extractionProgress.current /
+                                                                    extractionProgress.total) *
+                                                                    100
+                                                            )}
+                                                            %
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-full bg-secondary rounded-full h-2">
+                                                        <div
+                                                            className="bg-primary h-2 rounded-full transition-all duration-300"
+                                                            style={{
+                                                                width: `${
+                                                                    (extractionProgress.current /
+                                                                        extractionProgress.total) *
+                                                                    100
+                                                                }%`,
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground truncate">
+                                                        {extractionProgress.fileName}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {files.length > 0 && !extracting && (
+                                                <div className="mt-4 space-y-2">
+                                                    {files.map((file, index) => {
+                                                        const extracted = extractedTexts[index];
+                                                        return (
+                                                            <div
+                                                                key={index}
+                                                                className="flex items-start justify-between bg-muted p-3 rounded gap-2"
+                                                            >
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium truncate">
+                                                                        {file.name}
+                                                                    </p>
+                                                                    {extracted && (
+                                                                        <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                                                                            <span>{extracted.wordCount} palavras</span>
+                                                                            {extracted.pageCount && (
+                                                                                <span>
+                                                                                    {extracted.pageCount} páginas
+                                                                                </span>
+                                                                            )}
+                                                                            <span className="text-green-600">
+                                                                                ✓ Texto extraído
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => removeFile(index)}
+                                                                >
+                                                                    <X className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            <p className="text-xs text-muted-foreground mt-4 italic">
+                                                * O texto é extraído no seu navegador e apenas o conteúdo textual é
+                                                enviado para a IA
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Tipos de Questões */}
                                 <div className="space-y-2">
                                     <Label>Tipos de Questões *</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Selecione um ou mais tipos para diversificar sua avaliação
+                                    </p>
+                                    {allowedQuestionTypes.length === 0 && (
+                                        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                                            <p className="text-sm text-amber-900 dark:text-amber-300">
+                                                ⚠️ Você ainda não selecionou tipos de questões. Vá para{" "}
+                                                <Button
+                                                    variant="link"
+                                                    className="p-0 h-auto text-amber-900 dark:text-amber-300 underline"
+                                                    onClick={() => router.push("/profile")}
+                                                >
+                                                    Perfil
+                                                </Button>{" "}
+                                                para escolher seus tipos.
+                                            </p>
+                                        </div>
+                                    )}
                                     <TooltipProvider>
-                                        <div className="space-y-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                             {QUESTION_TYPES.map((type) => {
-                                                const allowedTypes = PLAN_LIMITS[userPlan]?.allowedTypes || [
-                                                    "multiple_choice",
-                                                ];
-                                                const isAllowed = allowedTypes.includes(type.id);
+                                                const isAllowed = allowedQuestionTypes.includes(type.id);
 
                                                 return (
-                                                    <div key={type.id} className="flex items-center space-x-2">
+                                                    <div
+                                                        key={type.id}
+                                                        className={cn(
+                                                            "flex items-start space-x-3 p-3 rounded-lg border transition-all",
+                                                            isAllowed
+                                                                ? "border-border hover:border-primary hover:bg-primary/5 cursor-pointer"
+                                                                : "border-border bg-muted/50 opacity-50 cursor-not-allowed"
+                                                        )}
+                                                        onClick={() => isAllowed && toggleQuestionType(type.id)}
+                                                    >
                                                         {isAllowed ? (
                                                             <>
                                                                 <Checkbox
                                                                     id={type.id}
                                                                     checked={questionTypes.includes(type.id)}
                                                                     onCheckedChange={() => toggleQuestionType(type.id)}
+                                                                    className="mt-0.5"
                                                                 />
-                                                                <Label
-                                                                    htmlFor={type.id}
-                                                                    className="text-sm font-normal cursor-pointer"
-                                                                >
-                                                                    {type.label}
-                                                                </Label>
+                                                                <div className="flex-1">
+                                                                    <Label
+                                                                        htmlFor={type.id}
+                                                                        className="text-sm font-medium cursor-pointer leading-tight"
+                                                                    >
+                                                                        {type.label}
+                                                                    </Label>
+                                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                                        {type.description}
+                                                                    </p>
+                                                                </div>
                                                             </>
                                                         ) : (
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
-                                                                    <div className="flex items-center space-x-2 opacity-50 cursor-not-allowed">
+                                                                    <div className="flex items-start space-x-3 w-full">
                                                                         <Checkbox
                                                                             id={type.id}
                                                                             checked={false}
                                                                             disabled
+                                                                            className="mt-0.5"
                                                                         />
-                                                                        <Label
-                                                                            htmlFor={type.id}
-                                                                            className="text-sm font-normal cursor-not-allowed flex items-center gap-1"
-                                                                        >
-                                                                            {type.label}
-                                                                            <Lock className="h-3 w-3" />
-                                                                        </Label>
+                                                                        <div className="flex-1">
+                                                                            <Label
+                                                                                htmlFor={type.id}
+                                                                                className="text-sm font-medium cursor-not-allowed flex items-center gap-1 leading-tight"
+                                                                            >
+                                                                                {type.label}
+                                                                                <Lock className="h-3 w-3" />
+                                                                            </Label>
+                                                                            <p className="text-xs text-muted-foreground mt-1">
+                                                                                {type.description}
+                                                                            </p>
+                                                                        </div>
                                                                     </div>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>

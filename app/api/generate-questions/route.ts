@@ -5,6 +5,13 @@ import {
     generateTfQuestions,
     generateDissertativeQuestions,
     generateSumQuestions,
+    generateFillInTheBlankQuestions,
+    generateMatchingColumnsQuestions,
+    generateProblemSolvingQuestions,
+    generateEssayQuestions,
+    generateProjectBasedQuestions,
+    generateGamifiedQuestions,
+    generateSummativeQuestions,
     GenerateQuestionsInput,
 } from "@/lib/genkit/prompts";
 import { QuestionType } from "@/db/schema";
@@ -138,7 +145,29 @@ export async function POST(request: NextRequest) {
                     case "sum":
                         result = await generateSumQuestions(input);
                         break;
+                    case "fill_in_the_blank":
+                        result = await generateFillInTheBlankQuestions(input);
+                        break;
+                    case "matching_columns":
+                        result = await generateMatchingColumnsQuestions(input);
+                        break;
+                    case "problem_solving":
+                        result = await generateProblemSolvingQuestions(input);
+                        break;
+                    case "essay":
+                        result = await generateEssayQuestions(input);
+                        break;
+                    case "project_based":
+                        result = await generateProjectBasedQuestions(input);
+                        break;
+                    case "gamified":
+                        result = await generateGamifiedQuestions(input);
+                        break;
+                    case "summative":
+                        result = await generateSummativeQuestions(input);
+                        break;
                     default:
+                        console.warn(`Tipo de questão não suportado: ${type}`);
                         continue;
                 }
 
@@ -158,16 +187,24 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Não foi possível gerar questões" }, { status: 500 });
         }
 
-        // 7. Inserir questões e respostas no banco
+        // 7. Inserir questões e respostas/metadata no banco
         for (const genQuestion of allGeneratedQuestions) {
+            // Preparar dados da questão
+            const questionData: any = {
+                assessment_id: assessment.id,
+                type: genQuestion.question?.type || genQuestion.type,
+                question: genQuestion.question?.question || genQuestion.text || "Questão sem texto",
+            };
+
+            // Se houver metadata, adiciona ao campo metadata
+            if (genQuestion.question?.metadata) {
+                questionData.metadata = genQuestion.question.metadata;
+            }
+
             // Inserir questão
             const { data: insertedQuestion, error: questionError } = await supabase
                 .from("questions")
-                .insert({
-                    assessment_id: assessment.id,
-                    type: genQuestion.question.type,
-                    question: genQuestion.question.question,
-                })
+                .insert(questionData)
                 .select()
                 .single();
 
@@ -176,18 +213,20 @@ export async function POST(request: NextRequest) {
                 continue;
             }
 
-            // Inserir respostas
-            const answersToInsert = genQuestion.answers.map((answer: any) => ({
-                question_id: insertedQuestion.id,
-                answer: answer.answer,
-                is_correct: answer.is_correct,
-                number: answer.number || null,
-            }));
+            // Inserir respostas (apenas para tipos que ainda usam tabela answers como fallback)
+            if (genQuestion.answers && Array.isArray(genQuestion.answers) && genQuestion.answers.length > 0) {
+                const answersToInsert = genQuestion.answers.map((answer: any) => ({
+                    question_id: insertedQuestion.id,
+                    answer: answer.answer || answer.text || "",
+                    is_correct: answer.is_correct || false,
+                    number: answer.number || null,
+                }));
 
-            const { error: answersError } = await supabase.from("answers").insert(answersToInsert);
+                const { error: answersError } = await supabase.from("answers").insert(answersToInsert);
 
-            if (answersError) {
-                console.error("Erro ao inserir respostas:", answersError);
+                if (answersError) {
+                    console.error("Erro ao inserir respostas:", answersError);
+                }
             }
         }
 
