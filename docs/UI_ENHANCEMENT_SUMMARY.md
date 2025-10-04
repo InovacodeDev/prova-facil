@@ -21,7 +21,7 @@ const QUESTION_TYPES = [
     { id: "fill_in_the_blank", label: "Preencher Lacunas", description: "Complete os espaços em branco" },
     { id: "matching_columns", label: "Associação de Colunas", description: "Relacione itens de duas colunas" },
     { id: "problem_solving", label: "Resolução de Problemas", description: "Problemas práticos e aplicados" },
-    { id: "essay", label: "Redação/Essay", description: "Produção textual completa" },
+    { id: "essay", label: "Redação", description: "Produção textual completa" },
     { id: "project_based", label: "Baseada em Projeto", description: "Projetos com fases e entregas" },
     { id: "gamified", label: "Gamificada", description: "Cenários e desafios interativos" },
     { id: "summative", label: "Avaliação Somativa", description: "Múltiplas seções integradas" },
@@ -34,47 +34,47 @@ Distributed question types across plans:
 
 **Starter Plan:**
 
--   Types: `multiple_choice`
--   Focus: Basic functionality
+- Types: `multiple_choice`
+- Focus: Basic functionality
 
 **Basic Plan:**
 
--   Types: `multiple_choice`, `open`, `true_false`
--   Focus: Common question formats
+- Types: `multiple_choice`, `open`, `true_false`
+- Focus: Common question formats
 
 **Essentials Plan:**
 
--   Types: `multiple_choice`, `true_false`, `open`, `sum`, `fill_in_the_blank`
--   Focus: Expanded variety
+- Types: `multiple_choice`, `true_false`, `open`, `sum`, `fill_in_the_blank`
+- Focus: Expanded variety
 
 **Plus Plan:**
 
--   Types: `multiple_choice`, `true_false`, `open`, `sum`, `fill_in_the_blank`, `matching_columns`, `problem_solving`, `essay`
--   Focus: Professional education tools
--   PDF Upload: ✅ Enabled
+- Types: `multiple_choice`, `true_false`, `open`, `sum`, `fill_in_the_blank`, `matching_columns`, `problem_solving`, `essay`
+- Focus: Professional education tools
+- PDF Upload: ✅ Enabled
 
 **Advanced Plan:**
 
--   Types: All 11 types including `project_based`, `gamified`, `summative`
--   Focus: Complete pedagogical toolkit
--   PDF Upload: ✅ Enabled
+- Types: All 11 types including `project_based`, `gamified`, `summative`
+- Focus: Complete pedagogical toolkit
+- PDF Upload: ✅ Enabled
 
 #### New UI Layout - Two Column Grid
 
 **Before:**
 
--   Simple vertical list
--   No descriptions
--   Basic checkboxes
+- Simple vertical list
+- No descriptions
+- Basic checkboxes
 
 **After:**
 
--   Responsive 2-column grid (`grid grid-cols-1 md:grid-cols-2`)
--   Card-style layout with hover effects
--   Type name + description for each option
--   Visual distinction between available and locked types
--   Interactive cards that respond to clicks
--   Lock icon 🔒 for unavailable types with upgrade tooltip
+- Responsive 2-column grid (`grid grid-cols-1 md:grid-cols-2`)
+- Card-style layout with hover effects
+- Type name + description for each option
+- Visual distinction between available and locked types
+- Interactive cards that respond to clicks
+- Lock icon 🔒 for unavailable types with upgrade tooltip
 
 **CSS Classes:**
 
@@ -91,9 +91,9 @@ className={cn(
 
 #### Changed Label
 
--   **Before:** "Matéria \*"
--   **After:** "Conteúdo das Questões \*"
--   Added helper text: "Escolha uma matéria comum ou digite um tema específico"
+- **Before:** "Matéria \*"
+- **After:** "Conteúdo das Questões \*"
+- Added helper text: "Escolha uma matéria comum ou digite um tema específico"
 
 #### New State Management
 
@@ -107,19 +107,19 @@ const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
 
 #### Dual Mode Interface
 
-**Mode 1: Select from Options**
+##### **Mode 1: Select from Options**
 
--   Predefined subjects (14 common subjects)
--   Recent subjects from user's history (loaded from database)
--   "✏️ Digitar tema personalizado..." option at the bottom
+- Predefined subjects (14 common subjects)
+- Recent subjects from user's history (loaded from database)
+- "✏️ Digitar tema personalizado..." option at the bottom
 
-**Mode 2: Custom Input**
+##### **Mode 2: Custom Input**
 
--   Free text input field
--   Real-time suggestions based on user's history
--   Filter suggestions as user types (minimum 2 characters)
--   Quick-select buttons for suggestions
--   Cancel button to return to select mode
+- Free text input field
+- Real-time suggestions based on user's history
+- Filter suggestions as user types (minimum 2 characters)
+- Quick-select buttons for suggestions
+- Cancel button to return to select mode
 
 #### Database Integration
 
@@ -157,27 +157,27 @@ if (existingSubject) {
 
 #### Visual Enhancements
 
--   ✅ Card-based design for question types
--   ✅ Hover effects on interactive elements
--   ✅ Clear visual hierarchy with sections
--   ✅ Descriptions help users understand each question type
--   ✅ Locked types show upgrade path clearly
+- ✅ Card-based design for question types
+- ✅ Hover effects on interactive elements
+- ✅ Clear visual hierarchy with sections
+- ✅ Descriptions help users understand each question type
+- ✅ Locked types show upgrade path clearly
 
 #### User Experience
 
--   ✅ Faster selection with larger click targets
--   ✅ Two-column layout reduces scrolling
--   ✅ Smart suggestions save time
--   ✅ Free input allows any topic/theme
--   ✅ Subject history persists across sessions
--   ✅ Intuitive mode switching (select ↔ custom)
+- ✅ Faster selection with larger click targets
+- ✅ Two-column layout reduces scrolling
+- ✅ Smart suggestions save time
+- ✅ Free input allows any topic/theme
+- ✅ Subject history persists across sessions
+- ✅ Intuitive mode switching (select ↔ custom)
 
 #### Accessibility
 
--   ✅ Proper labels and descriptions
--   ✅ Keyboard navigation support
--   ✅ Tooltips for disabled options
--   ✅ Clear visual feedback on selection
+- ✅ Proper labels and descriptions
+- ✅ Keyboard navigation support
+- ✅ Tooltips for disabled options
+- ✅ Clear visual feedback on selection
 
 ## Technical Details
 
@@ -269,18 +269,18 @@ if (existingSubject) {
 
 ## Testing Checklist
 
--   [x] All 11 types display correctly
--   [x] Two-column grid is responsive
--   [x] Descriptions show for each type
--   [x] Locked types show lock icon and tooltip
--   [x] Custom subject input works
--   [x] Subject suggestions load from database
--   [x] Suggestion filtering works while typing
--   [x] Mode switching (select ↔ custom) works smoothly
--   [x] New subjects are created automatically
--   [x] Existing subjects are found correctly
--   [x] Form validation includes custom subjects
--   [x] No TypeScript errors
+- [x] All 11 types display correctly
+- [x] Two-column grid is responsive
+- [x] Descriptions show for each type
+- [x] Locked types show lock icon and tooltip
+- [x] Custom subject input works
+- [x] Subject suggestions load from database
+- [x] Suggestion filtering works while typing
+- [x] Mode switching (select ↔ custom) works smoothly
+- [x] New subjects are created automatically
+- [x] Existing subjects are found correctly
+- [x] Form validation includes custom subjects
+- [x] No TypeScript errors
 
 ## Future Enhancements
 
@@ -301,7 +301,7 @@ No database migrations required - the changes are purely UI/UX improvements. The
 
 ## Related Documentation
 
--   `/PROMPTS_CONSOLIDATION_SUMMARY.md` - Details on all 11 prompt implementations
--   `/METADATA_IMPLEMENTATION_SUMMARY.md` - Metadata structure for each question type
--   `/components/QuestionCard.tsx` - Rendering logic for all types
--   `/lib/genkit/prompts.ts` - Generation flows for all types
+- `/PROMPTS_CONSOLIDATION_SUMMARY.md` - Details on all 11 prompt implementations
+- `/METADATA_IMPLEMENTATION_SUMMARY.md` - Metadata structure for each question type
+- `/components/QuestionCard.tsx` - Rendering logic for all types
+- `/lib/genkit/prompts.ts` - Generation flows for all types

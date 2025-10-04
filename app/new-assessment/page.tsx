@@ -105,7 +105,7 @@ export default function NewAssessmentPage() {
   const [questionCount, setQuestionCount] = useState('10');
   const [subject, setSubject] = useState('');
   const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
-  const [questionContext, setQuestionContext] = useState('');
+  const [questionContext, setQuestionContext] = useState<string | undefined>(undefined);
 
   // Document input modes - supports multiple documents of each type
   const [documentMode, setDocumentMode] = useState<DocumentMode>('file');
@@ -128,14 +128,18 @@ export default function NewAssessmentPage() {
   // Derived values from cache
   const userPlan = profile?.plan || 'starter';
   const allowedQuestionTypes = profile?.selected_question_types || [];
-  const planConfig: PlanConfig = plan
-    ? {
-        id: plan.id,
-        monthlyQuestionLimit: plan.questions_month ?? DEFAULT_PLAN_CONFIG.monthlyQuestionLimit,
-        docTypes: plan.doc_type ?? DEFAULT_PLAN_CONFIG.docTypes,
-        maxQuestionTypes: plan.max_question_types ?? DEFAULT_PLAN_CONFIG.maxQuestionTypes,
-      }
-    : DEFAULT_PLAN_CONFIG;
+  const planConfig: PlanConfig = useMemo(
+    () =>
+      plan
+        ? {
+            id: plan.id,
+            monthlyQuestionLimit: plan.questions_month ?? DEFAULT_PLAN_CONFIG.monthlyQuestionLimit,
+            docTypes: plan.doc_type ?? DEFAULT_PLAN_CONFIG.docTypes,
+            maxQuestionTypes: plan.max_question_types ?? DEFAULT_PLAN_CONFIG.maxQuestionTypes,
+          }
+        : DEFAULT_PLAN_CONFIG,
+    [plan]
+  );
   const planConfigId = plan?.id || DEFAULT_PLAN_CONFIG.id;
   const monthlyUsage = usage || 0;
   const maxQuestions = Math.max(0, (plan?.questions_month || DEFAULT_PLAN_CONFIG.monthlyQuestionLimit) - monthlyUsage);
@@ -149,13 +153,11 @@ export default function NewAssessmentPage() {
   );
 
   useEffect(() => {
-    if (allowedDocModes.length === 0) return;
-
-    if (!allowedDocModes.includes(documentMode)) {
+    if (allowedDocModes.length > 0 && !allowedDocModes.includes(documentMode)) {
       const fallbackMode = allowedDocModes[0] ?? 'text';
       setDocumentMode(fallbackMode);
     }
-  }, [allowedDocModes]); // Removido documentMode das dependências para evitar loop
+  }, [allowedDocModes, documentMode]);
 
   // Update questionCount when maxQuestions changes
   useEffect(() => {
@@ -386,36 +388,6 @@ export default function NewAssessmentPage() {
         return;
       }
 
-      // Buscar ou criar subject_id pelo nome da matéria
-      let subjectId: string;
-
-      // Primeiro tenta buscar matéria existente
-      const { data: existingSubject } = await supabase.from('subjects').select('id').eq('name', subject).maybeSingle();
-
-      if (existingSubject) {
-        subjectId = existingSubject.id;
-      } else {
-        // Se não existe, cria nova matéria
-        const { data: newSubject, error: createError } = await supabase
-          .from('subjects')
-          .insert({ name: subject })
-          .select('id')
-          .single();
-
-        if (createError || !newSubject) {
-          toast({
-            title: 'Erro',
-            description: 'Não foi possível criar a matéria. Tente novamente.',
-            variant: 'destructive',
-          });
-          setUploading(false);
-          return;
-        }
-
-        subjectId = newSubject.id;
-      }
-
-      // Buscar academic level do usuário
       const { data: userProfile } = await supabase
         .from('profiles')
         .select('academic_level_id, academic_levels(name)')
@@ -424,18 +396,15 @@ export default function NewAssessmentPage() {
 
       const academicLevel = (userProfile as any)?.academic_levels?.name;
 
-      // Preparar dados de documentos - agora suporta múltiplos de cada tipo simultaneamente
       let documentContent = '';
       let pdfFilesData: Array<{ name: string; type: string; data: string }> = [];
       const documentUrlsToSend: string[] = [];
 
-      // Coletar todos os textos não vazios
       const validTexts = documentTexts.filter((t) => t.trim().length > 0);
       if (validTexts.length > 0) {
         documentContent = validTexts.map((text, index) => `\n--- Texto ${index + 1} ---\n${text.trim()}`).join('\n\n');
       }
 
-      // Coletar todas as URLs não vazias
       const validUrls = documentUrls.filter((u) => u.trim().length > 0);
       if (validUrls.length > 0) {
         documentUrlsToSend.push(...validUrls);
@@ -468,7 +437,6 @@ export default function NewAssessmentPage() {
           );
         }
 
-        // Para DOCX: adicionar texto transcrito ao conteúdo
         const extractedContent = formatExtractedTextForAPI(extractedTexts);
         if (extractedContent) {
           documentContent = documentContent
@@ -477,7 +445,6 @@ export default function NewAssessmentPage() {
         }
       }
 
-      // Chamar API de geração de questões
       const response = await fetch('/api/generate-questions', {
         method: 'POST',
         headers: {
@@ -487,7 +454,6 @@ export default function NewAssessmentPage() {
           title: title.trim(),
           questionCount: parseInt(questionCount),
           subject,
-          subjectId: subjectId,
           questionTypes,
           questionContext,
           academicLevel,
@@ -986,26 +952,35 @@ export default function NewAssessmentPage() {
                           <div
                             key={type.id}
                             className={cn(
-                              'flex items-start space-x-3 p-3 rounded-lg border transition-all',
+                              'flex items-start space-x-3 px-3 rounded-lg border transition-all',
                               isAllowed
                                 ? 'border-border hover:border-primary hover:bg-primary/5 cursor-pointer'
                                 : 'border-border bg-muted/50 opacity-50 cursor-not-allowed'
                             )}
-                            onClick={() => isAllowed && toggleQuestionType(type.id)}
                           >
                             {isAllowed ? (
                               <>
-                                <Checkbox
-                                  id={type.id}
-                                  checked={questionTypes.includes(type.id)}
-                                  onCheckedChange={() => toggleQuestionType(type.id)}
-                                  className="mt-0.5"
-                                />
+                                <div className="pt-3">
+                                  <Checkbox
+                                    id={type.id}
+                                    checked={questionTypes.includes(type.id)}
+                                    onCheckedChange={() => toggleQuestionType(type.id)}
+                                    className="mt-0.5"
+                                  />
+                                </div>
                                 <div className="flex-1">
-                                  <Label htmlFor={type.id} className="text-sm font-medium cursor-pointer leading-tight">
+                                  <p
+                                    className="text-sm font-medium leading-tight cursor-pointer pt-3"
+                                    onClick={() => toggleQuestionType(type.id)}
+                                  >
                                     {type.label}
-                                  </Label>
-                                  <p className="text-xs text-muted-foreground mt-1">{type.description}</p>
+                                  </p>
+                                  <p
+                                    className="text-xs text-muted-foreground mt-1 pb-3"
+                                    onClick={() => toggleQuestionType(type.id)}
+                                  >
+                                    {type.description}
+                                  </p>
                                 </div>
                               </>
                             ) : (

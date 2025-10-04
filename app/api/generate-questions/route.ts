@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
             .eq("plan", profile.plan)
             .single();
 
-        const aiModel = planModelData?.model || "gemini-2.0-flash-exp";
-        console.log(`Usando modelo ${aiModel} para plano ${profile.plan}`);
+        const aiModel = planModelData?.model || "gemini-2.0-flash";
 
         // 2. Parse do body
         const body: GenerateQuestionsRequest = await request.json();
@@ -76,7 +75,6 @@ export async function POST(request: NextRequest) {
             title,
             questionCount: requestedQuestionCount,
             subject,
-            subjectId,
             questionTypes,
             questionContext,
             academicLevel,
@@ -94,7 +92,7 @@ export async function POST(request: NextRequest) {
 
         // Validações
         console.log(body);
-        if (!title || !subject || !subjectId || !questionTypes || questionTypes.length === 0 || !questionContext) {
+        if (!title || !subject || !questionTypes || questionTypes.length === 0 || !questionContext) {
             return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
         }
 
@@ -110,13 +108,12 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Criar o assessment
-        console.log({ subjectId });
         const { data: assessment, error: assessmentError } = await supabase
             .from("assessments")
             .insert({
                 user_id: profile.id,
                 title: title,
-                subject_id: subjectId,
+                subject,
             })
             .select()
             .single();
@@ -130,7 +127,7 @@ export async function POST(request: NextRequest) {
         const questionsPerType = Math.floor(totalRequestedQuestions / questionTypes.length);
         const remainder = totalRequestedQuestions % questionTypes.length;
 
-        const allGeneratedQuestions: any[] = [];
+        const allGeneratedQuestions: {}[] = [];
 
         // 5. Gerar questões para cada tipo
         for (let i = 0; i < questionTypes.length; i++) {
