@@ -25,16 +25,14 @@ FORMATO DE SAÍDA (JSON):
   "questions": [
     {
       "type": "gamified",
-      "question": "Qual instrumento é considerado o principal na documentação do desenvolvimento na Educação Infantil?",
+      "question": "Quiz Rápido: Avaliação na Educação Infantil",
       "metadata": {
-        "answers": [
-          {"answer": "Prova com nota", "is_correct": false},
-          {"answer": "Simulado", "is_correct": false},
-          {"answer": "Portfólio", "is_correct": true},
-          {"answer": "Redação", "is_correct": false}
-        ],
-        "feedback_after_answer": "Isso mesmo! O portfólio conta a história da aprendizagem da criança, valorizando todo o processo.",
-        "time_limit_seconds": 20
+        "scenario": "Você é um professor da Educação Infantil planejando as avaliações do semestre.",
+        "challenges": [
+          "Qual instrumento é considerado o principal na documentação do desenvolvimento?",
+          "Verdadeiro ou Falso: A avaliação na Educação Infantil tem caráter classificatório.",
+          "Complete: A avaliação deve valorizar o ________ mais do que apenas o produto final."
+        ]
       }
     }
   ]

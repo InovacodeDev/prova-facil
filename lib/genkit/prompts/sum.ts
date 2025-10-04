@@ -37,12 +37,12 @@ FORMATO DE SAÍDA (JSON):
       "type": "sum",
       "question": "Sobre os instrumentos e funções da avaliação na Educação Básica, assinale o que for correto:",
       "metadata": {
-        "propositions": [
-          {"answer": "A avaliação diagnóstica é aplicada ao final do ciclo letivo para classificar os alunos.", "number": 1, "is_correct": false},
-          {"answer": "O parecer descritivo é um instrumento qualitativo chave na Educação Infantil.", "number": 2, "is_correct": true},
-          {"answer": "O ENEM utiliza predominantemente questões de somatória em sua primeira fase.", "number": 4, "is_correct": false},
-          {"answer": "Rubricas são ferramentas que aumentam a transparência dos critérios de avaliação.", "number": 8, "is_correct": true},
-          {"answer": "A LDB determina a prevalência dos aspectos quantitativos sobre os qualitativos.", "number": 16, "is_correct": false}
+        "statements": [
+          {"statement": "A avaliação diagnóstica é aplicada ao final do ciclo letivo para classificar os alunos.", "number": 1, "is_correct": false},
+          {"statement": "O parecer descritivo é um instrumento qualitativo chave na Educação Infantil.", "number": 2, "is_correct": true},
+          {"statement": "O ENEM utiliza predominantemente questões de somatória em sua primeira fase.", "number": 4, "is_correct": false},
+          {"statement": "Rubricas são ferramentas que aumentam a transparência dos critérios de avaliação.", "number": 8, "is_correct": true},
+          {"statement": "A LDB determina a prevalência dos aspectos quantitativos sobre os qualitativos.", "number": 16, "is_correct": false}
         ]
       }
     }

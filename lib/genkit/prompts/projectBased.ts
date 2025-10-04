@@ -23,15 +23,19 @@ FORMATO DE SAÍDA (JSON):
   "questions": [
     {
       "type": "project_based",
-      "question": "Projeto: Criando a Avaliação do Futuro",
+      "question": "Projeto: Criando a Avaliação do Futuro - Como podemos criar um sistema de avaliação para nossa disciplina que seja justo, eficaz e alinhado às competências do século XXI?",
       "metadata": {
-        "guiding_question": "Como podemos criar um sistema de avaliação para nossa disciplina que seja justo, eficaz e alinhado às competências do século XXI?",
-        "learning_objectives": ["Analisar criticamente diferentes métodos de avaliação.", "Colaborar em equipe para desenvolver uma proposta coesa.", "Aplicar os conceitos de avaliação formativa e somativa."],
-        "final_product_description": "Os grupos deverão apresentar um 'Manual de Avaliação' para a disciplina, incluindo exemplos de atividades, instrumentos e uma rubrica.",
-        "main_steps": ["Pesquisa teórica", "Análise de práticas atuais", "Desenvolvimento da proposta", "Apresentação"],
-        "evaluation_rubric": [
-          {"criterion": "Profundidade da Pesquisa", "levels": [{"level": "Básico", "description": "..."}, {"level": "Proficiente", "description": "..."}]},
-          {"criterion": "Qualidade do Produto Final", "levels": [{"level": "Básico", "description": "..."}, {"level": "Proficiente", "description": "..."}]}
+        "phases": [
+          "Fase 1: Pesquisa teórica sobre diferentes métodos de avaliação e suas aplicações.",
+          "Fase 2: Análise crítica das práticas de avaliação atuais na escola.",
+          "Fase 3: Desenvolvimento colaborativo da proposta de sistema de avaliação.",
+          "Fase 4: Apresentação do Manual de Avaliação para a turma."
+        ],
+        "deliverables": [
+          "Manual de Avaliação completo (incluindo exemplos de atividades e instrumentos)",
+          "Rubrica detalhada para avaliação dos trabalhos",
+          "Apresentação em slides do sistema proposto",
+          "Reflexão individual sobre o processo de aprendizagem"
         ]
       }
     }
