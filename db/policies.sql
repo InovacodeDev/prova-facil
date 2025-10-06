@@ -143,66 +143,6 @@ CREATE POLICY questions_delete_owner
   );
 
 -- ================================
--- answers
--- ================================
-DROP POLICY IF EXISTS answers_select_public ON public.answers;
-CREATE POLICY answers_select_public
-  ON public.answers
-  FOR SELECT
-  TO public, authenticated
-  USING (true);
-
-DROP POLICY IF EXISTS answers_insert_owner_check ON public.answers;
-CREATE POLICY answers_insert_owner_check
-  ON public.answers
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.questions q
-      JOIN public.assessments a ON a.id = q.assessment_id
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE q.id = question_id AND p.user_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS answers_update_owner ON public.answers;
-CREATE POLICY answers_update_owner
-  ON public.answers
-  FOR UPDATE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.questions q
-      JOIN public.assessments a ON a.id = q.assessment_id
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE q.id = public.answers.question_id AND p.user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.questions q
-      JOIN public.assessments a ON a.id = q.assessment_id
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE q.id = question_id AND p.user_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS answers_delete_owner ON public.answers;
-CREATE POLICY answers_delete_owner
-  ON public.answers
-  FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.questions q
-      JOIN public.assessments a ON a.id = q.assessment_id
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE q.id = public.answers.question_id AND p.user_id = auth.uid()
-    )
-  );
-
--- ================================
 -- logs
 -- ================================
 DROP POLICY IF EXISTS logs_select_public ON public.logs;
@@ -327,3 +267,16 @@ CREATE INDEX idx_plans_id ON public.plans(id);
 -- - USING clauses reference the existing row via public.<table>.<col>.
 -- - If you need service-role or admin exceptions, create additional policies for those roles.
 -- - After applying, test with an authenticated session (auth.uid()) and the Supabase client.
+
+-- Policy: Users can only view their own logs
+CREATE POLICY "Users can view their own cycle logs"
+ON profile_logs_cycle
+FOR SELECT
+USING (auth.uid() = user_id);
+
+-- Policy: System can insert/update logs (via service role)
+CREATE POLICY "System can manage cycle logs"
+ON profile_logs_cycle
+FOR ALL
+USING (true)
+WITH CHECK (true);

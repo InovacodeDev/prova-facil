@@ -144,7 +144,7 @@ export const profiles = pgTable("profiles", {
     plan: planEnum().notNull().default("starter"),
     plan_expire_at: timestamp("plan_expire_at", { mode: "date" }),
     renew_status: renewStatusEnum().notNull().default("none"),
-    academic_level_id: uuid("academic_level_id").references(() => academicLevels.id),
+    academic_level_id: integer("academic_level_id").references(() => academicLevels.id),
     allowed_cookies: text("allowed_cookies").array().notNull().default([]), // jsonb stored as text
     selected_question_types: questionTypeEnum("selected_question_types").array().notNull().default([]),
     question_types_updated_at: timestamp("question_types_updated_at"),
