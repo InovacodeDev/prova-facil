@@ -13,7 +13,8 @@ Generate {{count}} matching columns questions about "{{subject}}"{{#if academicL
 The questions should fit the following context: {{questionContextDescription}}.
 
 Instructions:
-- Write a clear instruction for the student in the 'question' field (e.g., "Match the concepts in Column A with their definitions in Column B.").
+- **All output must be in Brazilian Portuguese (pt-BR).**
+- Write a clear instruction for the student in the 'question' field (e.g., "Associe os conceitos da Coluna A com suas definições na Coluna B.").
 - Create a set of items for the first column ('column_a'). Each item must have a unique ID (e.g., "A1", "A2") and its text.
 - Create a corresponding set of items for the second column ('column_b'). Each item must have a unique ID (e.g., "B1", "B2") and its text.
 - The items in column_b should be shuffled to not directly correspond to the order of column_a.

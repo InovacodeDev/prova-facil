@@ -13,6 +13,7 @@ Generate {{count}} problem-solving questions about "{{subject}}"{{#if academicLe
 The questions should fit the following context: {{questionContextDescription}}.
 
 Instructions:
+- **All output must be in Brazilian Portuguese (pt-BR).**
 - Present a realistic scenario or case study in the 'question' field.
 - The question must pose a clear problem or task that needs to be solved using the information from the reference material.
 - Provide a detailed, step-by-step solution in the 'step_by_step_solution' metadata field. This should explain the logical steps and reasoning required to arrive at the correct answer.

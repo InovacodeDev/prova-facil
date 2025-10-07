@@ -13,6 +13,7 @@ Generate {{count}} multiple-choice questions about the subject "{{subject}}"{{#i
 The questions should fit the following context: {{questionContextDescription}}.
 
 Instructions:
+- **All output must be in Brazilian Portuguese (pt-BR).**
 - Create a clear and concise question.
 - Provide a set of answer options.
 - Exactly one answer must be correct.

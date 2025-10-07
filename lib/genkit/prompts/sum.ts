@@ -13,6 +13,7 @@ Generate a set of statements for a sum question about "{{subject}}"{{#if academi
 The question should fit the following context: {{questionContextDescription}}.
 
 Instructions:
+- **All output must be in Brazilian Portuguese (pt-BR).**
 - Create {{count}} individual statements to be judged as correct or incorrect.
 - For each statement, assign a unique number that is a power of 2 (1, 2, 4, 8, 16, etc.).
 - The numbers must be assigned in ascending order.
