@@ -1,8 +1,8 @@
 # prova-facil
 
-![Status da CI/CD](URL_DO_BADGE) ![Licença](URL_DO_BADGE) ![npm version](URL_DO_BADGE)
+![Deploy Status](https://github.com/InovacodeDev/prova-facil/actions/workflows/deploy.yml/badge.svg?branch=main) ![License](https://img.shields.io/badge/license-ISC-blue.svg) ![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)
 
-A plataforma definitiva para criação e gestão de avaliações escolares — simplificando o processo para educadores e instituições.
+> A plataforma definitiva para criação e gestão de avaliações escolares — simplificando o processo para educadores e instituições.
 
 ## 📜 Sobre o Projeto
 
@@ -105,7 +105,35 @@ pnpm dev
 # Abra http://localhost:8800
 ```
 
-## 📡 Endpoints da API (resumo)
+## � CI/CD e Deployments
+
+O projeto utiliza GitHub Actions + Vercel para deploy automatizado baseado em branches:
+
+| Branch    | Ambiente            | Deploy Automático | URL                                    |
+| --------- | ------------------- | ----------------- | -------------------------------------- |
+| `main`    | **Production**      | ✅                | https://prova-facil.vercel.app         |
+| `staging` | **Preview/Staging** | ✅                | https://staging-prova-facil.vercel.app |
+| `dev`     | **Development**     | ✅                | https://dev-prova-facil.vercel.app     |
+| Outras    | Local apenas        | ❌                | Desenvolvimento local                  |
+
+### Setup CI/CD
+
+Para configurar o CI/CD pela primeira vez:
+
+```bash
+# Execute o script de setup
+chmod +x setup-cicd.sh
+./setup-cicd.sh
+
+# Siga as instruções para configurar:
+# 1. GitHub Secrets (VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID)
+# 2. Variáveis de ambiente no Vercel Dashboard
+```
+
+📖 **Documentação completa:** [`CICD_SETUP.md`](./CICD_SETUP.md)  
+⚡ **Guia rápido:** [`CICD_QUICKSTART.md`](./CICD_QUICKSTART.md)
+
+## �📡 Endpoints da API (resumo)
 
 O projeto usa o App Router (`app/api/*`). Endpoints principais observados:
 
