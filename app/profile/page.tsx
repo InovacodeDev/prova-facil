@@ -54,10 +54,10 @@ interface Profile {
 
 const PLAN_LIMITS: Record<string, { max_question_types: number }> = {
   starter: { max_question_types: 1 },
-  basic: { max_question_types: 3 },
-  essentials: { max_question_types: 5 },
-  plus: { max_question_types: 8 },
-  advanced: { max_question_types: 11 },
+  basic: { max_question_types: 2 },
+  essentials: { max_question_types: 3 },
+  plus: { max_question_types: 4 },
+  advanced: { max_question_types: 6 },
 };
 
 export default function ProfilePage() {
