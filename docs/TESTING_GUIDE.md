@@ -30,12 +30,13 @@ pnpm db:check
 SELECT * FROM error_logs LIMIT 5;
 
 -- Verificar estrutura
-SELECT column_name, data_type 
-FROM information_schema.columns 
+SELECT column_name, data_type
+FROM information_schema.columns
 WHERE table_name = 'error_logs';
 ```
 
 **Resultado Esperado:**
+
 - Tabela existe com colunas: id, message, stack, level, context, created_at
 - Enum `error_level` com valores: error, warn, fatal, info
 
@@ -46,6 +47,7 @@ WHERE table_name = 'error_logs';
 **Passo a Passo:**
 
 1. **Limpar dados de teste (opcional):**
+
 ```sql
 -- Deletar usuário de teste anterior (se existir)
 DELETE FROM auth.users WHERE email = 'teste-profile@example.com';
@@ -57,6 +59,7 @@ DELETE FROM profiles WHERE email = 'teste-profile@example.com';
 3. **Clicar na aba "Criar Conta"**
 
 4. **Preencher o formulário:**
+
    - Nome: `João Teste Profile`
    - Email: `teste-profile@example.com`
    - Nível Acadêmico: `Ensino Médio`
@@ -65,8 +68,9 @@ DELETE FROM profiles WHERE email = 'teste-profile@example.com';
 5. **Clicar em "Criar Conta"**
 
 6. **Verificar no banco:**
+
 ```sql
-SELECT 
+SELECT
   u.id as user_id,
   u.email as auth_email,
   u.email_confirmed_at,
@@ -81,6 +85,7 @@ WHERE u.email = 'teste-profile@example.com';
 ```
 
 **Resultado Esperado:**
+
 - ✅ Usuário criado em `auth.users`
 - ✅ Profile criado em `profiles` com:
   - `plan = 'starter'`
@@ -108,9 +113,10 @@ Se o domínio do email estiver configurado para não requerer confirmação:
 5. **Não** deve precisar inserir email/senha novamente
 
 **Verificar:**
+
 ```sql
 -- Após confirmar email
-SELECT email_confirmed_at FROM auth.users 
+SELECT email_confirmed_at FROM auth.users
 WHERE email = 'teste-profile@example.com';
 
 -- Deve ter uma data/hora
@@ -125,12 +131,13 @@ WHERE email = 'teste-profile@example.com';
 **Passo a Passo:**
 
 1. **Criar usuário SEM profile (simular erro):**
+
 ```sql
 -- 1. Criar usuário manualmente no auth
 INSERT INTO auth.users (
-  instance_id, 
-  id, 
-  email, 
+  instance_id,
+  id,
+  email,
   encrypted_password,
   email_confirmed_at,
   created_at,
@@ -150,17 +157,20 @@ INSERT INTO auth.users (
 ```
 
 2. **Fazer login:**
+
    - Ir para `/auth`
    - Email: `teste-fallback@example.com`
    - Senha: `senha123456`
    - Clicar em "Entrar"
 
 3. **Verificar:**
+
 ```sql
 SELECT * FROM profiles WHERE email = 'teste-fallback@example.com';
 ```
 
 **Resultado Esperado:**
+
 - ✅ Login bem-sucedido
 - ✅ Profile criado automaticamente
 - ✅ Redirecionado para `/dashboard`
@@ -176,6 +186,7 @@ SELECT * FROM profiles WHERE email = 'teste-fallback@example.com';
 2. **Acessar:** `/profile`
 
 3. **Verificar a interface:**
+
    - Deve mostrar ⚠️ "Status de Verificação de Email"
    - Ícone laranja de alerta
    - Botão "Enviar Verificação"
@@ -183,6 +194,7 @@ SELECT * FROM profiles WHERE email = 'teste-fallback@example.com';
 4. **Clicar em "Enviar Verificação"**
 
 5. **Verificar toast:**
+
    - Deve aparecer: ✉️ "Email Enviado! Verifique sua caixa de entrada..."
 
 6. **Abrir email de verificação**
@@ -198,12 +210,13 @@ SELECT * FROM profiles WHERE email = 'teste-fallback@example.com';
    - Botão "Enviar Verificação" não deve mais aparecer
 
 **Verificar no banco:**
+
 ```sql
-SELECT 
+SELECT
   email,
   email_verified,
   email_verified_at
-FROM profiles 
+FROM profiles
 WHERE email = 'seu-email@example.com';
 ```
 
@@ -214,6 +227,7 @@ WHERE email = 'seu-email@example.com';
 **Teste 1: Forçar erro em API Route**
 
 1. **Criar arquivo de teste:**
+
 ```typescript
 // app/api/test-error/route.ts
 import { NextRequest } from 'next/server';
@@ -232,6 +246,7 @@ export async function GET(request: NextRequest) {
 2. **Acessar:** `http://localhost:8800/api/test-error`
 
 3. **Verificar resposta:**
+
 ```json
 {
   "error": "Internal Server Error",
@@ -240,19 +255,21 @@ export async function GET(request: NextRequest) {
 ```
 
 4. **Verificar no banco:**
+
 ```sql
-SELECT 
+SELECT
   id,
   message,
   level,
   context->>'endpoint' as endpoint,
   created_at
-FROM error_logs 
-ORDER BY created_at DESC 
+FROM error_logs
+ORDER BY created_at DESC
 LIMIT 5;
 ```
 
 **Resultado Esperado:**
+
 - ✅ Erro registrado na tabela `error_logs`
 - ✅ `message = 'Teste de log de erro - API Route'`
 - ✅ `level = 'error'`
@@ -263,6 +280,7 @@ LIMIT 5;
 1. **Abrir console do navegador** (F12)
 
 2. **Executar:**
+
 ```javascript
 fetch('/api/errors/log', {
   method: 'POST',
@@ -272,15 +290,18 @@ fetch('/api/errors/log', {
     level: 'warn',
     context: {
       component: 'DevTools',
-      url: window.location.href
-    }
-  })
-}).then(r => r.json()).then(console.log);
+      url: window.location.href,
+    },
+  }),
+})
+  .then((r) => r.json())
+  .then(console.log);
 ```
 
 3. **Verificar no banco:**
+
 ```sql
-SELECT * FROM error_logs WHERE message LIKE '%frontend%' 
+SELECT * FROM error_logs WHERE message LIKE '%frontend%'
 ORDER BY created_at DESC LIMIT 1;
 ```
 
@@ -291,26 +312,32 @@ ORDER BY created_at DESC LIMIT 1;
 **Fluxo Completo:**
 
 1. ✅ **Criar nova conta**
+
    - Ir para `/auth`
    - Criar conta com novo email
    - Verificar toast de confirmação
 
 2. ✅ **Confirmar email**
+
    - Abrir email
    - Clicar no link
    - Deve redirecionar para `/dashboard` **automaticamente** (sem login)
 
 3. ✅ **Verificar profile**
+
    ```sql
    SELECT * FROM profiles WHERE email = 'novo-email@example.com';
    ```
+
    - Deve ter todos os campos preenchidos
 
 4. ✅ **Ir para perfil**
+
    - Acessar `/profile`
    - Email deve estar verificado ✅
 
 5. ✅ **Fazer logout e login novamente**
+
    - Fazer logout
    - Fazer login
    - Deve funcionar normalmente
@@ -328,16 +355,17 @@ ORDER BY created_at DESC LIMIT 1;
 ### Problema: "Profile não criado após signup"
 
 **Solução:**
+
 ```sql
 -- Verificar se o usuário existe
 SELECT * FROM auth.users WHERE email = 'seu-email@example.com';
 
 -- Se existir mas não tiver profile, criar manualmente:
 INSERT INTO profiles (
-  user_id, 
-  email, 
-  full_name, 
-  plan, 
+  user_id,
+  email,
+  full_name,
+  plan,
   renew_status,
   email_verified
 ) VALUES (
@@ -353,6 +381,7 @@ INSERT INTO profiles (
 ### Problema: "Email de verificação não chega"
 
 **Verificações:**
+
 1. Conferir spam/promoções
 2. Verificar configuração SMTP no Supabase
 3. Verificar logs no Supabase Dashboard > Logs
@@ -360,10 +389,11 @@ INSERT INTO profiles (
 ### Problema: "Erro ao inserir na tabela error_logs"
 
 **Solução:**
+
 ```sql
 -- Verificar se a tabela existe
 SELECT EXISTS (
-  SELECT FROM information_schema.tables 
+  SELECT FROM information_schema.tables
   WHERE table_name = 'error_logs'
 );
 
@@ -395,6 +425,7 @@ Se todos os testes passaram:
 4. ✅ Verificação de email está operacional
 
 **Próximos Passos:**
+
 - Aplicar logs em outras partes da aplicação (ver `ERROR_LOGGING_USAGE_EXAMPLES.md`)
 - Considerar criar dashboard de admin para visualizar logs
 - Configurar alertas para erros críticos

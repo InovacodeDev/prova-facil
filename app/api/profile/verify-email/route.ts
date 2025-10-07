@@ -1,6 +1,6 @@
 /**
  * API Route para enviar email de verificação
- * 
+ *
  * Este endpoint permite que usuários solicitem um novo email de verificação.
  */
 

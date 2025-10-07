@@ -1,6 +1,6 @@
 /**
  * API Route para registrar erros
- * 
+ *
  * Este endpoint permite que o frontend envie erros para serem persistidos
  * no banco de dados.
  */

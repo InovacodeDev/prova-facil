@@ -1,6 +1,6 @@
 /**
  * Error Logging Service
- * 
+ *
  * Serviço centralizado para persistir erros no banco de dados.
  * Segue os princípios do Grimório Arcano:
  * - Responsabilidade Única (SRP)
@@ -30,11 +30,11 @@ export interface CreateErrorLogDto {
 
 /**
  * ErrorLogsService - Serviço para persistir logs de erro
- * 
+ *
  * @example
  * ```typescript
  * import { logError } from '@/lib/error-logs-service';
- * 
+ *
  * try {
  *   // código que pode falhar
  * } catch (error) {
@@ -50,10 +50,10 @@ export interface CreateErrorLogDto {
 export class ErrorLogsService {
   /**
    * Persiste um erro no banco de dados
-   * 
+   *
    * @param dto - Dados do erro a ser registrado
    * @returns Promise<void>
-   * 
+   *
    * @remarks
    * Este método nunca lança exceções. Se falhar ao persistir,
    * registra no console e continua (fallback seguro).
@@ -83,7 +83,7 @@ export class ErrorLogsService {
 
   /**
    * Persiste múltiplos erros em lote (útil para logs acumulados)
-   * 
+   *
    * @param dtos - Array de erros a serem registrados
    * @returns Promise<void>
    */
@@ -111,7 +111,7 @@ export class ErrorLogsService {
 
   /**
    * Método utilitário para extrair informações de uma exceção
-   * 
+   *
    * @param error - O erro a ser processado
    * @returns CreateErrorLogDto formatado
    */
@@ -135,11 +135,11 @@ export class ErrorLogsService {
 
 /**
  * Função helper para uso mais simples (exportação nomeada)
- * 
+ *
  * @example
  * ```typescript
  * import { logError } from '@/lib/error-logs-service';
- * 
+ *
  * await logError({
  *   message: 'Something went wrong',
  *   level: 'error'

@@ -1,6 +1,6 @@
 /**
  * Global Error Handler
- * 
+ *
  * Middleware/handler para capturar e registrar erros não tratados
  * na aplicação Next.js.
  */
@@ -10,12 +10,12 @@ import { ErrorLogsService } from './error-logs-service';
 
 /**
  * Handler de erro para API Routes do Next.js
- * 
+ *
  * @example
  * ```typescript
  * // app/api/users/route.ts
  * import { handleApiError } from '@/lib/error-handler';
- * 
+ *
  * export async function GET(request: Request) {
  *   try {
  *     // sua lógica aqui
@@ -69,22 +69,19 @@ export async function handleApiError(error: unknown, request: Request): Promise<
 
 /**
  * Wrapper para proteger Server Actions
- * 
+ *
  * @example
  * ```typescript
  * // app/actions/users.ts
  * import { withErrorHandling } from '@/lib/error-handler';
- * 
+ *
  * export const createUser = withErrorHandling(async (data: UserData) => {
  *   // sua lógica aqui
  *   return result;
  * });
  * ```
  */
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
-  fn: T,
-  context?: { action: string }
-): T {
+export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(fn: T, context?: { action: string }): T {
   return (async (...args: Parameters<T>) => {
     try {
       return await fn(...args);
@@ -110,14 +107,14 @@ export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
 
 /**
  * Hook para capturar erros do lado do cliente
- * 
+ *
  * @example
  * ```typescript
  * // Em um componente cliente
  * import { useErrorHandler } from '@/lib/error-handler';
- * 
+ *
  * const { handleError } = useErrorHandler();
- * 
+ *
  * try {
  *   // código
  * } catch (error) {
