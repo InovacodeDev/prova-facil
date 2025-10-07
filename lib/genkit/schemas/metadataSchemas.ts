@@ -65,7 +65,9 @@ export const FillInTheBlankMetadataSchema = z.object({
   blanks: z
     .array(
       z.object({
-        id: z.string().regex(/^blank_\d+$/, 'ID must be in the format "blank_n".')
+        id: z
+          .string()
+          .regex(/^blank_\d+$/, 'ID must be in the format "blank_n".')
           .describe('The identifier for the blank, matching the placeholder in the question text (e.g., "blank_1").'),
         correct_answer: z.string().describe('The correct word or phrase to fill the blank.'),
       })
@@ -118,62 +120,91 @@ export const MatchingColumnsMetadataSchema = z.object({
  * Provides an expected answer or key topics for evaluation.
  */
 export const OpenMetadataSchema = z.object({
-  expected_answer: z.string().min(1, 'Expected answer cannot be empty.')
-    .describe('A model answer or a description of the key points, topics, and arguments expected for a correct response.'),
+  expected_answer: z
+    .string()
+    .min(1, 'Expected answer cannot be empty.')
+    .describe(
+      'A model answer or a description of the key points, topics, and arguments expected for a correct response.'
+    ),
 });
 
 /**
-* Metadata for Problem Solving questions.
-* Provides a detailed, step-by-step solution to the problem.
-*/
+ * Metadata for Problem Solving questions.
+ * Provides scenario, data, task, and step-by-step solution.
+ */
 export const ProblemSolvingMetadataSchema = z.object({
-  step_by_step_solution: z.string()
+  scenario: z.string().describe('The contextualized scenario/problem description.'),
+  data: z
+    .array(
+      z.object({
+        label: z.string().describe('The label for the data point (e.g., "Distance", "Weight").'),
+        value: z.string().describe('The value of the data point (e.g., "450 km", "12 kg").'),
+      })
+    )
+    .optional()
+    .describe('Optional structured data for the problem.'),
+  task: z.string().describe('The specific task or question to be solved.'),
+  solution_guideline: z
+    .string()
     .describe('A detailed, step-by-step explanation of how to arrive at the correct solution.'),
+  // Legacy field for backward compatibility
+  step_by_step_solution: z.string().optional().describe('DEPRECATED: Use solution_guideline instead.'),
 });
 
 /**
  * Metadata for Essay questions.
- * Provides supporting texts and an evaluation rubric.
+ * Provides instructions, supporting texts, and essay prompt.
  */
 export const EssayMetadataSchema = z.object({
-  evaluation_rubric: z.string()
-    .describe('A rubric or criteria for evaluating the essay, detailing what is expected in terms of argumentation, structure, and use of sources.'),
+  instructions: z
+    .array(z.string())
+    .describe('An array of instructions for the student (e.g., ["Use formal language", "Minimum 30 lines"]).'),
   supporting_texts: z
     .array(
       z.object({
-        source: z.string().describe('The source of the supporting text (e.g., author, book, website).'),
+        source: z.string().describe('The source of the supporting text (e.g., "Text I", "LDB, Art. 24").'),
         content: z.string().describe('The content of the supporting text.'),
       })
     )
-    .optional()
-    .describe('Optional supporting texts or documents to be used as a basis for the essay.'),
+    .describe('Supporting texts or documents to be used as a basis for the essay.'),
+  essay_prompt: z.string().describe('The essay prompt/theme/command.'),
+  // Legacy field for backward compatibility
+  evaluation_rubric: z.string().optional().describe('DEPRECATED: A rubric or criteria for evaluating the essay.'),
 });
 
 /**
  * Metadata for Project-Based questions.
- * Outlines the project tasks, deliverables, and evaluation criteria.
+ * Outlines welcome message, guiding question, phases, deliverables, and evaluation criteria.
  */
 export const ProjectBasedMetadataSchema = z.object({
-  project_tasks: z.array(z.string()).describe('A list of tasks the student needs to complete.'),
+  welcome_message: z.string().optional().describe('Optional welcome message to contextualize the project.'),
+  guiding_question: z.string().describe('The guiding question for the project.'),
+  phases: z.array(z.string()).describe('A list of phases/tasks the student needs to complete.'),
   deliverables: z.array(z.string()).describe('A list of what the student needs to deliver at the end of the project.'),
-  evaluation_criteria: z.array(z.string()).describe('A list of criteria that will be used to evaluate the final project.'),
+  evaluation_criteria: z
+    .array(z.string())
+    .optional()
+    .describe('Optional list of criteria that will be used to evaluate the final project.'),
+  // Legacy field for backward compatibility
+  project_tasks: z.array(z.string()).optional().describe('DEPRECATED: Use phases instead.'),
 });
 
 /**
  * Metadata for Gamified questions.
- * Includes elements like score, time limits, and narrative context.
+ * Includes mission briefing, challenges, and conclusion message.
  */
 export const GamifiedMetadataSchema = z.object({
-  scenario: z.string().describe('The narrative or scenario for the gamified challenge.'),
-  score_points: z.number().int().min(2).max(5).describe('Points awarded for a correct answer.'),
-  time_limit_seconds: z.number().int().min(2).max(5).optional().describe('An optional time limit in seconds for the question.'),
-});
-
-/**
- * Metadata for Summative questions.
- * Provides a summary of the expected answer and evaluation criteria.
- */
-export const SummativeMetadataSchema = z.object({
-  summary_of_expected_answer: z.string().describe('A summary of the expected answer or key points.'),
-  evaluation_criteria: z.string().describe('The criteria for evaluating the answer.'),
+  mission_briefing: z.string().describe('The mission briefing/context for the gamified challenge.'),
+  challenges: z.array(z.string()).describe('An array of challenges for the student to complete.'),
+  conclusion_message: z.string().optional().describe('Optional conclusion message after completing the challenge.'),
+  // Legacy fields for backward compatibility
+  scenario: z.string().optional().describe('DEPRECATED: Use mission_briefing instead.'),
+  score_points: z.number().int().min(2).max(5).optional().describe('DEPRECATED: Points awarded for a correct answer.'),
+  time_limit_seconds: z
+    .number()
+    .int()
+    .min(2)
+    .max(5)
+    .optional()
+    .describe('DEPRECATED: An optional time limit in seconds for the question.'),
 });

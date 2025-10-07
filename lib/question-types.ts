@@ -12,7 +12,6 @@ export const QUESTION_TYPE_LABELS: Record<string, string> = {
   essay: 'Redação',
   project_based: 'Baseada em Projeto',
   gamified: 'Gamificada',
-  summative: 'Avaliação Somativa',
 };
 
 export const QUESTION_TYPE_DESCRIPTIONS: Record<string, string> = {
@@ -26,7 +25,6 @@ export const QUESTION_TYPE_DESCRIPTIONS: Record<string, string> = {
   essay: 'Produção textual completa',
   project_based: 'Projetos com fases e entregas',
   gamified: 'Cenários e desafios interativos',
-  summative: 'Múltiplas seções integradas',
 };
 
 // Helper function to get translated label
@@ -52,7 +50,6 @@ export const QUESTION_TYPE_CONTEXT_RECOMMENDATIONS: Record<string, string[]> = {
   essay: ['discursiva_aberta', 'estudo_caso', 'pesquisa'],
   project_based: ['estudo_caso', 'discursiva_aberta', 'pesquisa'],
   gamified: ['contextualizada', 'estudo_caso'],
-  summative: ['contextualizada', 'teorica', 'estudo_caso'],
 };
 
 // Dicas de contexto por nível acadêmico
@@ -105,11 +102,10 @@ export const QUESTION_TYPES = [
   { id: 'true_false', label: 'Verdadeiro ou Falso', description: 'Julgamento de afirmativas' },
   { id: 'open', label: 'Aberta/Dissertativa', description: 'Resposta livre e argumentada' },
   { id: 'sum', label: 'Somatória', description: 'Soma de valores das corretas' },
-  { id: 'fill_in_the_blank', label: 'Preencher Lacunas', description: 'Complete os espaços em branco' },
+  // { id: 'fill_in_the_blank', label: 'Preencher Lacunas', description: 'Complete os espaços em branco' },
   { id: 'matching_columns', label: 'Associação de Colunas', description: 'Relacione itens de duas colunas' },
-  { id: 'problem_solving', label: 'Resolução de Problemas', description: 'Problemas práticos e aplicados' },
   { id: 'essay', label: 'Redação', description: 'Produção textual completa' },
-  { id: 'project_based', label: 'Baseada em Projeto', description: 'Projetos com fases e entregas' },
-  { id: 'gamified', label: 'Gamificada', description: 'Cenários e desafios interativos' },
-  { id: 'summative', label: 'Avaliação Somativa', description: 'Múltiplas seções integradas' },
+  // { id: 'problem_solving', label: 'Resolução de Problemas', description: 'Problemas práticos e aplicados' },
+  // { id: 'project_based', label: 'Baseada em Projeto', description: 'Projetos com fases e entregas' },
+  // { id: 'gamified', label: 'Gamificada', description: 'Cenários e desafios interativos' },
 ];

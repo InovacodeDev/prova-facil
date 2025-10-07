@@ -10,7 +10,6 @@ import {
   EssayMetadataSchema,
   ProjectBasedMetadataSchema,
   GamifiedMetadataSchema,
-  SummativeMetadataSchema,
 } from './schemas/metadataSchemas';
 
 // ============================================================================
@@ -68,11 +67,6 @@ const QuestionSchema = z.union([
     question: z.string().describe('The text of the question.'),
     metadata: GamifiedMetadataSchema,
   }),
-  z.object({
-    type: z.enum(['summative']),
-    question: z.string().describe('The text of the question.'),
-    metadata: SummativeMetadataSchema,
-  }),
 ]);
 
 // ============================================================================
@@ -85,9 +79,7 @@ const QuestionSchema = z.union([
  * ensuring that the metadata strictly matches the question type.
  */
 export const QuestionsResponseSchema = z.object({
-  questions: z
-    .array(QuestionSchema)
-    .describe('An array of all the generated questions.'),
+  questions: z.array(QuestionSchema).describe('An array of all the generated questions.'),
 });
 
 export type QuestionsResponse = z.infer<typeof QuestionsResponseSchema>;

@@ -386,6 +386,18 @@ export function normalizeMetadata(type: string, metadata: MetadataInput): any {
       case 'matching_columns':
         return normalizeMatchingColumnsMetadata(metadata);
 
+      case 'gamified':
+        return normalizeGamifiedMetadata(metadata);
+
+      case 'essay':
+        return normalizeEssayMetadata(metadata);
+
+      case 'problem_solving':
+        return normalizeProblemSolvingMetadata(metadata);
+
+      case 'project_based':
+        return normalizeProjectBasedMetadata(metadata);
+
       default:
         console.warn(`[Normalizer] Unknown type: ${type}, returning metadata as-is`);
         return metadata;
@@ -394,4 +406,258 @@ export function normalizeMetadata(type: string, metadata: MetadataInput): any {
     console.error(`[Normalizer] Error normalizing ${type}:`, error);
     return metadata; // Retorna original em caso de erro
   }
+}
+
+/**
+ * NORMALIZA GAMIFIED
+ */
+export function normalizeGamifiedMetadata(metadata: MetadataInput): {
+  mission_briefing: string;
+  challenges: string[];
+  conclusion_message?: string;
+} {
+  // Suporta campo legado "scenario" → migra para mission_briefing
+  const missionBriefing = String(metadata?.mission_briefing || metadata?.scenario || 'Missão gamificada');
+
+  const challenges = ensureArray(metadata?.challenges);
+
+  const normalizedChallenges = challenges
+    .map((item) => {
+      // Challenges devem ser strings simples
+      if (typeof item === 'string') return item;
+
+      // Se veio como objeto, tenta extrair propriedade "challenge" ou "text"
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, any>;
+        return String(obj.challenge || obj.text || obj.question || '');
+      }
+
+      return null;
+    })
+    .filter((item): item is string => item !== null && item.length > 0);
+
+  // Fallback se não houver challenges
+  if (normalizedChallenges.length === 0) {
+    console.error('[Normalizer] No valid challenges found, creating fallback');
+    return {
+      mission_briefing: missionBriefing,
+      challenges: ['Desafio não disponível'],
+    };
+  }
+
+  const conclusionMessage = metadata?.conclusion_message ? String(metadata.conclusion_message) : undefined;
+
+  return {
+    mission_briefing: missionBriefing,
+    challenges: normalizedChallenges,
+    ...(conclusionMessage ? { conclusion_message: conclusionMessage } : {}),
+  };
+}
+
+/**
+ * NORMALIZA ESSAY
+ */
+export function normalizeEssayMetadata(metadata: MetadataInput): {
+  instructions: string[];
+  supporting_texts: Array<{ source: string; content: string }>;
+  essay_prompt: string;
+} {
+  // Normaliza instructions
+  let instructions: string[] = [];
+
+  if (Array.isArray(metadata?.instructions)) {
+    instructions = metadata.instructions.map((item: any) => String(item)).filter((item: string) => item.length > 0);
+  } else if (typeof metadata?.instructions === 'string') {
+    // Se veio como string única, transforma em array
+    instructions = [metadata.instructions];
+  }
+
+  // Fallback para instructions
+  if (instructions.length === 0) {
+    console.warn('[Normalizer] No valid instructions found, creating fallback');
+    instructions = ['Escreva um texto dissertativo-argumentativo em norma padrão da língua portuguesa'];
+  }
+
+  // Normaliza supporting_texts
+  const supportingTexts = ensureArray(metadata?.supporting_texts);
+
+  const normalizedSupportingTexts = supportingTexts
+    .map((item) => {
+      const unescaped = unescapeJSON(item);
+
+      if (typeof unescaped === 'string') {
+        console.warn('[Normalizer] Skipping string supporting text:', unescaped);
+        return null;
+      }
+
+      if (typeof unescaped === 'object' && unescaped !== null) {
+        const source = String(unescaped.source || 'Texto de apoio');
+        const content = String(unescaped.content || '');
+
+        if (!content) return null;
+
+        return { source, content };
+      }
+
+      return null;
+    })
+    .filter((item): item is { source: string; content: string } => item !== null);
+
+  // Fallback para supporting_texts
+  if (normalizedSupportingTexts.length === 0) {
+    console.error('[Normalizer] No valid supporting texts found, creating fallback');
+    normalizedSupportingTexts.push({
+      source: 'Texto motivador',
+      content: 'Utilize seus conhecimentos para desenvolver o tema proposto.',
+    });
+  }
+
+  // Essay prompt
+  const essayPrompt = String(metadata?.essay_prompt || metadata?.theme || 'Desenvolva o tema proposto');
+
+  return {
+    instructions,
+    supporting_texts: normalizedSupportingTexts,
+    essay_prompt: essayPrompt,
+  };
+}
+
+/**
+ * NORMALIZA PROBLEM SOLVING
+ */
+export function normalizeProblemSolvingMetadata(metadata: MetadataInput): {
+  scenario: string;
+  data?: Array<{ label: string; value: string }>;
+  task: string;
+  solution_guideline: string;
+} {
+  const scenario = String(metadata?.scenario || 'Cenário do problema');
+
+  // Suporta campo legado "step_by_step_solution" → migra para solution_guideline
+  const solutionGuideline = String(
+    metadata?.solution_guideline || metadata?.step_by_step_solution || 'Solução não disponível'
+  );
+
+  const task = String(metadata?.task || metadata?.question || 'Resolva o problema apresentado');
+
+  // Normaliza data array (opcional)
+  const dataArray = ensureArray(metadata?.data);
+
+  const normalizedData = dataArray
+    .map((item) => {
+      const unescaped = unescapeJSON(item);
+
+      if (typeof unescaped === 'string') {
+        console.warn('[Normalizer] Skipping string data item:', unescaped);
+        return null;
+      }
+
+      if (typeof unescaped === 'object' && unescaped !== null) {
+        const label = String(unescaped.label || unescaped.key || '');
+        const value = String(unescaped.value || '');
+
+        if (!label || !value) return null;
+
+        return { label, value };
+      }
+
+      return null;
+    })
+    .filter((item): item is { label: string; value: string } => item !== null);
+
+  return {
+    scenario,
+    ...(normalizedData.length > 0 ? { data: normalizedData } : {}),
+    task,
+    solution_guideline: solutionGuideline,
+  };
+}
+
+/**
+ * NORMALIZA PROJECT BASED
+ */
+export function normalizeProjectBasedMetadata(metadata: MetadataInput): {
+  welcome_message?: string;
+  guiding_question: string;
+  phases: string[];
+  deliverables: string[];
+  evaluation_criteria?: string[];
+} {
+  const guidingQuestion = String(
+    metadata?.guiding_question || metadata?.question || 'Como podemos resolver o desafio proposto?'
+  );
+
+  const welcomeMessage = metadata?.welcome_message ? String(metadata.welcome_message) : undefined;
+
+  // Normaliza phases (suporta campo legado "project_tasks")
+  const phasesArray = ensureArray(metadata?.phases || metadata?.project_tasks);
+
+  const normalizedPhases = phasesArray
+    .map((item: any) => {
+      // Phases devem ser strings simples
+      if (typeof item === 'string') return item;
+
+      // Se veio como objeto, tenta extrair propriedade "phase" ou "task"
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, any>;
+        return String(obj.phase || obj.task || obj.description || '');
+      }
+
+      return null;
+    })
+    .filter((item): item is string => item !== null && item.length > 0);
+
+  // Fallback para phases
+  if (normalizedPhases.length === 0) {
+    console.error('[Normalizer] No valid phases found, creating fallback');
+    normalizedPhases.push('Fase 1: Planejamento do projeto');
+  }
+
+  // Normaliza deliverables
+  const deliverablesArray = ensureArray(metadata?.deliverables);
+
+  const normalizedDeliverables = deliverablesArray
+    .map((item: any) => {
+      // Deliverables devem ser strings simples
+      if (typeof item === 'string') return item;
+
+      // Se veio como objeto, tenta extrair propriedade relevante
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, any>;
+        return String(obj.deliverable || obj.item || obj.product || '');
+      }
+
+      return null;
+    })
+    .filter((item): item is string => item !== null && item.length > 0);
+
+  // Fallback para deliverables
+  if (normalizedDeliverables.length === 0) {
+    console.error('[Normalizer] No valid deliverables found, creating fallback');
+    normalizedDeliverables.push('Relatório final do projeto');
+  }
+
+  // Normaliza evaluation_criteria (opcional)
+  const evaluationCriteriaArray = ensureArray(metadata?.evaluation_criteria);
+
+  const normalizedCriteria = evaluationCriteriaArray
+    .map((item: any) => {
+      if (typeof item === 'string') return item;
+
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, any>;
+        return String(obj.criterion || obj.criteria || obj.description || '');
+      }
+
+      return null;
+    })
+    .filter((item): item is string => item !== null && item.length > 0);
+
+  return {
+    ...(welcomeMessage ? { welcome_message: welcomeMessage } : {}),
+    guiding_question: guidingQuestion,
+    phases: normalizedPhases,
+    deliverables: normalizedDeliverables,
+    ...(normalizedCriteria.length > 0 ? { evaluation_criteria: normalizedCriteria } : {}),
+  };
 }

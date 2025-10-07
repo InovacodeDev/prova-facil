@@ -14,11 +14,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useProfile } from '@/hooks/use-cache';
 import { UserMenu } from '@/components/UserMenu';
 import { Question, QuestionCard } from '@/components/QuestionCard';
-
-interface Assessment {
-  id: string;
-  title: string;
-}
+import { QUESTION_TYPES } from '@/lib/question-types';
 
 interface Subject {
   id: string;
@@ -41,7 +37,7 @@ export default function MyAssessmentsPage() {
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('all');
 
   // Use cache hook for profile
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile } = useProfile();
 
   const router = useRouter();
   const { toast } = useToast();
@@ -49,17 +45,7 @@ export default function MyAssessmentsPage() {
 
   const QUESTION_TYPE_FILTERS = [
     { id: 'all', label: 'Todos os tipos' },
-    { id: 'multiple_choice', label: 'Múltipla Escolha' },
-    { id: 'true_false', label: 'Verdadeiro/Falso' },
-    { id: 'open', label: 'Aberta/Dissertativa' },
-    { id: 'sum', label: 'Somatória' },
-    { id: 'fill_in_the_blank', label: 'Preencher Lacunas' },
-    { id: 'matching_columns', label: 'Associação de Colunas' },
-    { id: 'problem_solving', label: 'Resolução de Problemas' },
-    { id: 'essay', label: 'Redação' },
-    { id: 'project_based', label: 'Baseada em Projeto' },
-    { id: 'gamified', label: 'Gamificada' },
-    { id: 'summative', label: 'Avaliação Somativa' },
+    ...QUESTION_TYPES,
   ];
 
   // Função para filtrar questões por tipo
