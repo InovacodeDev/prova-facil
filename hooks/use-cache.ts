@@ -10,6 +10,8 @@ interface Profile {
   full_name: string | null;
   email: string;
   plan: string;
+  email_verified: boolean;
+  email_verified_at: string | null;
   selected_question_types: string[];
   question_types_updated_at: string | null;
 }
@@ -63,7 +65,9 @@ export function useProfile() {
         // Fetch from database
         const { data, error: fetchError } = await supabase
           .from('profiles')
-          .select('id, user_id, full_name, email, plan, selected_question_types, question_types_updated_at')
+          .select(
+            'id, user_id, full_name, email, plan, email_verified, email_verified_at, selected_question_types, question_types_updated_at'
+          )
           .eq('user_id', user.id)
           .single();
 

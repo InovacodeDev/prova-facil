@@ -46,16 +46,18 @@ interface Profile {
   user_id: string;
   full_name: string | null;
   plan: string;
+  email_verified: boolean;
+  email_verified_at: string | null;
   selected_question_types: string[];
   question_types_updated_at: string | null;
 }
 
 const PLAN_LIMITS: Record<string, { max_question_types: number }> = {
   starter: { max_question_types: 1 },
-  basic: { max_question_types: 3 },
-  essentials: { max_question_types: 5 },
-  plus: { max_question_types: 8 },
-  advanced: { max_question_types: 11 },
+  basic: { max_question_types: 2 },
+  essentials: { max_question_types: 3 },
+  plus: { max_question_types: 4 },
+  advanced: { max_question_types: 6 },
 };
 
 export default function ProfilePage() {
@@ -63,6 +65,8 @@ export default function ProfilePage() {
   const { profile: cachedProfile, loading: profileLoading } = useProfile();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState<string[]>([]);
   const [canUpdateTypes, setCanUpdateTypes] = useState(true);
   const [nextUpdateDate, setNextUpdateDate] = useState<string | null>(null);
@@ -82,6 +86,7 @@ export default function ProfilePage() {
     if (cachedProfile) {
       setFullName(cachedProfile.full_name || '');
       setSelectedQuestionTypes(cachedProfile.selected_question_types || []);
+      setEmailVerified(cachedProfile.email_verified || false);
 
       // Calculate next update date
       if (cachedProfile.question_types_updated_at) {
@@ -231,6 +236,41 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSendVerificationEmail = async () => {
+    if (!user) return;
+
+    setSendingVerification(true);
+    try {
+      const response = await fetch('/api/profile/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send verification email');
+      }
+
+      toast({
+        title: 'Email Enviado!',
+        description: 'Verifique sua caixa de entrada e clique no link de verificação.',
+        duration: 5000,
+      });
+    } catch (error: any) {
+      console.error('Erro ao enviar email de verificação:', error);
+      toast({
+        title: 'Erro',
+        description: error.message || 'Não foi possível enviar o email de verificação. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!user) return;
 
@@ -347,109 +387,163 @@ export default function ProfilePage() {
                   />
                   <p className="text-sm text-muted-foreground">Alterar o email pode exigir verificação</p>
                 </div>
+
+                {/* Email Verification Section */}
+                <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        Status de Verificação de Email
+                        {emailVerified ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-orange-500" />
+                        )}
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {emailVerified
+                          ? 'Seu email está verificado e ativo.'
+                          : 'Recomendamos verificar seu email para garantir acesso completo à plataforma.'}
+                      </p>
+                    </div>
+                    {emailVerified ? (
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium text-green-700 dark:text-green-300">Verificado</span>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSendVerificationEmail}
+                        disabled={sendingVerification}
+                      >
+                        {sendingVerification ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          'Enviar Verificação'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+
+                  {emailVerified && cachedProfile?.email_verified_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Verificado em:{' '}
+                      {new Date(cachedProfile.email_verified_at).toLocaleDateString('pt-BR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Question Types Selection */}
-              {cachedProfile && (
-                <div className="space-y-4 pt-4 border-t border-border">
-                  <div>
-                    <Label className="text-base">Tipos de Questões Disponíveis</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Selecione até {PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1} tipos de questões para
-                      usar ({selectedQuestionTypes.length}/{PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1}{' '}
-                      selecionados)
-                    </p>
-                  </div>
+              <div className="space-y-4 pt-4 border-t border-border">
+                <div>
+                  <Label className="text-base">Tipos de Questões Disponíveis</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {cachedProfile ? (
+                      <>
+                        Selecione até {PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1} tipos de questões para
+                        usar ({selectedQuestionTypes.length}/{PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1}{' '}
+                        selecionados)
+                      </>
+                    ) : (
+                      'Carregando informações do plano...'
+                    )}
+                  </p>
+                </div>
 
-                  {!canUpdateTypes && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Limite de Alterações Mensal</AlertTitle>
-                      <AlertDescription>
-                        Você só pode alterar os tipos de questões uma vez por mês. Próxima alteração disponível em:{' '}
-                        <strong>{nextUpdateDate}</strong>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <TooltipProvider>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {QUESTION_TYPES.map((type) => {
-                        const isSelected = selectedQuestionTypes.includes(type.id);
-                        const isDisabled = !canUpdateTypes;
-                        const hint = getQuestionTypeHint(type.id);
-
-                        return (
-                          <Tooltip key={type.id} delayDuration={200}>
-                            <TooltipTrigger asChild>
-                              <div
-                                className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${
-                                  isSelected ? 'bg-primary/5 border-primary' : 'border-border hover:border-primary/50'
-                                } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                onClick={() => !isDisabled && handleToggleQuestionType(type.id)}
-                              >
-                                <Checkbox
-                                  id={type.id}
-                                  checked={isSelected}
-                                  disabled={isDisabled}
-                                  onCheckedChange={() => handleToggleQuestionType(type.id)}
-                                  className="mt-1"
-                                />
-                                <div className="flex-1">
-                                  <Label
-                                    htmlFor={type.id}
-                                    className={`font-medium cursor-pointer flex items-center gap-1.5 ${
-                                      isDisabled ? 'cursor-not-allowed' : ''
-                                    }`}
-                                  >
-                                    {type.label}
-                                    {hint && <Info className="h-3.5 w-3.5 text-muted-foreground" />}
-                                  </Label>
-                                  <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
-                                </div>
-                                {isSelected && <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />}
-                              </div>
-                            </TooltipTrigger>
-                            {hint && (
-                              <TooltipContent side="top" className="max-w-sm p-4">
-                                <div className="space-y-2">
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                      Melhores Disciplinas
-                                    </p>
-                                    <p className="text-sm">{hint.bestDisciplines}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                      Nível Indicado
-                                    </p>
-                                    <p className="text-sm">{hint.educationLevel}</p>
-                                  </div>
-                                  {/* <div className="pt-2 border-t border-border">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                      💡 Dica Estratégica
-                                    </p>
-                                    <p className="text-sm italic">{hint.strategicTip}</p>
-                                  </div> */}
-                                </div>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        );
-                      })}
-                    </div>
-                  </TooltipProvider>
-
-                  <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-                    <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <AlertTitle className="text-blue-900 dark:text-blue-300">Dica de Uso</AlertTitle>
-                    <AlertDescription className="text-blue-800 dark:text-blue-400">
-                      Escolha os tipos de questões que você mais utiliza. Você poderá alterá-los novamente após 30 dias.
-                      Para desbloquear mais tipos, considere fazer upgrade do seu plano.
+                {!canUpdateTypes && nextUpdateDate && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Limite de Alterações Mensal</AlertTitle>
+                    <AlertDescription>
+                      Você só pode alterar os tipos de questões uma vez por mês. Próxima alteração disponível em:{' '}
+                      <strong>{nextUpdateDate}</strong>
                     </AlertDescription>
                   </Alert>
-                </div>
-              )}
+                )}
+
+                <TooltipProvider>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {QUESTION_TYPES.map((type) => {
+                      const isSelected = selectedQuestionTypes.includes(type.id);
+                      const isDisabled = !canUpdateTypes || !cachedProfile;
+                      const hint = getQuestionTypeHint(type.id);
+
+                      return (
+                        <Tooltip key={type.id} delayDuration={200}>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${
+                                isSelected ? 'bg-primary/5 border-primary' : 'border-border hover:border-primary/50'
+                              } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                              onClick={() => !isDisabled && handleToggleQuestionType(type.id)}
+                            >
+                              <Checkbox
+                                id={type.id}
+                                checked={isSelected}
+                                disabled={isDisabled}
+                                onCheckedChange={() => handleToggleQuestionType(type.id)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1">
+                                <Label
+                                  htmlFor={type.id}
+                                  className={`font-medium cursor-pointer flex items-center gap-1.5 ${
+                                    isDisabled ? 'cursor-not-allowed' : ''
+                                  }`}
+                                >
+                                  {type.label}
+                                  {hint && <Info className="h-3.5 w-3.5 text-muted-foreground" />}
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
+                              </div>
+                              {isSelected && <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />}
+                            </div>
+                          </TooltipTrigger>
+                          {hint && (
+                            <TooltipContent side="top" className="max-w-sm p-4">
+                              <div className="space-y-2">
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                    Melhores Disciplinas
+                                  </p>
+                                  <p className="text-sm">{hint.bestDisciplines}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                    Nível Indicado
+                                  </p>
+                                  <p className="text-sm">{hint.educationLevel}</p>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </TooltipProvider>
+
+                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                  <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <AlertTitle className="text-blue-900 dark:text-blue-300">Dica de Uso</AlertTitle>
+                  <AlertDescription className="text-blue-800 dark:text-blue-400">
+                    Escolha os tipos de questões que você mais utiliza. Você poderá alterá-los novamente após 30 dias.
+                    Para desbloquear mais tipos, considere fazer upgrade do seu plano.
+                  </AlertDescription>
+                </Alert>
+              </div>
 
               {/* Actions */}
               <div className="flex gap-3 pt-4">
