@@ -60,7 +60,7 @@ export default function AuthPage() {
     if (!error && data) {
       setAcademicLevels(
         data.map((level) => ({
-          id: level.id,
+          id: (level.id as number).toString(),
           name: ACADEMIC_LEVELS.find((l) => l.value === level.name)?.label || level.name,
         }))
       );
