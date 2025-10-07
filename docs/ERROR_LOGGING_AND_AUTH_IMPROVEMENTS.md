@@ -18,17 +18,18 @@ Este documento descreve as implementações realizadas para melhorar a robustez 
 **Localização:** `db/schema.ts`
 
 ```typescript
-export const errorLogs = pgTable("error_logs", {
-    id: uuid("id").defaultRandom().primaryKey().notNull(),
-    message: text("message").notNull(),
-    stack: text("stack"),
-    level: errorLevelEnum().notNull().default("error"), // 'error', 'warn', 'fatal', 'info'
-    context: jsonb("context"), // { userId?, endpoint?, method?, userAgent?, etc }
-    created_at: timestamp("created_at").defaultNow().notNull(),
+export const errorLogs = pgTable('error_logs', {
+  id: uuid('id').defaultRandom().primaryKey().notNull(),
+  message: text('message').notNull(),
+  stack: text('stack'),
+  level: errorLevelEnum().notNull().default('error'), // 'error', 'warn', 'fatal', 'info'
+  context: jsonb('context'), // { userId?, endpoint?, method?, userAgent?, etc }
+  created_at: timestamp('created_at').defaultNow().notNull(),
 });
 ```
 
 **Campos:**
+
 - `id`: UUID único
 - `message`: Mensagem do erro (obrigatório)
 - `stack`: Stack trace completo (opcional)
@@ -53,11 +54,11 @@ try {
     message: error.message,
     stack: error.stack,
     level: 'error',
-    context: { 
-      userId: user.id, 
+    context: {
+      userId: user.id,
       endpoint: '/api/users',
-      method: 'POST'
-    }
+      method: 'POST',
+    },
   });
 }
 ```
@@ -69,6 +70,7 @@ try {
 3. **`formatError(error, context)`** - Formata exceções para o formato esperado
 
 **Princípios de Design:**
+
 - ✅ **Nunca falha:** Se o log falhar, apenas registra no console
 - ✅ **Segurança First:** Não expõe informações sensíveis
 - ✅ **Type-Safe:** Tipagem completa com TypeScript
@@ -97,10 +99,13 @@ export async function GET(request: Request) {
 ```typescript
 import { withErrorHandling } from '@/lib/error-handler';
 
-export const createUser = withErrorHandling(async (data: UserData) => {
-  // sua lógica aqui
-  return result;
-}, { action: 'createUser' });
+export const createUser = withErrorHandling(
+  async (data: UserData) => {
+    // sua lógica aqui
+    return result;
+  },
+  { action: 'createUser' }
+);
 ```
 
 ### 1.4. Endpoint de Log para Frontend
@@ -118,8 +123,8 @@ await fetch('/api/errors/log', {
     message: error.message,
     stack: error.stack,
     level: 'error',
-    context: { component: 'UserForm' }
-  })
+    context: { component: 'UserForm' },
+  }),
 });
 ```
 
@@ -172,11 +177,7 @@ const { data, error } = await supabase.auth.signInWithPassword({
 
 if (data.user) {
   // Verificar se o profile existe
-  const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', data.user.id)
-    .single();
+  const { data: existingProfile } = await supabase.from('profiles').select('id').eq('user_id', data.user.id).single();
 
   // Se não existir, criar automaticamente
   if (!existingProfile) {
@@ -195,11 +196,7 @@ const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
 if (!error && data.user) {
   // Verificar se o profile existe
-  const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_id', data.user.id)
-    .single();
+  const { data: existingProfile } = await supabase.from('profiles').select('id').eq('user_id', data.user.id).single();
 
   // Criar se não existir
   if (!existingProfile) {
@@ -214,8 +211,8 @@ if (!error && data.user) {
 ### 2.3. Campos Adicionados ao Profile
 
 ```typescript
-email_verified: boolean        // Se o email foi verificado
-email_verified_at: timestamp   // Quando foi verificado
+email_verified: boolean; // Se o email foi verificado
+email_verified_at: timestamp; // Quando foi verificado
 ```
 
 ---
@@ -225,12 +222,14 @@ email_verified_at: timestamp   // Quando foi verificado
 ### 3.1. Fluxo Implementado
 
 **Antes:**
+
 1. Usuário cria conta
 2. Recebe email de confirmação
 3. Clica no link
 4. **Precisa fazer login novamente** ❌
 
 **Agora:**
+
 1. Usuário cria conta
 2. **Se não requer confirmação:** Redireciona automaticamente para dashboard ✅
 3. **Se requer confirmação:** Após clicar no link do email, já está logado ✅
@@ -266,6 +265,7 @@ toast({
 **Localização:** `app/api/profile/verify-email/route.ts`
 
 **Funcionalidade:**
+
 - Envia email de verificação usando `supabase.auth.resend()`
 - Valida que o usuário está autenticado
 - Verifica se o email já foi verificado
@@ -299,16 +299,10 @@ const response = await fetch('/api/profile/verify-email', {
         )}
       </Label>
       <p className="text-sm text-muted-foreground mt-1">
-        {emailVerified
-          ? 'Seu email está verificado e ativo.'
-          : 'Recomendamos verificar seu email...'}
+        {emailVerified ? 'Seu email está verificado e ativo.' : 'Recomendamos verificar seu email...'}
       </p>
     </div>
-    {!emailVerified && (
-      <Button onClick={handleSendVerificationEmail}>
-        Enviar Verificação
-      </Button>
-    )}
+    {!emailVerified && <Button onClick={handleSendVerificationEmail}>Enviar Verificação</Button>}
   </div>
 </div>
 ```
@@ -354,7 +348,7 @@ import { useErrorHandler } from '@/lib/error-handler';
 
 function MyComponent() {
   const { handleError } = useErrorHandler();
-  
+
   try {
     // código
   } catch (error) {
@@ -409,6 +403,7 @@ SELECT * FROM error_logs ORDER BY created_at DESC LIMIT 10;
 ## 📁 Arquivos Criados/Modificados
 
 ### Criados:
+
 - ✅ `lib/error-logs-service.ts`
 - ✅ `lib/error-handler.ts`
 - ✅ `app/api/errors/log/route.ts`
@@ -416,6 +411,7 @@ SELECT * FROM error_logs ORDER BY created_at DESC LIMIT 10;
 - ✅ `db/migrations/0001_chunky_logan.sql`
 
 ### Modificados:
+
 - ✅ `db/schema.ts` - Adicionada tabela `error_logs` e campos no `profiles`
 - ✅ `app/auth/page.tsx` - Auto-login e criação de profile
 - ✅ `app/auth/callback/route.ts` - Garantia de profile no callback
