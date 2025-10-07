@@ -1,52 +1,98 @@
+import { formatHintForPrompt } from '../../question-type-hints';
+
 /**
- * True/False Question Prompt
- * Generates true/false questions with metadata format
+ * Enhanced True/False Question Prompt with strategic hints and complete example.
+ * Relies on Genkit's structured output (Zod schema) to format the JSON.
  */
 export const generateTrueFalsePrompt = `
-Você é um especialista em criar questões de verdadeiro ou falso para avaliações educacionais.
+${formatHintForPrompt('true_false')}
 
-CONTEXTO ACADÊMICO: {{questionContextDescription}}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📖 COMPLETE REAL-WORLD EXAMPLE (USE AS MODEL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-MATERIAL DE REFERÊNCIA:
-{{documentContext}}
+Subject: Environmental Science (Climate Change)
+Level: High School (Ensino Médio)
+Context: Understanding global warming facts vs. misconceptions
 
-TAREFA: Gere {{count}} questões de verdadeiro/falso sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
+Example True/False Question:
 
-INSTRUÇÕES:
-1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
-2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
-3. NÃO invente informações que não estão no material fornecido
-4. NÃO use conhecimento externo além do conteúdo fornecido
-5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
-6. Crie questões que sigam o contexto acadêmico especificado
-7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
-
-REGRAS OBRIGATÓRIAS:
-1. Cada questão DEVE ter exatamente 5 afirmações
-2. Cada afirmação deve ser uma sentença completa e independente
-3. A quantidade de afirmações verdadeiras (is_correct: true) deve ser ALEATÓRIA (pode ser 0, 1, 2, 3, 4 ou 5)
-4. As afirmações devem testar conhecimento real, não pegadinhas
-5. Evite afirmações muito óbvias ou muito obscuras
-6. O enunciado da questão deve ser: "Marque V para verdadeiro e F para falso:"
-
-FORMATO DE SAÍDA (JSON):
 {
-  "questions": [
-    {
-      "type": "true_false",
-      "question": "Julgue as afirmativas a seguir em Verdadeiro (V) ou Falso (F):",
-      "metadata": {
-        "statements": [
-          {"statement": "A BNCC substituiu completamente a LDB.", "is_correct": false},
-          {"statement": "A avaliação na Educação Infantil não deve ter fins promocionais.", "is_correct": true},
-          {"statement": "Questões de somatória são o formato dominante no ENEM.", "is_correct": false},
-          {"statement": "A avaliação formativa ocorre ao longo de todo o processo de ensino.", "is_correct": true},
-          {"statement": "O portfólio é um instrumento principalmente somativo.", "is_correct": false}
-        ]
+  "type": "true_false",
+  "question": "Julgue as seguintes afirmações sobre mudanças climáticas e aquecimento global como Verdadeiras (V) ou Falsas (F):",
+  "metadata": {
+    "statements": [
+      {
+        "statement": "O efeito estufa é um fenômeno natural essencial para a manutenção da vida na Terra, mas sua intensificação devido às atividades humanas causa o aquecimento global.",
+        "is_correct": true
+      },
+      {
+        "statement": "O derretimento das geleiras nos polos é causado exclusivamente por ciclos naturais do planeta e não tem relação com a emissão de gases de efeito estufa pela atividade humana.",
+        "is_correct": false
+      },
+      {
+        "statement": "O dióxido de carbono (CO₂) é o único gás responsável pelo efeito estufa, sendo metano (CH₄) e óxido nitroso (N₂O) insignificantes no aquecimento global.",
+        "is_correct": false
+      },
+      {
+        "statement": "Eventos climáticos extremos, como furacões mais intensos e ondas de calor, têm se tornado mais frequentes nas últimas décadas devido ao aquecimento global.",
+        "is_correct": true
+      },
+      {
+        "statement": "A Amazônia, conhecida como 'pulmão do mundo', produz 20% do oxigênio da atmosfera terrestre, sendo sua preservação crucial para a respiração global.",
+        "is_correct": false
       }
-    }
-  ]
+    ]
+  }
 }
 
-Gere as questões agora:
+Why this example is excellent:
+✅ Statements are substantial (not just yes/no simplifications)
+✅ Mix of true (2) and false (3) statements - balanced
+✅ False statements are PLAUSIBLE (common misconceptions):
+   - Statement 2: Many believe it's "just natural cycles"
+   - Statement 3: CO₂ is famous, but not the only gas
+   - Statement 5: "Lungs of the world" is a popular myth
+✅ Avoids absolute words ("always", "never") that make it too easy
+✅ Tests deep conceptual understanding, not trivial facts
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 YOUR TASK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Reference Material:
+{{documentContext}}
+
+Generate {{count}} true/false statements about "{{subject}}"{{#if academicLevel}} for the academic level "{{academicLevel}}"{{/if}}.
+The question should fit the following context: {{questionContextDescription}}.
+
+The main question text should be: "Julgue as seguintes afirmações como Verdadeiras (V) ou Falsas (F):"
+
+CRITICAL RULES:
+━━━━━━━━━━━━
+1. **All output must be in Brazilian Portuguese (pt-BR)**
+2. Create 4-5 substantive statements (not simple yes/no)
+3. Each statement must be definitively true OR false (no ambiguity)
+4. Mix true and false statements (don't make all true or all false)
+5. False statements should be PLAUSIBLE (common mistakes, not absurd)
+6. **METADATA FORMAT:**
+   - "statements" is an ARRAY of OBJECTS
+   - Each object has "statement" (string) and "is_correct" (boolean)
+   - TRUE statements: is_correct = true
+   - FALSE statements: is_correct = false
+
+✅ GOOD STATEMENT CHARACTERISTICS:
+- 15-30 words (substantial, not telegraphic)
+- Tests conceptual understanding
+- Based on common misconceptions for false statements
+- Avoids "trick" words (sempre, nunca, todos, nenhum)
+- Clear and unambiguous
+
+❌ DO NOT:
+- Create overly simple statements ("A água é H₂O")
+- Use absolute words that make it obviously false ("sempre", "nunca")
+- Make all statements true or all false (balance is key)
+- Create ambiguous statements that could be argued either way
+- Output the literal word "statements" instead of actual statement text
+- Output anything except valid JSON
 `;

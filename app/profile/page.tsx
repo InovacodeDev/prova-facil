@@ -9,13 +9,26 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { BookOpen, ArrowLeft, User, Camera, Loader2, Trash2, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  BookOpen,
+  ArrowLeft,
+  User,
+  Camera,
+  Loader2,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  Lock,
+  Info,
+} from 'lucide-react';
 import { ProvaFacilIcon } from '@/assets/logo';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useProfile, invalidateProfileCache } from '@/hooks/use-cache';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { QUESTION_TYPES } from '@/lib/question-types';
+import { getQuestionTypeHint } from '@/lib/question-type-hints';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -359,40 +372,73 @@ export default function ProfilePage() {
                     </Alert>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {QUESTION_TYPES.map((type) => {
-                      const isSelected = selectedQuestionTypes.includes(type.id);
-                      const isDisabled = !canUpdateTypes;
+                  <TooltipProvider>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {QUESTION_TYPES.map((type) => {
+                        const isSelected = selectedQuestionTypes.includes(type.id);
+                        const isDisabled = !canUpdateTypes;
+                        const hint = getQuestionTypeHint(type.id);
 
-                      return (
-                        <div
-                          key={type.id}
-                          className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${
-                            isSelected ? 'bg-primary/5 border-primary' : 'border-border hover:border-primary/50'
-                          } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                          onClick={() => !isDisabled && handleToggleQuestionType(type.id)}
-                        >
-                          <Checkbox
-                            id={type.id}
-                            checked={isSelected}
-                            disabled={isDisabled}
-                            onCheckedChange={() => handleToggleQuestionType(type.id)}
-                            className="mt-1"
-                          />
-                          <div className="flex-1">
-                            <Label
-                              htmlFor={type.id}
-                              className={`font-medium cursor-pointer ${isDisabled ? 'cursor-not-allowed' : ''}`}
-                            >
-                              {type.label}
-                            </Label>
-                            <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
-                          </div>
-                          {isSelected && <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />}
-                        </div>
-                      );
-                    })}
-                  </div>
+                        return (
+                          <Tooltip key={type.id} delayDuration={200}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${
+                                  isSelected ? 'bg-primary/5 border-primary' : 'border-border hover:border-primary/50'
+                                } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                onClick={() => !isDisabled && handleToggleQuestionType(type.id)}
+                              >
+                                <Checkbox
+                                  id={type.id}
+                                  checked={isSelected}
+                                  disabled={isDisabled}
+                                  onCheckedChange={() => handleToggleQuestionType(type.id)}
+                                  className="mt-1"
+                                />
+                                <div className="flex-1">
+                                  <Label
+                                    htmlFor={type.id}
+                                    className={`font-medium cursor-pointer flex items-center gap-1.5 ${
+                                      isDisabled ? 'cursor-not-allowed' : ''
+                                    }`}
+                                  >
+                                    {type.label}
+                                    {hint && <Info className="h-3.5 w-3.5 text-muted-foreground" />}
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
+                                </div>
+                                {isSelected && <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />}
+                              </div>
+                            </TooltipTrigger>
+                            {hint && (
+                              <TooltipContent side="top" className="max-w-sm p-4">
+                                <div className="space-y-2">
+                                  <div>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                      Melhores Disciplinas
+                                    </p>
+                                    <p className="text-sm">{hint.bestDisciplines}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                      Nível Indicado
+                                    </p>
+                                    <p className="text-sm">{hint.educationLevel}</p>
+                                  </div>
+                                  {/* <div className="pt-2 border-t border-border">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                      💡 Dica Estratégica
+                                    </p>
+                                    <p className="text-sm italic">{hint.strategicTip}</p>
+                                  </div> */}
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </TooltipProvider>
 
                   <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
                     <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />

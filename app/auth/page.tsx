@@ -57,7 +57,6 @@ export default function AuthPage() {
   const fetchAcademicLevels = async () => {
     const { data, error } = await supabase.from('academic_levels').select('id, name').order('name');
 
-    console.log(data);
     if (!error && data) {
       setAcademicLevels(
         data.map((level) => ({

@@ -7,34 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, ArrowLeft, Plus, Loader2, Filter } from 'lucide-react';
+import { ArrowLeft, Plus, Loader2, Filter } from 'lucide-react';
 import { ProvaFacilLogo, ProvaFacilIcon } from '@/assets/logo';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useProfile } from '@/hooks/use-cache';
 import { UserMenu } from '@/components/UserMenu';
-import { QuestionCard } from '@/components/QuestionCard';
-
-interface Answer {
-  id: string;
-  answer: string;
-  is_correct: boolean;
-  number: number | null;
-}
-
-interface Question {
-  id: string;
-  question: string;
-  type: string;
-  copy_count: number;
-  metadata?: any;
-  answers: Answer[];
-}
-
-interface Assessment {
-  id: string;
-  title: string;
-}
+import { Question, QuestionCard } from '@/components/QuestionCard';
+import { QUESTION_TYPES } from '@/lib/question-types';
 
 interface Subject {
   id: string;
@@ -57,7 +37,7 @@ export default function MyAssessmentsPage() {
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('all');
 
   // Use cache hook for profile
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile } = useProfile();
 
   const router = useRouter();
   const { toast } = useToast();
@@ -65,17 +45,7 @@ export default function MyAssessmentsPage() {
 
   const QUESTION_TYPE_FILTERS = [
     { id: 'all', label: 'Todos os tipos' },
-    { id: 'multiple_choice', label: 'Múltipla Escolha' },
-    { id: 'true_false', label: 'Verdadeiro/Falso' },
-    { id: 'open', label: 'Aberta/Dissertativa' },
-    { id: 'sum', label: 'Somatória' },
-    { id: 'fill_in_the_blank', label: 'Preencher Lacunas' },
-    { id: 'matching_columns', label: 'Associação de Colunas' },
-    { id: 'problem_solving', label: 'Resolução de Problemas' },
-    { id: 'essay', label: 'Redação' },
-    { id: 'project_based', label: 'Baseada em Projeto' },
-    { id: 'gamified', label: 'Gamificada' },
-    { id: 'summative', label: 'Avaliação Somativa' },
+    ...QUESTION_TYPES,
   ];
 
   // Função para filtrar questões por tipo
@@ -114,12 +84,6 @@ export default function MyAssessmentsPage() {
           type,
           copy_count,
           metadata,
-          answers (
-            id,
-            answer,
-            is_correct,
-            number
-          ),
           assessments!inner (
             id,
             title,
@@ -135,7 +99,6 @@ export default function MyAssessmentsPage() {
       // Agrupar dados por matéria e título de avaliação
       const grouped: GroupedData = {};
 
-      console.log('Questions Data:', questionsData);
       if (questionsData) {
         // Buscar todas as matérias
         const subjectsData = [];
@@ -170,12 +133,10 @@ export default function MyAssessmentsPage() {
             type: q.type || 'multiple_choice',
             copy_count: q.copy_count || 0,
             metadata: q.metadata || {},
-            answers: q.answers || [],
           });
         });
       }
 
-      console.log('Grouped Data:', grouped);
       setGroupedData(grouped);
     } catch (error: any) {
       console.error('Erro ao carregar questões:', error);

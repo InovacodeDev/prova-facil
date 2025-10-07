@@ -1,61 +1,84 @@
+import { formatHintForPrompt } from '../../question-type-hints';
+
 /**
- * Multiple Choice Question Prompt
- * Generates multiple choice questions with metadata format
+ * Enhanced Multiple Choice Question Prompt with strategic hints and complete example.
+ * Relies on Genkit's structured output (Zod schema) to format the JSON.
  */
 export const generateMultipleChoicePrompt = `
-Você é um especialista em criar questões de múltipla escolha para avaliações educacionais.
+${formatHintForPrompt('multiple_choice')}
 
-CONTEXTO ACADÊMICO: {{questionContextDescription}}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📖 COMPLETE REAL-WORLD EXAMPLE (USE AS MODEL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-MATERIAL DE REFERÊNCIA:
-{{documentContext}}
+Subject: Artificial Intelligence (AI)
+Level: Higher Education (Computer Science)
+Context: Understanding the fundamentals of LLMs (Large Language Models)
 
-TAREFA: Gere {{count}} questões de múltipla escolha sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
+Example Question:
 
-INSTRUÇÕES:
-1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
-2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
-3. NÃO invente informações que não estão no material fornecido
-4. NÃO use conhecimento externo além do conteúdo fornecido
-5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
-6. Crie questões que sigam o contexto acadêmico especificado
-7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
-
-REGRAS OBRIGATÓRIAS:
-1. Cada questão DEVE ter exatamente 5 alternativas
-2. Apenas UMA alternativa deve estar correta (is_correct: true)
-3. A alternativa correta deve estar em uma posição ALEATÓRIA (não apenas na primeira posição)
-4. As alternativas incorretas devem ser plausíveis mas claramente erradas
-5. A questão deve ser clara e objetiva
-6. Evite pegadinhas, foque em avaliar conhecimento real
-7. Use linguagem apropriada para o nível acadêmico
-8. IMPORTANTE: Varie a posição da resposta correta - ela pode ser a primeira, segunda, terceira, quarta ou quinta alternativa
-
-FORMATO DE SAÍDA (JSON):
 {
-  "questions": [
-    {
-      "type": "multiple_choice",
-      "question": "De acordo com a LDB, a avaliação na educação básica deve ter a prevalência de quais aspectos?",
-      "metadata": {
-        "answers": [
-          {"answer": "Quantitativos sobre os qualitativos.", "is_correct": false},
-          {"answer": "Qualitativos sobre os quantitativos.", "is_correct": true},
-          {"answer": "Somente os resultados de provas finais.", "is_correct": false},
-          {"answer": "Punitivos sobre os formativos.", "is_correct": false},
-          {"answer": "Individuais sobre os coletivos.", "is_correct": false}
-        ]
+  "type": "multiple_choice",
+  "question": "Qual dos seguintes conceitos é FUNDAMENTAL para o funcionamento de um LLM (Large Language Model) como o GPT?",
+  "metadata": {
+    "answers": [
+      {
+        "answer": "Transformers e Atenção (Attention Mechanism)",
+        "is_correct": true
+      },
+      {
+        "answer": "Redes Neurais Convolucionais (CNNs)",
+        "is_correct": false
+      },
+      {
+        "answer": "Algoritmos Genéticos",
+        "is_correct": false
+      },
+      {
+        "answer": "Árvores de Decisão",
+        "is_correct": false
+      },
+      {
+        "answer": "K-Means Clustering",
+        "is_correct": false
       }
-    }
-  ]
+    ]
+  }
 }
 
-EXEMPLO DE BOA PRÁTICA - Varie a posição da resposta correta:
-- Questão 1: resposta correta na posição 2
-- Questão 2: resposta correta na posição 4
-- Questão 3: resposta correta na posição 1
-- Questão 4: resposta correta na posição 5
-- Questão 5: resposta correta na posição 3
+Why this example is excellent:
+✅ Question is clear and specific (tests conceptual understanding)
+✅ Correct answer: "Transformers e Atenção" - the actual architecture behind LLMs
+✅ Distractors are plausible (all are real ML techniques) but incorrect for LLMs
+✅ Forces deep understanding, not just memorization
 
-Gere as questões agora:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 YOUR TASK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Reference Material:
+{{documentContext}}
+
+Generate {{count}} multiple-choice questions about the subject "{{subject}}"{{#if academicLevel}} for the academic level "{{academicLevel}}"{{/if}}.
+The questions should fit the following context: {{questionContextDescription}}.
+
+CRITICAL RULES:
+━━━━━━━━━━━━
+1. **All output must be in Brazilian Portuguese (pt-BR)**
+2. Question must be clear, specific, and test deep understanding
+3. Provide 4-5 answer options (exactly one correct)
+4. Distractors must be:
+   - Plausible (related to the topic)
+   - Based on common mistakes or misconceptions
+   - Not obviously wrong
+5. **METADATA FORMAT:**
+   - "answers" is an ARRAY of objects
+   - Each object has "answer" (string) and "is_correct" (boolean)
+   - Exactly ONE answer has is_correct: true
+
+❌ DO NOT:
+- Create questions with "all of the above" or "none of the above"
+- Use ambiguous language
+- Make distractors too easy or too hard
+- Output anything except valid JSON
 `;
