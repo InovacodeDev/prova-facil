@@ -38,8 +38,8 @@ export function About() {
                         que realmente importa: ensinar.
                     </p>
                     <p className="text-lg text-muted-foreground">
-                        Com inteligência artificial e uma interface intuitiva, transformamos horas de trabalho em
-                        minutos, mantendo a qualidade e personalização que cada turma merece.
+                        Com inteligência artificial avançada e uma interface intuitiva, transformamos horas de trabalho em
+                        minutos, oferecendo 11 tipos diferentes de questões contextualizadas que mantêm a qualidade e personalização que cada turma merece.
                     </p>
                 </div>
 

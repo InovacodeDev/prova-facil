@@ -5,42 +5,42 @@ const features = [
     {
         icon: Zap,
         title: "Geração Instantânea",
-        description: "Crie questões completas em segundos a partir de PDFs, DOCs e outros materiais",
+        description: "Crie questões completas em segundos a partir de PDFs, DOCs e outros materiais didáticos",
         color: "text-primary",
         bgColor: "bg-primary-muted",
     },
     {
         icon: Brain,
-        title: "IA Especializada",
-        description: "Nossa IA entende contexto educacional e gera questões alinhadas com BNCC e objetivos pedagógicos",
+        title: "IA Especializada em Educação",
+        description: "Nossa IA entende contexto pedagógico e gera questões alinhadas com BNCC e objetivos de aprendizagem",
         color: "text-secondary",
         bgColor: "bg-secondary-muted",
     },
     {
         icon: FileText,
-        title: "4 Tipos de Questões",
-        description: "Múltipla escolha, Verdadeiro/Falso, Dissertativas e Somatórias - tudo em uma plataforma",
+        title: "11 Tipos de Questões",
+        description: "Múltipla escolha, V/F, Dissertativas, Somatórias, Lacunas, Associação, Problemas, Redação, Projetos, Gamificadas e Somativas",
         color: "text-accent",
         bgColor: "bg-accent-muted",
     },
     {
         icon: Upload,
-        title: "Upload de Documentos",
-        description: "Envie PDFs, slides, textos e materiais didáticos - a IA extrai o conteúdo relevante",
+        title: "Upload Inteligente",
+        description: "Envie PDFs, slides, textos e materiais didáticos - a IA extrai e contextualiza o conteúdo relevante",
         color: "text-primary",
         bgColor: "bg-primary-muted",
     },
     {
         icon: Copy,
-        title: "Banco de Questões",
-        description: "Salve, organize e reutilize questões - construa seu próprio banco ao longo do tempo",
+        title: "Banco de Questões Personalizado",
+        description: "Salve, organize, filtre e reutilize questões - construa seu próprio banco ao longo do tempo",
         color: "text-secondary",
         bgColor: "bg-secondary-muted",
     },
     {
         icon: BarChart3,
-        title: "Dashboard Inteligente",
-        description: "Visualize estatísticas por matéria e tipo, acompanhe uso e tendências",
+        title: "Dashboard Completo",
+        description: "Visualize estatísticas por matéria, nível acadêmico e tipo de questão, acompanhe uso e tendências",
         color: "text-accent",
         bgColor: "bg-accent-muted",
     },
@@ -48,9 +48,11 @@ const features = [
 
 const benefits = [
     "Economize até 5 horas por semana na preparação",
-    "Gere até 100 questões de uma só vez",
-    "Questões contextualizadas estilo ENEM",
-    "Foque no que importa: ensinar e motivar alunos",
+    "Gere até 100 questões personalizadas de uma só vez",
+    "11 formatos diferentes de questões disponíveis",
+    "Questões contextualizadas e alinhadas com BNCC",
+    "Filtros inteligentes por matéria e nível acadêmico",
+    "Foque no que importa: ensinar e motivar seus alunos",
 ];
 
 export const Features = () => {

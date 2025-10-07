@@ -40,7 +40,6 @@ export const Hero = () => {
     const questionsGenerated = stats?.totals.questionsGenerated || 0;
     const usersCount = Math.ceil(questionsGenerated / 10); // Aproximação de usuários
     const uniqueAssessments = stats?.totals.uniqueAssessments || 0;
-    const meanQuestionsPerAssessment = stats?.totals.meanQuestionsPerAssessment || 0;
 
     return (
         <section className="relative py-20 lg:py-32 overflow-hidden">
@@ -65,8 +64,7 @@ export const Hero = () => {
                                 horas
                             </h1>
                             <p className="text-xl text-muted-foreground max-w-xl">
-                                Transforme qualquer material didático em avaliações diversificadas e personalizadas.
-                                Economize 90% do seu tempo de preparação com nossa IA especializada em educação.
+                                Transforme qualquer material didático em avaliações diversificadas e personalizadas com 11 tipos de questões diferentes. Economize até 90% do seu tempo de preparação com nossa IA especializada em educação.
                             </p>
                         </div>
 
@@ -120,16 +118,8 @@ export const Hero = () => {
                                     <p className="text-sm text-muted-foreground">Educadores ativos</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-2xl font-bold text-primary">
-                                        {meanQuestionsPerAssessment > 0 ? meanQuestionsPerAssessment.toFixed(1) : "---"}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">Questões por conteúdo</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-6 pt-4">
-                                <div className="text-2xl font-bold text-primary">4.9★</div>
-                                <div className="text-sm text-muted-foreground">
-                                    "Revolucionou minha rotina de preparação"
+                                    <p className="text-2xl font-bold text-primary">11</p>
+                                    <p className="text-sm text-muted-foreground">Tipos de questões</p>
                                 </div>
                             </div>
                         </div>
