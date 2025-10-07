@@ -18,9 +18,9 @@ const features = [
   },
   {
     icon: FileText,
-    title: '11 Tipos de Questões',
+    title: '6 Tipos de Questões',
     description:
-      'Múltipla escolha, V/F, Dissertativas, Somatórias, Lacunas, Associação, Problemas, Redação, Projetos, Gamificadas e Somativas',
+      'Múltipla escolha, V/F, Dissertativas, Somatórias, Redação e Associação',
     color: 'text-accent',
     bgColor: 'bg-accent-muted',
   },
@@ -50,7 +50,7 @@ const features = [
 const benefits = [
   'Economize até 5 horas por semana na preparação',
   'Gere até 100 questões personalizadas de uma só vez',
-  '11 formatos diferentes de questões disponíveis',
+  '6 formatos diferentes de questões disponíveis',
   'Questões contextualizadas e alinhadas com BNCC',
   'Filtros inteligentes por matéria e nível acadêmico',
   'Foque no que importa: ensinar e motivar seus alunos',

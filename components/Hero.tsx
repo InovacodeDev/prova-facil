@@ -63,7 +63,7 @@ export const Hero = () => {
                 horas
               </h1>
               <p className="text-xl text-muted-foreground max-w-xl">
-                Transforme qualquer material didático em avaliações diversificadas e personalizadas com 11 tipos de
+                Transforme qualquer material didático em avaliações diversificadas e personalizadas com 6 tipos de
                 questões diferentes. Economize até 90% do seu tempo de preparação com nossa IA especializada em
                 educação.
               </p>
@@ -112,7 +112,7 @@ export const Hero = () => {
                   <p className="text-sm text-muted-foreground">Educadores ativos</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-2xl font-bold text-primary">11</p>
+                  <p className="text-2xl font-bold text-primary">6</p>
                   <p className="text-sm text-muted-foreground">Tipos de questões</p>
                 </div>
               </div>
