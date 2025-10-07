@@ -76,14 +76,48 @@ export default function AuthPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
       setError(error.message);
-    } else {
+      setIsLoading(false);
+      return;
+    }
+
+    if (data.user) {
+      // Verificar se o profile existe
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .single();
+
+      // Se não existir, criar automaticamente
+      if (!existingProfile) {
+        const { error: profileError } = await supabase.from('profiles').insert({
+          user_id: data.user.id,
+          full_name: data.user.user_metadata?.full_name || null,
+          email: data.user.email!,
+          plan: 'starter',
+          renew_status: 'none',
+          academic_level_id: data.user.user_metadata?.academic_level_id
+            ? parseInt(data.user.user_metadata.academic_level_id)
+            : null,
+          email_verified: data.user.email_confirmed_at ? true : false,
+          email_verified_at: data.user.email_confirmed_at || null,
+        });
+
+        if (profileError) {
+          console.error('Erro ao criar profile no login:', profileError);
+          setError('Erro ao criar perfil. Por favor, contate o suporte.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       toast({
         title: 'Bem-vindo de volta!',
         description: 'Login realizado com sucesso.',
@@ -111,12 +145,12 @@ export default function AuthPage() {
       return;
     }
 
-    // 1. Criar conta no Supabase Auth com confirmação por email
+    // 1. Criar conta no Supabase Auth
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: process.env.NEXT_PUBLIC_SIGNUP_REDIRECT_URL,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
         data: {
           full_name: fullName,
           academic_level_id: selectedAcademicLevel,
@@ -136,28 +170,40 @@ export default function AuthPage() {
       return;
     }
 
-    // 2. Criar profile com plan=starter e renew_status=none
-    // O profile será criado mesmo antes da confirmação, mas o usuário só poderá acessar após confirmar
+    // 2. Criar profile automaticamente com plan=starter e renew_status=none
     const { error: profileError } = await supabase.from('profiles').insert({
       user_id: signUpData.user.id,
       full_name: fullName,
       email: email,
       plan: 'starter',
       renew_status: 'none',
-      academic_level_id: selectedAcademicLevel,
+      academic_level_id: parseInt(selectedAcademicLevel),
+      email_verified: false, // Será atualizado após confirmação
     });
 
     if (profileError) {
       console.error('Erro ao criar profile:', profileError);
-      // Não bloqueamos aqui, pois o profile pode ser criado depois via trigger
+      // Não bloqueamos aqui, pois tentaremos criar o profile no login se necessário
     }
 
-    // 3. Mostrar mensagem de confirmação de email
+    // 3. Se o email já está confirmado (ex: domínios permitidos), redirecionar
+    if (signUpData.session) {
+      toast({
+        title: 'Conta criada com sucesso!',
+        description: 'Você já está logado e será redirecionado.',
+      });
+      router.push('/dashboard');
+      router.refresh();
+      setIsLoading(false);
+      return;
+    }
+
+    // 4. Caso contrário, solicitar confirmação de email
     toast({
       title: 'Conta criada com sucesso!',
       description:
         'Enviamos um email de confirmação. Por favor, verifique sua caixa de entrada e clique no link para ativar sua conta.',
-      duration: 10000, // 10 segundos
+      duration: 10000,
     });
 
     setIsLoading(false);

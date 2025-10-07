@@ -141,6 +141,8 @@ export const profiles = pgTable("profiles", {
     is_admin: boolean("is_admin").default(false).notNull(),
     full_name: varchar("full_name", { length: 255 }),
     email: varchar("email", { length: 320 }).notNull().unique(),
+    email_verified: boolean("email_verified").default(false).notNull(),
+    email_verified_at: timestamp("email_verified_at"),
     plan: planEnum().notNull().default("starter"),
     plan_expire_at: timestamp("plan_expire_at", { mode: "date" }),
     renew_status: renewStatusEnum().notNull().default("none"),
@@ -203,6 +205,24 @@ export const profileLogsCycle = pgTable("profile_logs_cycle", {
     subjects_breakdown: jsonb("subjects_breakdown").notNull().default("[]"), // Array of {subject: string, count: number}
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const ErrorLevel = {
+    error: "error",
+    warn: "warn",
+    fatal: "fatal",
+    info: "info",
+} as const;
+
+export const errorLevelEnum = pgEnum("error_level", ["error", "warn", "fatal", "info"]);
+
+export const errorLogs = pgTable("error_logs", {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    message: text("message").notNull(),
+    stack: text("stack"),
+    level: errorLevelEnum().notNull().default("error"),
+    context: jsonb("context"), // { userId?, endpoint?, method?, userAgent?, etc }
+    created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Relations

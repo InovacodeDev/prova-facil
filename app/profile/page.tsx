@@ -46,6 +46,8 @@ interface Profile {
   user_id: string;
   full_name: string | null;
   plan: string;
+  email_verified: boolean;
+  email_verified_at: string | null;
   selected_question_types: string[];
   question_types_updated_at: string | null;
 }
@@ -63,6 +65,8 @@ export default function ProfilePage() {
   const { profile: cachedProfile, loading: profileLoading } = useProfile();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState<string[]>([]);
   const [canUpdateTypes, setCanUpdateTypes] = useState(true);
   const [nextUpdateDate, setNextUpdateDate] = useState<string | null>(null);
@@ -82,6 +86,7 @@ export default function ProfilePage() {
     if (cachedProfile) {
       setFullName(cachedProfile.full_name || '');
       setSelectedQuestionTypes(cachedProfile.selected_question_types || []);
+      setEmailVerified(cachedProfile.email_verified || false);
 
       // Calculate next update date
       if (cachedProfile.question_types_updated_at) {
@@ -231,6 +236,41 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSendVerificationEmail = async () => {
+    if (!user) return;
+
+    setSendingVerification(true);
+    try {
+      const response = await fetch('/api/profile/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send verification email');
+      }
+
+      toast({
+        title: 'Email Enviado!',
+        description: 'Verifique sua caixa de entrada e clique no link de verificação.',
+        duration: 5000,
+      });
+    } catch (error: any) {
+      console.error('Erro ao enviar email de verificação:', error);
+      toast({
+        title: 'Erro',
+        description: error.message || 'Não foi possível enviar o email de verificação. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!user) return;
 
@@ -346,6 +386,57 @@ export default function ProfilePage() {
                     placeholder="seu@email.com"
                   />
                   <p className="text-sm text-muted-foreground">Alterar o email pode exigir verificação</p>
+                </div>
+
+                {/* Email Verification Section */}
+                <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        Status de Verificação de Email
+                        {emailVerified ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-orange-500" />
+                        )}
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {emailVerified
+                          ? 'Seu email está verificado e ativo.'
+                          : 'Recomendamos verificar seu email para garantir acesso completo à plataforma.'}
+                      </p>
+                    </div>
+                    {!emailVerified && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSendVerificationEmail}
+                        disabled={sendingVerification}
+                      >
+                        {sendingVerification ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          'Enviar Verificação'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+
+                  {emailVerified && cachedProfile?.email_verified_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Verificado em:{' '}
+                      {new Date(cachedProfile.email_verified_at).toLocaleDateString('pt-BR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  )}
                 </div>
               </div>
 
