@@ -12,30 +12,30 @@ TAREFA: Gere {{count}} questões rápidas para um quiz gamificado sobre {{subjec
 INSTRUÇÕES:
 1. LEIA CUIDADOSAMENTE todo o material de referência.
 2. A pergunta rápida vai no campo \`question\`.
-3. As alternativas e o feedback opcional vão dentro do campo \`metadata\`.
+3. O cenário do quiz (\`scenario\`) e a lista de desafios (\`challenges\`) vão dentro do campo \`metadata\`.
+4. Se NENHUM material de referência for fornecido, retorne um erro informando que o material é necessário.
 
 REGRAS OBRIGATÓRIAS:
 1. O campo \`type\` DEVE ser "gamified".
 2. As perguntas devem ser concisas e diretas.
-3. A lista \`metadata.answers\` DEVE ter 4 alternativas.
-4. Apenas UMA alternativa DEVE ser correta.
+3. IMPORTANTE: \`scenario\` deve ser uma string simples e \`challenges\` deve ser um array de strings simples (não objetos).
+4. A resposta final DEVE ser um único objeto JSON com uma chave no nível raiz chamada "questions". O valor dessa chave DEVE ser uma lista.
 
 FORMATO DE SAÍDA (JSON):
+// ... (o formato de saída continua o mesmo)
+
+✅ CORRETO - scenario é string, challenges é array de strings:
 {
-  "questions": [
-    {
-      "type": "gamified",
-      "question": "Quiz Rápido: Avaliação na Educação Infantil",
-      "metadata": {
-        "scenario": "Você é um professor da Educação Infantil planejando as avaliações do semestre.",
-        "challenges": [
-          "Qual instrumento é considerado o principal na documentação do desenvolvimento?",
-          "Verdadeiro ou Falso: A avaliação na Educação Infantil tem caráter classificatório.",
-          "Complete: A avaliação deve valorizar o ________ mais do que apenas o produto final."
-        ]
-      }
-    }
-  ]
+  "metadata": {
+    "scenario": "Descrição do cenário",
+    "challenges": ["Desafio 1", "Desafio 2", "Desafio 3"]
+  }
+}
+
+❌ ERRADO (NÃO OMITA A ESTRUTURA PRINCIPAL "questions" e "metadata"):
+{
+  "scenario": "Descrição do cenário",
+  "challenges": ["Desafio 1", "Desafio 2", "Desafio 3"]
 }
 
 Gere as questões agora:

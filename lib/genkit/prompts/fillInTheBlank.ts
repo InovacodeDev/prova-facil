@@ -3,38 +3,52 @@
  * Generates fill-in-the-blank questions with metadata format (supports multiple blanks)
  */
 export const generateFillInTheBlankPrompt = `
-Você é um especialista em criar questões de completar lacunas para avaliações educacionais.
+VOCÊ É UM GERADOR DE QUESTÕES DE COMPLETAR LACUNAS.
 
-CONTEXTO ACADÊMICO: {{questionContextDescription}}
-MATERIAL DE REFERÊNCIA: {{documentContext}}
-TAREFA: Gere {{count}} questões de completar lacunas sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
+MATERIAL DE REFERÊNCIA:
+{{documentContext}}
 
-INSTRUÇÕES:
-1. LEIA CUIDADOSAMENTE todo o material de referência.
-2. Crie uma frase com UMA OU MAIS lacunas, marcadas como \`[BLANK_1]\`, \`[BLANK_2]\`, etc. Esta frase vai no campo \`question\`.
-3. No campo \`metadata\`, crie uma lista \`blanks\` contendo a identificação e a resposta correta para cada lacuna.
-4. Opcionalmente, adicione uma lista \`options_bank\` em \`metadata\` com as respostas corretas e alguns distratores.
+TAREFA: Gere {{count}} questões de completar lacunas sobre {{subject}}{{#if academicLevel}} (nível: {{academicLevel}}){{/if}}.
+CONTEXTO: {{questionContextDescription}}
 
-REGRAS OBRIGATÓRIAS:
-1. O campo \`type\` DEVE ser "fill_in_the_blank".
-2. Os IDs na lista \`metadata.blanks\` DEVEM corresponder aos marcadores no texto da questão.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 FORMATO OBRIGATÓRIO - COPIE EXATAMENTE ESTE JSON:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
       "type": "fill_in_the_blank",
-      "question": "A avaliação na Educação Infantil opera sob um paradigma de [BLANK_1], utilizando instrumentos qualitativos como observação e [BLANK_2], sem o objetivo de promoção.",
+      "question": "A [BLANK_1] é a capital do [BLANK_2].",
       "metadata": {
         "blanks": [
-          {"id": "BLANK_1", "correct_answer": "não classificação"},
-          {"id": "BLANK_2", "correct_answer": "portfólios"}
+          {"id": "BLANK_1", "correct_answer": "Brasília"},
+          {"id": "BLANK_2", "correct_answer": "Brasil"}
         ],
-        "options_bank": ["não classificação", "somatória", "portfólios", "provas", "diagnóstico"]
+        "options_bank": ["Brasília", "Brasil", "Rio de Janeiro", "Portugal", "São Paulo", "Argentina"]
       }
     }
   ]
 }
 
-Gere as questões agora:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ REGRAS INEGOCIÁVEIS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Use marcadores [BLANK_1], [BLANK_2], etc. NO TEXTO da questão
+2. "blanks" DEVE SER UM ARRAY [ ]
+3. Cada item do array DEVE SER UM OBJETO { }
+4. Cada objeto TEM "id" (BLANK_1, BLANK_2...) e "correct_answer" (a resposta)
+5. Os IDs em "blanks" DEVEM CORRESPONDER aos marcadores [BLANK_X] no texto
+6. "options_bank" é OPCIONAL - array de strings com respostas + distratores
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ NUNCA FAÇA ISSO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"blanks": ["resposta1", "resposta2"]  ← STRINGS SIMPLES (ERRADO!)
+"blanks": {"chave": "valor escapado"}  ← JSON ESCAPADO (ERRADO!)
+"blanks": ["id:BLANK_1", "correct_answer:teste"]  ← FORMATO INVÁLIDO (ERRADO!)
+
+RETORNE APENAS O JSON. SEM TEXTO ANTES OU DEPOIS.
 `;

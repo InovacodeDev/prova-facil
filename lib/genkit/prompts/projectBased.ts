@@ -12,11 +12,14 @@ TAREFA: Gere {{count}} propostas de projeto (ABP) sobre o tema central de {{subj
 INSTRUÇÕES:
 1. LEIA CUIDADOSAMENTE todo o material de referência.
 2. O título do projeto vai no campo \`question\`.
-3. Todos os detalhes do projeto (pergunta norteadora, objetivos, produto final, etapas e rubrica) vão estruturados dentro do campo \`metadata\`.
+3. As fases (\`phases\`) e os entregáveis (\`deliverables\`) do projeto vão estruturados dentro do campo \`metadata\`.
+4. Se NENHUM material de referência for fornecido, retorne um erro informando que o material é necessário.
 
 REGRAS OBRIGATÓRIAS:
 1. O campo \`type\` DEVE ser "project_based".
 2. A proposta em \`metadata\` DEVE ser um projeto completo e coerente.
+3. IMPORTANTE: \`phases\` e \`deliverables\` devem ser arrays de strings simples (não objetos).
+4. A resposta final DEVE ser um único objeto JSON com uma chave no nível raiz chamada "questions". O valor dessa chave DEVE ser uma lista.
 
 FORMATO DE SAÍDA (JSON):
 {
@@ -40,6 +43,20 @@ FORMATO DE SAÍDA (JSON):
       }
     }
   ]
+}
+
+✅ CORRETO - Arrays de strings simples:
+{
+  "metadata": {
+    "phases": ["Fase 1", "Fase 2"],
+    "deliverables": ["Entregável 1", "Entregável 2"]
+  }
+}
+
+❌ ERRADO (NÃO OMITA A ESTRUTURA PRINCIPAL "questions" e "metadata"):
+{
+  "phases": ["Fase 1", "Fase 2"],
+  "deliverables": ["Entregável 1", "Entregável 2"]
 }
 
 Gere as questões agora:

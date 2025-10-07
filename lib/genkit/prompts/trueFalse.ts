@@ -3,33 +3,18 @@
  * Generates true/false questions with metadata format
  */
 export const generateTrueFalsePrompt = `
-Você é um especialista em criar questões de verdadeiro ou falso para avaliações educacionais.
-
-CONTEXTO ACADÊMICO: {{questionContextDescription}}
+VOCÊ É UM GERADOR DE QUESTÕES DE VERDADEIRO OU FALSO.
 
 MATERIAL DE REFERÊNCIA:
 {{documentContext}}
 
-TAREFA: Gere {{count}} questões de verdadeiro/falso sobre {{subject}}{{#if academicLevel}} para o nível acadêmico: {{academicLevel}}{{/if}}.
+TAREFA: Gere {{count}} questões de verdadeiro/falso sobre {{subject}}{{#if academicLevel}} (nível: {{academicLevel}}){{/if}}.
+CONTEXTO: {{questionContextDescription}}
 
-INSTRUÇÕES:
-1. LEIA CUIDADOSAMENTE E COMPLETAMENTE todo o material fornecido acima
-2. BASE AS QUESTÕES EXCLUSIVAMENTE no conteúdo real presente no material
-3. NÃO invente informações que não estão no material fornecido
-4. NÃO use conhecimento externo além do conteúdo fornecido
-5. Se o título da avaliação menciona um tema mas o material fornecido contém outro tema, SIGA O CONTEÚDO DO MATERIAL
-6. Crie questões que sigam o contexto acadêmico especificado
-7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 FORMATO OBRIGATÓRIO - COPIE EXATAMENTE ESTE JSON:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-REGRAS OBRIGATÓRIAS:
-1. Cada questão DEVE ter exatamente 5 afirmações
-2. Cada afirmação deve ser uma sentença completa e independente
-3. A quantidade de afirmações verdadeiras (is_correct: true) deve ser ALEATÓRIA (pode ser 0, 1, 2, 3, 4 ou 5)
-4. As afirmações devem testar conhecimento real, não pegadinhas
-5. Evite afirmações muito óbvias ou muito obscuras
-6. O enunciado da questão deve ser: "Marque V para verdadeiro e F para falso:"
-
-FORMATO DE SAÍDA (JSON):
 {
   "questions": [
     {
@@ -37,16 +22,35 @@ FORMATO DE SAÍDA (JSON):
       "question": "Julgue as afirmativas a seguir em Verdadeiro (V) ou Falso (F):",
       "metadata": {
         "statements": [
-          {"statement": "A BNCC substituiu completamente a LDB.", "is_correct": false},
-          {"statement": "A avaliação na Educação Infantil não deve ter fins promocionais.", "is_correct": true},
-          {"statement": "Questões de somatória são o formato dominante no ENEM.", "is_correct": false},
-          {"statement": "A avaliação formativa ocorre ao longo de todo o processo de ensino.", "is_correct": true},
-          {"statement": "O portfólio é um instrumento principalmente somativo.", "is_correct": false}
+          {"statement": "Afirmação 1 aqui", "is_correct": true},
+          {"statement": "Afirmação 2 aqui", "is_correct": false},
+          {"statement": "Afirmação 3 aqui", "is_correct": true},
+          {"statement": "Afirmação 4 aqui", "is_correct": false},
+          {"statement": "Afirmação 5 aqui", "is_correct": true}
         ]
       }
     }
   ]
 }
 
-Gere as questões agora:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ REGRAS INEGOCIÁVEIS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. "statements" DEVE SER UM ARRAY [ ]
+2. Cada item do array DEVE SER UM OBJETO { }
+3. EXATAMENTE 5 afirmações
+4. Cada objeto TEM "statement" (texto) e "is_correct" (boolean)
+5. Use valores BOOLEAN (true/false), NÃO strings ("true"/"false")
+6. O campo "question" é SEMPRE: "Julgue as afirmativas a seguir em Verdadeiro (V) ou Falso (F):"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ NUNCA FAÇA ISSO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"statements": ["texto 1", "texto 2"]  ← STRINGS SIMPLES (ERRADO!)
+"statements": [{"statement": "texto", "is_correct": "false"}]  ← STRING DE BOOLEAN (ERRADO!)
+{"statement": "statements", "is_correct": false}  ← CONTEÚDO LITERAL (ERRADO!)
+
+RETORNE APENAS O JSON. SEM TEXTO ANTES OU DEPOIS.
 `;

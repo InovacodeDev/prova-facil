@@ -22,12 +22,13 @@ INSTRUÇÕES:
 7. Se NENHUM documento foi fornecido, retorne um erro informando que documentos são necessários
 
 REGRAS OBRIGATÓRIAS:
-1. Cada questão deve ter UMA pergunta aberta que estimule reflexão
-2. Forneça UMA resposta modelo completa e bem elaborada (sempre com is_correct: true)
-3. A pergunta deve exigir análise, síntese ou avaliação, não apenas memorização
-4. A resposta modelo deve ter entre 3 e 5 parágrafos bem estruturados
-5. Use linguagem apropriada para o nível acadêmico
-6. Evite perguntas que possam ser respondidas com sim/não
+1. Cada questão deve ter UMA pergunta aberta que estimule reflexão.
+2. Forneça uma diretriz clara e concisa para a resposta esperada no campo "expected_answer_guideline".
+3. A pergunta deve exigir análise, síntese ou avaliação, não apenas memorização.
+4. A diretriz da resposta deve ser um parágrafo único que resume os pontos-chave que o aluno deve abordar.
+5. Use linguagem apropriada para o nível acadêmico.
+6. Evite perguntas que possam ser respondidas com sim/não.
+8. A resposta final DEVE ser um único objeto JSON com uma chave no nível raiz chamada "questions". O valor dessa chave DEVE ser uma lista.
 
 FORMATO DE SAÍDA (JSON):
 {
@@ -40,6 +41,11 @@ FORMATO DE SAÍDA (JSON):
       }
     }
   ]
+}
+
+❌ ERRADO (NÃO OMITA A ESTRUTURA PRINCIPAL "questions"):
+{
+  "expected_answer_guideline": "A diretriz da resposta deve conter os pontos principais sobre o tema X, Y e Z."
 }
 
 Gere as questões agora:

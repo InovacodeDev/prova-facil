@@ -18,7 +18,11 @@ import { cn } from '@/lib/utils';
 import { invalidateDashboardCache } from '@/lib/cache';
 import { track } from '@vercel/analytics';
 import { Autocomplete } from '@/components/ui/autocomplete';
-import { QUESTION_TYPES } from '@/lib/question-types';
+import {
+  QUESTION_TYPES,
+  getContextRecommendationsForType,
+  getContextSuggestionsForAcademicLevel,
+} from '@/lib/question-types';
 import {
   extractTextFromFiles,
   formatExtractedTextForAPI,
@@ -45,13 +49,25 @@ const SUBJECTS = [
 ];
 
 const QUESTION_CONTEXTS = [
-  { value: 'fixacao', label: 'Fixação' },
-  { value: 'contextualizada', label: 'Contextualizada (Estilo ENEM)' },
-  { value: 'teorica', label: 'Teórica / Conceitual' },
-  { value: 'estudo_caso', label: 'Estudo de Caso' },
-  { value: 'discursiva_aberta', label: 'Discursiva Aberta' },
-  { value: 'letra_lei', label: '"Letra da Lei" (Estilo Concurso)' },
-  { value: 'pesquisa', label: 'Prompt para Pesquisa (Nível Pós-Doc)' },
+  { value: 'fixacao', label: 'Fixação', description: 'Questões objetivas para fixar conceitos básicos' },
+  {
+    value: 'contextualizada',
+    label: 'Contextualizada (Estilo ENEM)',
+    description: 'Questões com situações reais e contextualizadas',
+  },
+  { value: 'teorica', label: 'Teórica / Conceitual', description: 'Foco em teoria e conceitos fundamentais' },
+  { value: 'estudo_caso', label: 'Estudo de Caso', description: 'Análise de situações complexas e aplicadas' },
+  { value: 'discursiva_aberta', label: 'Discursiva Aberta', description: 'Respostas elaboradas e argumentação livre' },
+  {
+    value: 'letra_lei',
+    label: '"Letra da Lei" (Estilo Concurso)',
+    description: 'Questões diretas sobre normas e legislação',
+  },
+  {
+    value: 'pesquisa',
+    label: 'Prompt para Pesquisa (Nível Pós-Doc)',
+    description: 'Questões investigativas e de pesquisa avançada',
+  },
 ];
 
 type DocumentMode = 'file' | 'url' | 'text';
@@ -119,6 +135,7 @@ export default function NewAssessmentPage() {
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]);
+  const [academicLevelName, setAcademicLevelName] = useState<string>('');
 
   // Use cache hooks for profile, plan, and usage data
   const { profile, loading: profileLoading } = useProfile();
@@ -199,6 +216,36 @@ export default function NewAssessmentPage() {
     return Array.from(normalized.values()).map((subjectName) => ({ value: subjectName, label: subjectName }));
   }, [subjectSuggestions]);
 
+  // Calcular número mínimo de questões (pelo menos 1 de cada tipo)
+  const minimumQuestions = questionTypes.length;
+  const adjustedQuestionCount = useMemo(() => {
+    const requested = parseInt(questionCount, 10) || 0;
+    if (requested < minimumQuestions && minimumQuestions > 0) {
+      return minimumQuestions;
+    }
+    return requested;
+  }, [questionCount, minimumQuestions]);
+
+  // Obter recomendações de contexto baseadas no academic level
+  const contextSuggestions = useMemo(() => {
+    if (!academicLevelName) return { primary: [], secondary: [] };
+    return getContextSuggestionsForAcademicLevel(academicLevelName);
+  }, [academicLevelName]);
+
+  // Verificar se o contexto selecionado é recomendado para os tipos escolhidos
+  const contextRecommendations = useMemo(() => {
+    if (questionTypes.length === 0) return [];
+
+    // Pegar recomendações de todos os tipos selecionados
+    const allRecommendations = new Set<string>();
+    questionTypes.forEach((type) => {
+      const recommendations = getContextRecommendationsForType(type);
+      recommendations.forEach((rec) => allRecommendations.add(rec));
+    });
+
+    return Array.from(allRecommendations);
+  }, [questionTypes]);
+
   // Buscar títulos distintos de avaliações existentes
   useEffect(() => {
     const fetchAssessmentTitles = async () => {
@@ -243,6 +290,35 @@ export default function NewAssessmentPage() {
     };
 
     fetchSubjectSuggestions();
+  }, [supabase]);
+
+  // Buscar academic level do usuário
+  useEffect(() => {
+    const fetchAcademicLevel = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('academic_level_id, academic_levels(name)')
+          .eq('user_id', user.id)
+          .single();
+
+        if (userProfile) {
+          const academicLevel = (userProfile as any)?.academic_levels?.name;
+          if (academicLevel) {
+            setAcademicLevelName(academicLevel);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar nível acadêmico:', error);
+      }
+    };
+
+    fetchAcademicLevel();
   }, [supabase]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -589,6 +665,54 @@ export default function NewAssessmentPage() {
                   <p className="text-xs text-muted-foreground">
                     Define o estilo e a complexidade das questões que serão geradas
                   </p>
+
+                  {/* Recomendações baseadas no nível acadêmico */}
+                  {academicLevelName &&
+                    (contextSuggestions.primary.length > 0 || contextSuggestions.secondary.length > 0) && (
+                      <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                        <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-xs text-blue-800 dark:text-blue-300 space-y-1">
+                          <p>
+                            <strong>💡 Recomendado para {academicLevelName}:</strong>
+                          </p>
+                          {contextSuggestions.primary.length > 0 && (
+                            <p>
+                              <span className="font-medium">Ideais:</span>{' '}
+                              {contextSuggestions.primary
+                                .map((ctx) => QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label)
+                                .filter(Boolean)
+                                .join(', ')}
+                            </p>
+                          )}
+                          {contextSuggestions.secondary.length > 0 && (
+                            <p>
+                              <span className="font-medium">Alternativos:</span>{' '}
+                              {contextSuggestions.secondary
+                                .map((ctx) => QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label)
+                                .filter(Boolean)
+                                .join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Aviso sobre compatibilidade com tipos selecionados */}
+                  {questionContext && questionTypes.length > 0 && !contextRecommendations.includes(questionContext) && (
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                      <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800 dark:text-amber-300">
+                        <strong>⚠️ Atenção:</strong> O contexto selecionado pode não ser ideal para os tipos de questões
+                        escolhidos. Tipos compatíveis com{' '}
+                        <strong>{QUESTION_CONTEXTS.find((c) => c.value === questionContext)?.label}</strong>:{' '}
+                        {questionTypes
+                          .filter((type) => getContextRecommendationsForType(type).includes(questionContext))
+                          .map((type) => QUESTION_TYPES.find((t) => t.id === type)?.label)
+                          .filter(Boolean)
+                          .join(', ') || 'Nenhum'}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Quantidade e Matéria */}
@@ -613,6 +737,36 @@ export default function NewAssessmentPage() {
                       Plano {userPlan}: {monthlyUsage}/{planConfig.monthlyQuestionLimit} questões usadas este mês.{' '}
                       <strong>Disponível: {maxQuestions}</strong>
                     </p>
+
+                    {/* Aviso sobre quantidade mínima */}
+                    {minimumQuestions > 0 && parseInt(questionCount, 10) < minimumQuestions && (
+                      <div className="flex items-start gap-2 p-2 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 dark:text-amber-300">
+                          <strong>ℹ️ Ajuste automático:</strong> Você selecionou {minimumQuestions} tipo(s) de questão.
+                          Para garantir pelo menos 1 questão de cada tipo, o sistema gerará{' '}
+                          <strong>{minimumQuestions} questões</strong>
+                          (em vez de {questionCount}).
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Info sobre distribuição */}
+                    {minimumQuestions > 0 && parseInt(questionCount, 10) >= minimumQuestions && (
+                      <div className="flex items-start gap-2 p-2 rounded-md bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-800">
+                        <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-green-800 dark:text-green-300">
+                          ✅ Cada um dos {minimumQuestions} tipos terá pelo menos 1 questão.
+                          {adjustedQuestionCount > minimumQuestions && (
+                            <>
+                              {' '}
+                              As {adjustedQuestionCount - minimumQuestions} questões restantes serão distribuídas
+                              proporcionalmente.
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -947,46 +1101,69 @@ export default function NewAssessmentPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {QUESTION_TYPES.map((type) => {
                         const isAllowed = allowedQuestionTypes.includes(type.id);
+                        const workingOn = [].includes(type.id);
+                        const recommendedContexts = getContextRecommendationsForType(type.id);
 
                         return (
                           <div
                             key={type.id}
                             className={cn(
                               'flex items-start space-x-3 px-3 rounded-lg border transition-all',
-                              isAllowed
+                              isAllowed && !workingOn
                                 ? 'border-border hover:border-primary hover:bg-primary/5 cursor-pointer'
                                 : 'border-border bg-muted/50 opacity-50 cursor-not-allowed'
                             )}
                           >
-                            {isAllowed ? (
-                              <>
-                                <div className="pt-3">
-                                  <Checkbox
-                                    id={type.id}
-                                    checked={questionTypes.includes(type.id)}
-                                    onCheckedChange={() => toggleQuestionType(type.id)}
-                                    className="mt-0.5"
-                                  />
-                                </div>
-                                <div className="flex-1">
-                                  <p
-                                    className="text-sm font-medium leading-tight cursor-pointer pt-3"
-                                    onClick={() => toggleQuestionType(type.id)}
-                                  >
-                                    {type.label}
-                                  </p>
-                                  <p
-                                    className="text-xs text-muted-foreground mt-1 pb-3"
-                                    onClick={() => toggleQuestionType(type.id)}
-                                  >
-                                    {type.description}
-                                  </p>
-                                </div>
-                              </>
-                            ) : (
+                            {isAllowed && !workingOn ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="flex items-start space-x-3 w-full">
+                                    <div className="pt-3">
+                                      <Checkbox
+                                        id={type.id}
+                                        checked={questionTypes.includes(type.id)}
+                                        onCheckedChange={() => toggleQuestionType(type.id)}
+                                        className="mt-0.5"
+                                      />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p
+                                        className="text-sm font-medium leading-tight cursor-pointer pt-3"
+                                        onClick={() => toggleQuestionType(type.id)}
+                                      >
+                                        {type.label}
+                                      </p>
+                                      <p
+                                        className="text-xs text-muted-foreground mt-1 pb-3"
+                                        onClick={() => toggleQuestionType(type.id)}
+                                      >
+                                        {type.description}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[280px]">
+                                  <div className="space-y-1">
+                                    <p className="font-medium text-xs">{type.label}</p>
+                                    <p className="text-xs">{type.description}</p>
+                                    {recommendedContexts.length > 0 && (
+                                      <div className="pt-2 border-t border-border/50 mt-2">
+                                        <p className="text-xs font-medium mb-1">💡 Contextos recomendados:</p>
+                                        <ul className="text-xs space-y-0.5 list-disc list-inside">
+                                          {recommendedContexts.slice(0, 3).map((ctx) => {
+                                            const contextLabel = QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label;
+                                            return contextLabel ? <li key={ctx}>{contextLabel}</li> : null;
+                                          })}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-start space-x-3 w-full py-3">
                                     <Checkbox id={type.id} checked={false} disabled className="mt-0.5" />
                                     <div className="flex-1">
                                       <Label
@@ -1001,10 +1178,13 @@ export default function NewAssessmentPage() {
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p className="text-xs">
-                                    Este tipo de questão não está disponível no plano <strong>{userPlan}</strong>. Faça
-                                    upgrade para desbloquear.
-                                  </p>
+                                  {workingOn && <p className="text-xs">Em breve!</p>}
+                                  {!workingOn && (
+                                    <p className="text-xs">
+                                      Este tipo de questão não está disponível no plano <strong>{userPlan}</strong>.
+                                      Faça upgrade para desbloquear.
+                                    </p>
+                                  )}
                                 </TooltipContent>
                               </Tooltip>
                             )}

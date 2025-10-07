@@ -15,9 +15,9 @@ export const QuestionsResponseSchema = z.object({
             ),
           question: z.string().describe('O texto da pergunta'),
           metadata: z
-            .record(z.any())
+            .any()
             .describe(
-              'Metadados obrigatórios contendo as respostas/estrutura específica de cada tipo de questão. NUNCA deve ser undefined ou null.'
+              'Metadados obrigatórios contendo as respostas/estrutura específica de cada tipo de questão. Deve ser um objeto JSON válido com as propriedades específicas do tipo de questão.'
             ),
           created_at: z.string().optional(),
         }),
