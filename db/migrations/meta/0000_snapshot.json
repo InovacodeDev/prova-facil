@@ -1,89 +1,48 @@
 {
-  "id": "5e399661-739b-413f-a1a7-a36a5ee341da",
+  "id": "a1db5679-8fa4-4342-8b30-2722b5b803f7",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.academic_level_subjects": {
-      "name": "academic_level_subjects",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "academic_level_id": {
-          "name": "academic_level_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "subject_id": {
-          "name": "subject_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "academic_level_subjects_academic_level_id_academic_levels_id_fk": {
-          "name": "academic_level_subjects_academic_level_id_academic_levels_id_fk",
-          "tableFrom": "academic_level_subjects",
-          "tableTo": "academic_levels",
-          "columnsFrom": [
-            "academic_level_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "academic_level_subjects_subject_id_subjects_id_fk": {
-          "name": "academic_level_subjects_subject_id_subjects_id_fk",
-          "tableFrom": "academic_level_subjects",
-          "tableTo": "subjects",
-          "columnsFrom": [
-            "subject_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.academic_levels": {
       "name": "academic_levels",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "default": "gen_random_uuid()"
+          "identity": {
+            "type": "always",
+            "name": "academic_levels_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "academic_level",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "allowed_question_types": {
+          "name": "allowed_question_types",
+          "type": "question_type[]",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "allowed_question_context": {
+          "name": "allowed_question_context",
+          "type": "question_context[]",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -117,65 +76,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.answers": {
-      "name": "answers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "question_id": {
-          "name": "question_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "answer": {
-          "name": "answer",
-          "type": "varchar(8192)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_correct": {
-          "name": "is_correct",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "answers_question_id_questions_id_fk": {
-          "name": "answers_question_id_questions_id_fk",
-          "tableFrom": "answers",
-          "tableTo": "questions",
-          "columnsFrom": [
-            "question_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.assessments": {
       "name": "assessments",
       "schema": "",
@@ -193,11 +93,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "category_id": {
-          "name": "category_id",
-          "type": "uuid",
+        "subject": {
+          "name": "subject",
+          "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "title": {
           "name": "title",
@@ -227,19 +127,6 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "assessments_category_id_categories_id_fk": {
-          "name": "assessments_category_id_categories_id_fk",
-          "tableFrom": "assessments",
-          "tableTo": "categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -248,8 +135,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.categories": {
-      "name": "categories",
+    "public.logs": {
+      "name": "logs",
       "schema": "",
       "columns": {
         "id": {
@@ -259,9 +146,91 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "name": {
-          "name": "name",
+        "action": {
+          "name": "action",
+          "type": "action_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.plans": {
+      "name": "plans",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "plan",
+          "typeSchema": "public",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
           "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "questions_month": {
+          "name": "questions_month",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 30
+        },
+        "doc_type": {
+          "name": "doc_type",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "docs_size": {
+          "name": "docs_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 10
+        },
+        "max_question_types": {
+          "name": "max_question_types",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "support": {
+          "name": "support",
+          "type": "support_type_enum[]",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -271,10 +240,91 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.profile_logs_cycle": {
+      "name": "profile_logs_cycle",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cycle": {
+          "name": "cycle",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_questions": {
+          "name": "total_questions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "subjects_breakdown": {
+          "name": "subjects_breakdown",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "profile_logs_cycle_user_id_profiles_id_fk": {
+          "name": "profile_logs_cycle_user_id_profiles_id_fk",
+          "tableFrom": "profile_logs_cycle",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -298,6 +348,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "is_admin": {
+          "name": "is_admin",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "full_name": {
           "name": "full_name",
           "type": "varchar(255)",
@@ -308,7 +365,7 @@
           "name": "email",
           "type": "varchar(320)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "plan": {
           "name": "plan",
@@ -334,7 +391,28 @@
         },
         "academic_level_id": {
           "name": "academic_level_id",
-          "type": "uuid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "allowed_cookies": {
+          "name": "allowed_cookies",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "selected_question_types": {
+          "name": "selected_question_types",
+          "type": "question_type[]",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "question_types_updated_at": {
+          "name": "question_types_updated_at",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -370,7 +448,22 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "profiles_user_id_unique": {
+          "name": "profiles_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id"
+          ]
+        },
+        "profiles_email_unique": {
+          "name": "profiles_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -406,6 +499,26 @@
           "primaryKey": false,
           "notNull": true
         },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "copy_count": {
+          "name": "copy_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "copy_last_at": {
+          "name": "copy_last_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -435,56 +548,39 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
-    },
-    "public.subjects": {
-      "name": "subjects",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "subjects_name_unique": {
-          "name": "subjects_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
     }
   },
   "enums": {
+    "public.academic_level": {
+      "name": "academic_level",
+      "schema": "public",
+      "values": [
+        "elementary_school",
+        "middle_school",
+        "high_school",
+        "technical",
+        "undergraduate",
+        "specialization",
+        "mba",
+        "masters",
+        "doctorate",
+        "postdoctoral",
+        "extension",
+        "language_course",
+        "none"
+      ]
+    },
+    "public.action_type": {
+      "name": "action_type",
+      "schema": "public",
+      "values": [
+        "create_new_questions",
+        "new_questions",
+        "copy_question",
+        "unique_assessments",
+        "mean_questions_per_assessment"
+      ]
+    },
     "public.plan": {
       "name": "plan",
       "schema": "public",
@@ -496,6 +592,19 @@
         "advanced"
       ]
     },
+    "public.question_context": {
+      "name": "question_context",
+      "schema": "public",
+      "values": [
+        "fixacao",
+        "contextualizada",
+        "teorica",
+        "estudo_caso",
+        "discursiva_aberta",
+        "letra_lei",
+        "pesquisa"
+      ]
+    },
     "public.question_type": {
       "name": "question_type",
       "schema": "public",
@@ -503,7 +612,14 @@
         "multiple_choice",
         "true_false",
         "open",
-        "sum"
+        "sum",
+        "fill_in_the_blank",
+        "matching_columns",
+        "problem_solving",
+        "essay",
+        "project_based",
+        "gamified",
+        "summative"
       ]
     },
     "public.renew_status": {
@@ -515,6 +631,15 @@
         "trial",
         "canceled",
         "none"
+      ]
+    },
+    "public.support_type_enum": {
+      "name": "support_type_enum",
+      "schema": "public",
+      "values": [
+        "email",
+        "whatsapp",
+        "vip"
       ]
     }
   },

@@ -1,8 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, Sparkles, Target } from "lucide-react";
+import { ArrowRight, Sparkles, Target } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface StatsData {
     totals: {
@@ -16,6 +17,7 @@ interface StatsData {
 
 export const Hero = () => {
     const [stats, setStats] = useState<StatsData | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         // Fetch stats from API
@@ -71,10 +73,6 @@ export const Hero = () => {
                         {/* Stats */}
                         <div className="flex flex-wrap gap-8">
                             <div className="flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-primary" />
-                                <span className="text-sm font-medium text-foreground">90% menos tempo</span>
-                            </div>
-                            <div className="flex items-center gap-2">
                                 <Target className="w-5 h-5 text-secondary" />
                                 <span className="text-sm font-medium text-foreground">100% personalizado</span>
                             </div>
@@ -86,11 +84,16 @@ export const Hero = () => {
 
                         {/* CTAs */}
                         <div className="flex flex-col sm:flex-row gap-4">
-                            <Button variant="hero" size="lg" className="text-base">
+                            <Button variant="hero" size="lg" className="text-base" onClick={() => router.push("/auth")}>
                                 Gerar Minha Primeira Prova
                                 <ArrowRight className="w-5 h-5 ml-2" />
                             </Button>
-                            <Button variant="outline" size="lg" className="text-base">
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                className="text-base"
+                                onClick={() => router.push("/support")}
+                            >
                                 Ver Demonstração
                             </Button>
                         </div>
@@ -142,21 +145,6 @@ export const Hero = () => {
                                 loading="eager"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                        </div>
-
-                        {/* Floating Cards */}
-                        <div className="absolute -top-6 -left-6 bg-card border border-border rounded-xl p-4 shadow-lg">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-secondary rounded-full"></div>
-                                <span className="text-sm font-medium">Prova gerada em 12s</span>
-                            </div>
-                        </div>
-
-                        <div className="absolute -bottom-6 -right-6 bg-card border border-border rounded-xl p-4 shadow-lg">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-accent rounded-full"></div>
-                                <span className="text-sm font-medium">15 questões criadas</span>
-                            </div>
                         </div>
                     </div>
                 </div>

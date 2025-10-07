@@ -143,66 +143,6 @@ CREATE POLICY questions_delete_owner
   );
 
 -- ================================
--- answers
--- ================================
-DROP POLICY IF EXISTS answers_select_public ON public.answers;
-CREATE POLICY answers_select_public
-  ON public.answers
-  FOR SELECT
-  TO public, authenticated
-  USING (true);
-
-DROP POLICY IF EXISTS answers_insert_owner_check ON public.answers;
-CREATE POLICY answers_insert_owner_check
-  ON public.answers
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.questions q
-      JOIN public.assessments a ON a.id = q.assessment_id
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE q.id = question_id AND p.user_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS answers_update_owner ON public.answers;
-CREATE POLICY answers_update_owner
-  ON public.answers
-  FOR UPDATE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.questions q
-      JOIN public.assessments a ON a.id = q.assessment_id
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE q.id = public.answers.question_id AND p.user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.questions q
-      JOIN public.assessments a ON a.id = q.assessment_id
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE q.id = question_id AND p.user_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS answers_delete_owner ON public.answers;
-CREATE POLICY answers_delete_owner
-  ON public.answers
-  FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.questions q
-      JOIN public.assessments a ON a.id = q.assessment_id
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE q.id = public.answers.question_id AND p.user_id = auth.uid()
-    )
-  );
-
--- ================================
 -- logs
 -- ================================
 DROP POLICY IF EXISTS logs_select_public ON public.logs;
@@ -235,8 +175,108 @@ CREATE POLICY logs_delete_auth
   USING (auth.uid() IS NOT NULL);
 
 -- ================================
+-- academic_levels
+-- ================================
+ALTER TABLE IF EXISTS public.academic_levels ENABLE ROW LEVEL SECURITY;
+
+-- SELECT: allow public read access (change TO authenticated to require login)
+DROP POLICY IF EXISTS academic_levels_select_public ON public.academic_levels;
+CREATE POLICY academic_levels_select_public
+  ON public.academic_levels
+  FOR SELECT
+  TO public, authenticated
+  USING (true);
+
+-- INSERT: only admins may insert
+DROP POLICY IF EXISTS academic_levels_insert_admin ON public.academic_levels;
+CREATE POLICY academic_levels_insert_admin
+  ON public.academic_levels
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
+    )
+  );
+
+-- UPDATE: only admins may update
+DROP POLICY IF EXISTS academic_levels_update_admin ON public.academic_levels;
+CREATE POLICY academic_levels_update_admin
+  ON public.academic_levels
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
+    )
+  );
+
+-- DELETE: only admins may delete
+DROP POLICY IF EXISTS academic_levels_delete_admin ON public.academic_levels;
+CREATE POLICY academic_levels_delete_admin
+  ON public.academic_levels
+  FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
+    )
+  );
+
+-- ================================
+-- plans
+-- ================================
+ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for plans table
+-- Allow public read access (anyone can see plan configurations)
+CREATE POLICY "Allow public read access to plans"
+    ON public.plans
+    FOR SELECT
+    TO public
+    USING (true);
+
+-- Allow admin write access only
+CREATE POLICY "Allow admin to manage plans"
+    ON public.plans
+    FOR ALL
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE profiles.user_id = auth.uid()
+            AND profiles.is_admin = true
+        )
+    );
+
+-- Create index for faster lookups
+CREATE INDEX idx_plans_id ON public.plans(id);
+
+-- ================================
 -- Notes:
 -- - Policies use column names directly in WITH CHECK (evaluated against the new row).
 -- - USING clauses reference the existing row via public.<table>.<col>.
 -- - If you need service-role or admin exceptions, create additional policies for those roles.
 -- - After applying, test with an authenticated session (auth.uid()) and the Supabase client.
+
+-- Policy: Users can only view their own logs
+CREATE POLICY "Users can view their own cycle logs"
+ON profile_logs_cycle
+FOR SELECT
+USING (auth.uid() = user_id);
+
+-- Policy: System can insert/update logs (via service role)
+CREATE POLICY "System can manage cycle logs"
+ON profile_logs_cycle
+FOR ALL
+USING (true)
+WITH CHECK (true);

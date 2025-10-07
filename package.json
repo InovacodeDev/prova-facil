@@ -58,8 +58,11 @@
     "genkit": "^1.20.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
+    "mammoth": "^1.11.0",
+    "marked": "^16.4.0",
     "next": "^15.3.2",
     "next-themes": "^0.3.0",
+    "pdfjs-dist": "^5.4.149",
     "postgres": "^3.4.7",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
@@ -75,6 +78,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.56.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
@@ -92,5 +96,15 @@
     "node": ">=22",
     "pnpm": ">=9"
   },
-  "packageManager": "pnpm@10.17.1"
+  "packageManager": "pnpm@10.17.1",
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "printWidth": 120,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "bracketSpacing": true,
+    "arrowParens": "always",
+    "endOfLine": "lf"
+  }
 }

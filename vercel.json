@@ -1,0 +1,17 @@
+{
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "staging": true,
+      "dev": true
+    }
+  },
+  "buildCommand": "pnpm build",
+  "devCommand": "pnpm dev",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "regions": [
+    "iad1"
+  ]
+}

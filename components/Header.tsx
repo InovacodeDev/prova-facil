@@ -1,13 +1,40 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, Menu } from "lucide-react";
-import { useState } from "react";
+import { User, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ProvaFacilLogo } from "@/assets/logo";
+import { createClient } from "@/lib/supabase/client";
 
 export const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const router = useRouter();
+    const supabase = createClient();
+
+    useEffect(() => {
+        // Verifica se há usuário logado
+        const checkUser = async () => {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            setIsLoggedIn(!!user);
+        };
+
+        checkUser();
+
+        // Listener para mudanças no estado de autenticação
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) => {
+            setIsLoggedIn(!!session?.user);
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [supabase]);
 
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -15,8 +42,7 @@ export const Header = () => {
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center gap-2">
-                        <BookOpen className="h-8 w-8 text-primary" />
-                        <span className="text-xl font-bold text-foreground">ProvaFácil AI</span>
+                        <ProvaFacilLogo className="h-8" clickable={!isLoggedIn} />
                     </div>
 
                     {/* Desktop Navigation */}
