@@ -14,7 +14,7 @@ import {
   isSumMetadata,
   isMatchingColumnsMetadata,
   isFillInTheBlankMetadata,
-  isOpenMetadata,
+  isOpenQuestionMetadata,
   isProblemSolvingMetadata,
   isEssayMetadata,
   isProjectBasedMetadata,
@@ -25,7 +25,7 @@ import {
   type SumMetadata,
   type MatchingColumnsMetadata,
   type FillInTheBlankMetadata,
-  type OpenMetadata,
+  type OpenQuestionMetadata,
   type ProblemSolvingMetadata,
   type EssayMetadata,
   type ProjectBasedMetadata,
@@ -125,9 +125,10 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
           text += '\n\nBanco de opções:\n';
           text += metadata.options_bank.filter((opt) => typeof opt === 'string').join(', ');
         }
-      } else if (isOpenMetadata(metadata)) {
-        // Apenas a pergunta, SEM gabarito (expected_answer_guideline é para o professor)
-        // Nada a adicionar além da pergunta já incluída
+      } else if (isOpenQuestionMetadata(metadata)) {
+        // Concatena a pergunta principal e as sub-questões
+        text = `${metadata.main_question}\n\n`;
+        text += metadata.sub_questions.join('\n');
       } else if (isProblemSolvingMetadata(metadata)) {
         // Incluir cenário e dados estruturados, mas NÃO a solução
         if (metadata.scenario) {
@@ -580,18 +581,19 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
     );
   };
 
-  const renderOpen = (data: OpenMetadata) => {
-    // Extrair apenas o contexto (tudo antes do primeiro item A, B, C)
-    const firstItemMatch = question.question.match(/\n[A-Z]\)/);
-    const context = firstItemMatch
-      ? question.question.substring(0, question.question.indexOf(firstItemMatch[0])).trim()
-      : question.question;
-
+  const renderOpenQuestion = (data: OpenQuestionMetadata) => {
     return (
-      <div className="space-y-3">
-        {/* Apenas o contexto/texto motivador */}
-        <div className="border-l-4 border-primary pl-4 py-2">
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{context}</p>
+      <div className="space-y-4">
+        <div
+          className="text-base leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: markdownToHtml(data.main_question) }}
+        />
+        <div className="space-y-2">
+          {data.sub_questions.map((sub, index) => (
+            <div key={index} className="p-3 bg-muted rounded-lg text-sm">
+              {sub}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -682,8 +684,8 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
       return renderMatchingColumns(metadata);
     } else if (isFillInTheBlankMetadata(metadata)) {
       return renderFillInTheBlank(metadata);
-    } else if (isOpenMetadata(metadata)) {
-      return renderOpen(metadata);
+    } else if (isOpenQuestionMetadata(metadata)) {
+      return renderOpenQuestion(metadata);
     } else if (isProblemSolvingMetadata(metadata)) {
       return renderProblemSolving(metadata);
     } else if (isEssayMetadata(metadata)) {
@@ -855,143 +857,18 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
     );
   };
 
-  const renderGabaritoOpen = (data: OpenMetadata) => {
-    // Extrair apenas o texto da resposta, sem JSON ou formatação extra
-    let answerText = data.expected_answer || '';
-
-    // Se for um JSON stringificado, tentar parsear
-    if (answerText.trim().startsWith('{')) {
-      try {
-        const parsed = JSON.parse(answerText);
-        answerText = parsed.expected_answer || answerText;
-      } catch {
-        // Se não conseguir parsear, usar o texto original
-      }
-    }
-
-    // Extrair e remover critérios de correção do texto principal
-    const criteriaMatch = answerText.match(/\*\*CRITÉRIOS DE CORREÇÃO:\*\*([\s\S]*)$/);
-    const criteria = criteriaMatch ? criteriaMatch[1].trim() : '';
-
-    // Remover critérios do texto principal
-    if (criteriaMatch) {
-      answerText = answerText.substring(0, criteriaMatch.index).trim();
-    }
-
-    // Função para quebrar o gabarito em itens (Item A, Item B, etc.)
-    const parseAnswerItems = (text: string): Array<{ letter: string; title: string; content: string }> => {
-      const items: Array<{ letter: string; title: string; content: string }> = [];
-
-      // Regex para capturar "**Item A ...**" ou "Item A -" ou "A)"
-      const itemRegex = /\*\*Item ([A-Z])([^*]*)\*\*\n([\s\S]*?)(?=\n\*\*Item [A-Z]|\*\*CRITÉRIOS|$)/g;
-      const matches = text.matchAll(itemRegex);
-
-      for (const match of matches) {
-        let content = match[3].trim();
-
-        // Remover critérios se estiver dentro do conteúdo do item
-        const criteriaInContent = content.match(/\*\*CRITÉRIOS DE CORREÇÃO:\*\*([\s\S]*)$/);
-        if (criteriaInContent) {
-          content = content.substring(0, criteriaInContent.index).trim();
-        }
-
-        items.push({
-          letter: match[1],
-          title: match[2].trim(),
-          content: content,
-        });
-      }
-
-      // Se não encontrou no formato acima, tentar formato alternativo
-      if (items.length === 0) {
-        const altRegex = /([A-Z])\)\s*(.+?)(?=\n[A-Z]\)|$)/gs;
-        const altMatches = text.matchAll(altRegex);
-
-        for (const match of altMatches) {
-          items.push({
-            letter: match[1],
-            title: '',
-            content: match[2].trim(),
-          });
-        }
-      }
-
-      return items;
-    };
-
-    const answerItems = parseAnswerItems(answerText);
-
-    // Se não encontrou itens, mostrar resposta inteira
-    if (answerItems.length === 0) {
-      return (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold">Resposta esperada:</p>
-          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div
-              className="text-sm leading-relaxed text-green-900 dark:text-green-100 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: markdownToHtml(answerText) }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground italic">
-            💡 Esta é uma resposta modelo. Outras respostas podem ser aceitas desde que abordem os pontos principais.
-          </p>
-        </div>
-      );
-    }
-
-    // Extrair cabeçalho (tudo antes do primeiro item)
-    const firstItemMatch = answerText.match(/\*\*Item [A-Z]/);
-    const header = firstItemMatch ? answerText.substring(0, answerText.indexOf(firstItemMatch[0])).trim() : '';
+  const renderGabaritoOpenQuestion = (data: OpenQuestionMetadata) => {
+    const answerText = data.expected_answer_guideline || '';
 
     return (
-      <div className="space-y-4">
-        {/* Cabeçalho se houver */}
-        {header && (
-          <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
-            <div
-              className="text-sm font-semibold prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: markdownToHtml(header) }}
-            />
-          </div>
-        )}
-
-        <p className="text-sm font-semibold">Respostas esperadas por item:</p>
-
-        {/* Itens do gabarito */}
-        {answerItems.map((item, i) => (
+      <div className="space-y-3">
+        <p className="text-sm font-semibold">Gabarito e Critérios de Avaliação:</p>
+        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
           <div
-            key={i}
-            className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg space-y-2"
-          >
-            <div className="flex items-start gap-2">
-              <span className="font-bold text-lg text-green-700 dark:text-green-400 min-w-[2rem]">{item.letter})</span>
-              <div className="flex-1">
-                {item.title && (
-                  <div
-                    className="font-semibold text-green-800 dark:text-green-300 mb-2"
-                    dangerouslySetInnerHTML={{ __html: markdownToHtml(item.title) }}
-                  />
-                )}
-                <div
-                  className="text-sm leading-relaxed text-green-900 dark:text-green-100 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: markdownToHtml(item.content) }}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Critérios de correção se houver */}
-        {criteria && (
-          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <p className="text-sm font-semibold mb-2">Critérios de Correção:</p>
-            <div
-              className="text-sm leading-relaxed prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: markdownToHtml(criteria) }}
-            />
-          </div>
-        )}
-
+            className="text-sm leading-relaxed text-green-900 dark:text-green-100 prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: markdownToHtml(answerText) }}
+          />
+        </div>
         <p className="text-xs text-muted-foreground italic">
           💡 Esta é uma resposta modelo. Outras respostas podem ser aceitas desde que abordem os pontos principais.
         </p>
@@ -1174,8 +1051,8 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
       return renderGabaritoMatchingColumns(metadata);
     } else if (isFillInTheBlankMetadata(metadata)) {
       return renderGabaritoFillInTheBlank(metadata);
-    } else if (isOpenMetadata(metadata)) {
-      return renderGabaritoOpen(metadata);
+    } else if (isOpenQuestionMetadata(metadata)) {
+      return renderGabaritoOpenQuestion(metadata);
     } else if (isProblemSolvingMetadata(metadata)) {
       return renderGabaritoProblemSolving(metadata);
     } else if (isEssayMetadata(metadata)) {

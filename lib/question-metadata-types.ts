@@ -56,9 +56,11 @@ export interface FillInTheBlankMetadata {
   text_with_blanks?: string; // Texto com marcadores [BLANK_1], pode vir no question
 }
 
-// Open (Dissertative) - FORMATO DO PROMPT: expected_answer_guideline
-export interface OpenMetadata {
-  expected_answer: string; // Diretriz da resposta esperada
+// Open (Dissertative) - FORMATO DO PROMPT: main_question, sub_questions, expected_answer_guideline
+export interface OpenQuestionMetadata {
+  main_question: string; // The main, contextualizing text of the question (enunciado).
+  sub_questions: string[]; // An array of sub-questions (items a, b, c).
+  expected_answer_guideline: string; // A detailed model answer and rubric.
 }
 
 // Problem Solving - FORMATO DO PROMPT: scenario, data, task, solution_guideline
@@ -106,7 +108,7 @@ export type QuestionMetadata =
   | SumMetadata
   | MatchingColumnsMetadata
   | FillInTheBlankMetadata
-  | OpenMetadata
+  | OpenQuestionMetadata
   | ProblemSolvingMetadata
   | EssayMetadata
   | ProjectBasedMetadata
@@ -134,8 +136,8 @@ export function isFillInTheBlankMetadata(metadata: any): metadata is FillInTheBl
   return metadata && Array.isArray(metadata.blanks);
 }
 
-export function isOpenMetadata(metadata: any): metadata is OpenMetadata {
-  return metadata && typeof metadata.expected_answer === 'string';
+export function isOpenQuestionMetadata(metadata: any): metadata is OpenQuestionMetadata {
+  return metadata && typeof metadata.main_question === 'string' && Array.isArray(metadata.sub_questions);
 }
 
 export function isProblemSolvingMetadata(metadata: any): metadata is ProblemSolvingMetadata {

@@ -117,14 +117,16 @@ export const MatchingColumnsMetadataSchema = z.object({
 
 /**
  * Metadata for Open-ended/Dissertative questions.
- * Provides an expected answer or key topics for evaluation.
+ * Provides a main question, a list of sub-questions, and detailed guidelines for the expected answer.
  */
-export const OpenMetadataSchema = z.object({
-  expected_answer: z
+export const OpenQuestionMetadataSchema = z.object({
+  main_question: z.string().min(1, 'Main question cannot be empty.').describe('The main, contextualizing text of the question (enunciado).'),
+  sub_questions: z.array(z.string().min(1)).min(1).describe('An array of sub-questions (items a, b, c).'),
+  expected_answer_guideline: z
     .string()
-    .min(1, 'Expected answer cannot be empty.')
+    .min(1, 'Expected answer guideline cannot be empty.')
     .describe(
-      'A model answer or a description of the key points, topics, and arguments expected for a correct response.'
+      'A detailed model answer, including evaluation criteria and point distribution, explaining what constitutes a good response for each sub-question.'
     ),
 });
 

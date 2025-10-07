@@ -5,7 +5,7 @@ import {
   SumMetadataSchema,
   FillInTheBlankMetadataSchema,
   MatchingColumnsMetadataSchema,
-  OpenMetadataSchema,
+  OpenQuestionMetadataSchema,
   ProblemSolvingMetadataSchema,
   EssayMetadataSchema,
   ProjectBasedMetadataSchema,
@@ -44,8 +44,9 @@ const QuestionSchema = z.union([
   }),
   z.object({
     type: z.enum(['open']),
-    question: z.string().describe('The text of the question.'),
-    metadata: OpenMetadataSchema,
+    // For 'open' questions, the question content is now in the metadata.
+    question: z.string().optional().describe('Legacy field. Not used for new open questions.'),
+    metadata: OpenQuestionMetadataSchema,
   }),
   z.object({
     type: z.enum(['problem_solving']),
