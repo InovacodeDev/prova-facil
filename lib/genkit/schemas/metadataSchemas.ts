@@ -44,7 +44,7 @@ export const SumMetadataSchema = z.object({
   statements: z
     .array(
       z.object({
-        number: z.number().int().positive().describe('The number associated with the statement (e.g., 1, 2, 4, 8).'),
+        number: z.number().int().min(1).describe('The number associated with the statement (e.g., 1, 2, 4, 8).'),
         statement: z.string().describe('The text of the statement.'),
         is_correct: z.boolean().describe('Indicates if the statement is correct and should be included in the sum.'),
       })
@@ -158,8 +158,8 @@ export const ProjectBasedMetadataSchema = z.object({
  */
 export const GamifiedMetadataSchema = z.object({
   scenario: z.string().describe('The narrative or scenario for the gamified challenge.'),
-  score_points: z.number().int().positive().describe('Points awarded for a correct answer.'),
-  time_limit_seconds: z.number().int().positive().optional().describe('An optional time limit in seconds for the question.'),
+  score_points: z.number().int().min(1).describe('Points awarded for a correct answer.'),
+  time_limit_seconds: z.number().int().min(1).optional().describe('An optional time limit in seconds for the question.'),
 });
 
 /**

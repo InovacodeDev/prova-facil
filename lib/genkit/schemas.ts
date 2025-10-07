@@ -14,62 +14,62 @@ import {
 } from './schemas/metadataSchemas';
 
 // ============================================================================
-// DISCRIMINATED UNION FOR QUESTION-SPECIFIC METADATA
+// UNION FOR QUESTION-SPECIFIC METADATA
 // ============================================================================
 
-const QuestionSchema = z.discriminatedUnion('type', [
+const QuestionSchema = z.union([
   z.object({
-    type: z.literal('multiple_choice'),
+    type: z.enum(['multiple_choice']),
     question: z.string().describe('The text of the question.'),
     metadata: McqMetadataSchema,
   }),
   z.object({
-    type: z.literal('true_false'),
+    type: z.enum(['true_false']),
     question: z.string().describe('The text of the question.'),
     metadata: TfMetadataSchema,
   }),
   z.object({
-    type: z.literal('sum'),
+    type: z.enum(['sum']),
     question: z.string().describe('The text of the question.'),
     metadata: SumMetadataSchema,
   }),
   z.object({
-    type: z.literal('fill_in_the_blank'),
+    type: z.enum(['fill_in_the_blank']),
     question: z.string().describe('The text of the question, containing placeholders like {{blank_1}}.'),
     metadata: FillInTheBlankMetadataSchema,
   }),
   z.object({
-    type: z.literal('matching_columns'),
+    type: z.enum(['matching_columns']),
     question: z.string().describe('The text of the question.'),
     metadata: MatchingColumnsMetadataSchema,
   }),
   z.object({
-    type: z.literal('open'),
+    type: z.enum(['open']),
     question: z.string().describe('The text of the question.'),
     metadata: OpenMetadataSchema,
   }),
   z.object({
-    type: z.literal('problem_solving'),
+    type: z.enum(['problem_solving']),
     question: z.string().describe('The text of the question.'),
     metadata: ProblemSolvingMetadataSchema,
   }),
   z.object({
-    type: z.literal('essay'),
+    type: z.enum(['essay']),
     question: z.string().describe('The text of the question.'),
     metadata: EssayMetadataSchema,
   }),
   z.object({
-    type: z.literal('project_based'),
+    type: z.enum(['project_based']),
     question: z.string().describe('The text of the question.'),
     metadata: ProjectBasedMetadataSchema,
   }),
   z.object({
-    type: z.literal('gamified'),
+    type: z.enum(['gamified']),
     question: z.string().describe('The text of the question.'),
     metadata: GamifiedMetadataSchema,
   }),
   z.object({
-    type: z.literal('summative'),
+    type: z.enum(['summative']),
     question: z.string().describe('The text of the question.'),
     metadata: SummativeMetadataSchema,
   }),
