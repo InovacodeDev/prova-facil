@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Unhandled error in generate-questions endpoint:', error);
-    
+
     await logError({
       message: error instanceof Error ? error.message : 'Unknown error in generate-questions',
       stack: error instanceof Error ? error.stack : undefined,
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
       },
     });
-    
+
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

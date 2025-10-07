@@ -17,10 +17,7 @@ export async function GET() {
 
     const stats = await getAllLogsStats();
 
-    const { data: viewData } = await supabase
-      .from('public_profiles_count')
-      .select('*')
-      .single();
+    const { data: viewData } = await supabase.from('public_profiles_count').select('*').single();
 
     const formattedStats = stats.reduce((acc, stat) => {
       acc[stat.action] = {
