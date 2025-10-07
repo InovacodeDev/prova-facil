@@ -15,6 +15,7 @@ import { useProfile } from '@/hooks/use-cache';
 import { UserMenu } from '@/components/UserMenu';
 import { Question, QuestionCard } from '@/components/QuestionCard';
 import { QUESTION_TYPES } from '@/lib/question-types';
+import { logClientError } from '@/lib/client-error-logger';
 
 interface Subject {
   id: string;
@@ -43,10 +44,7 @@ export default function MyAssessmentsPage() {
   const { toast } = useToast();
   const supabase = createClient();
 
-  const QUESTION_TYPE_FILTERS = [
-    { id: 'all', label: 'Todos os tipos' },
-    ...QUESTION_TYPES,
-  ];
+  const QUESTION_TYPE_FILTERS = [{ id: 'all', label: 'Todos os tipos' }, ...QUESTION_TYPES];
 
   // Função para filtrar questões por tipo
   const filterQuestionsByType = (questions: Question[]) => {
@@ -140,6 +138,7 @@ export default function MyAssessmentsPage() {
       setGroupedData(grouped);
     } catch (error: any) {
       console.error('Erro ao carregar questões:', error);
+      logClientError(error, { component: 'MyAssessments', action: 'fetchQuestions' });
       toast({
         title: 'Erro',
         description: 'Não foi possível carregar suas questões.',

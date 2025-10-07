@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { UserMenu } from '@/components/UserMenu';
 import { plans } from '@/components/Pricing';
+import { logClientError } from '@/lib/client-error-logger';
 
 export default function PlanPage() {
   const [currentPlan, setCurrentPlan] = useState<string>('starter');
@@ -43,6 +44,7 @@ export default function PlanPage() {
       }
     } catch (error: any) {
       console.error('Erro ao carregar plano:', error);
+      logClientError(error, { component: 'Plan', action: 'fetchUserPlan' });
       toast({
         title: 'Erro',
         description: 'Não foi possível carregar seu plano atual.',
@@ -72,6 +74,7 @@ export default function PlanPage() {
           description: 'Você agora está no plano Starter.',
         });
       } catch (error) {
+        logClientError(error, { component: 'Plan', action: 'handleSelectPlan', planId });
         toast({
           title: 'Erro',
           description: 'Não foi possível atualizar seu plano.',
