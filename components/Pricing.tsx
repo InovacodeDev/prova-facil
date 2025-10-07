@@ -1,224 +1,215 @@
-"use client";
+'use client';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export const plans = [
-    {
-        id: "starter",
-        name: "Starter",
-        monthlyPrice: 0,
-        annualPrice: 0,
-        description: "Ideal para testar a plataforma",
-        aiLevel: "IA Básica",
-        features: [
-            "Até 30 questões/mês para suas primeiras turmas",
-            "1 tipo de questão personalizável",
-            "Upload de arquivos TXT e DOCX (10MB)",
-            "Entrada de texto direto",
-            "Suporte por email",
-        ],
-        cta: "Começar Grátis",
-        highlighted: false,
-    },
-    {
-        id: "basic",
-        name: "Basic",
-        monthlyPrice: 29.9,
-        annualPrice: 269.1, // 29.9 * 12 * 0.75 = 25% desconto
-        description: "Perfeito para 2-3 turmas pequenas",
-        aiLevel: "IA Básica",
-        features: [
-            "Até 75 questões/mês, ideal para aulas semanais",
-            "2 personalizáveis",
-            "Upload de arquivos TXT e DOCX (20MB)",
-            "Entrada de texto direto",
-            "Suporte prioritário com resposta em 24h",
-        ],
-        cta: "Começar Agora",
-        highlighted: false,
-    },
-    {
-        id: "essentials",
-        name: "Essentials",
-        monthlyPrice: 49.9,
-        annualPrice: 449.1, // 49.9 * 12 * 0.75 = 25% desconto
-        description: "Ótimo para 4-5 turmas regulares",
-        aiLevel: "IA Avançada",
-        features: [
-            "Até 150 questões/mês para diversas disciplinas",
-            "3 tipos de questões personalizáveis",
-            "Upload de PDF, DOCX, TXT e links externos (30MB)",
-            "IA avançada com maior precisão contextual",
-            "Suporte prioritário via email e WhatsApp",
-        ],
-        cta: "Começar Agora",
-        highlighted: false,
-    },
-    {
-        id: "plus",
-        name: "Plus",
-        monthlyPrice: 79.9,
-        annualPrice: 719.1, // 79.9 * 12 * 0.75 = 25% desconto
-        description: "Completo para múltiplas turmas",
-        aiLevel: "IA Avançada",
-        features: [
-            "Até 250 questões/mês, liberdade para criar sem limites",
-            "4 tipos de questões personalizáveis",
-            "Upload de todos os formatos + links (40MB)",
-            "IA avançada otimizada para contextos técnicos",
-            "Suporte VIP com atendimento prioritário",
-        ],
-        cta: "Começar Agora",
-        highlighted: false,
-    },
-    {
-        id: "advanced",
-        name: "Advanced",
-        monthlyPrice: 129.9,
-        annualPrice: 1169.1, // 129.9 * 12 * 0.75 = 25% desconto
-        description: "Máxima capacidade para instituições",
-        aiLevel: "IA Premium",
-        features: [
-            "Até 300 questões/mês com máxima qualidade",
-            "Todos os 6 tipos de questões disponíveis",
-            "Upload de PPTX, PDF, DOCX, TXT + links (100MB)",
-            "IA Premium com precisão máxima e contexto profundo",
-            "Suporte VIP dedicado com resposta imediata",
-        ],
-        cta: "Começar Agora",
-        highlighted: true,
-    },
+  {
+    id: 'starter',
+    name: 'Starter',
+    monthlyPrice: 0,
+    annualPrice: 0,
+    description: 'Ideal para testar a plataforma',
+    aiLevel: 'IA Básica',
+    features: [
+      'Até 30 questões/mês para suas primeiras turmas',
+      '1 tipo de questão personalizável',
+      'Upload de arquivos TXT e DOCX (10MB)',
+      'Entrada de texto direto',
+      'Suporte por email',
+    ],
+    cta: 'Começar Grátis',
+    highlighted: false,
+  },
+  {
+    id: 'basic',
+    name: 'Basic',
+    monthlyPrice: 29.9,
+    annualPrice: 269.1, // 29.9 * 12 * 0.75 = 25% desconto
+    description: 'Perfeito para 2-3 turmas pequenas',
+    aiLevel: 'IA Básica',
+    features: [
+      'Até 75 questões/mês, ideal para aulas semanais',
+      'Até 2 tipos de questões disponíveis',
+      'Upload de arquivos TXT e DOCX (20MB)',
+      'Entrada de texto direto',
+      'Suporte prioritário com resposta em 24h',
+    ],
+    cta: 'Começar Agora',
+    highlighted: false,
+  },
+  {
+    id: 'essentials',
+    name: 'Essentials',
+    monthlyPrice: 49.9,
+    annualPrice: 449.1, // 49.9 * 12 * 0.75 = 25% desconto
+    description: 'Ótimo para 4-5 turmas regulares',
+    aiLevel: 'IA Avançada',
+    features: [
+      'Até 150 questões/mês para diversas disciplinas',
+      'Até 3 tipos de questões disponíveis',
+      'Upload de PDF, DOCX, TXT e links externos (30MB)',
+      'IA avançada com maior precisão contextual',
+      'Suporte prioritário via email e WhatsApp',
+    ],
+    cta: 'Começar Agora',
+    highlighted: false,
+  },
+  {
+    id: 'plus',
+    name: 'Plus',
+    monthlyPrice: 79.9,
+    annualPrice: 719.1, // 79.9 * 12 * 0.75 = 25% desconto
+    description: 'Completo para múltiplas turmas',
+    aiLevel: 'IA Avançada',
+    features: [
+      'Até 250 questões/mês, liberdade para criar sem limites',
+      'Até 4 tipos de questões disponíveis',
+      'Upload de todos os formatos + links (40MB)',
+      'IA avançada otimizada para contextos técnicos',
+      'Suporte VIP com atendimento prioritário',
+    ],
+    cta: 'Começar Agora',
+    highlighted: false,
+  },
+  {
+    id: 'advanced',
+    name: 'Advanced',
+    monthlyPrice: 129.9,
+    annualPrice: 1169.1, // 129.9 * 12 * 0.75 = 25% desconto
+    description: 'Máxima capacidade para instituições',
+    aiLevel: 'IA Premium',
+    features: [
+      'Até 300 questões/mês com máxima qualidade',
+      'Todos os 6 tipos de questões disponíveis',
+      'Upload de PPTX, PDF, DOCX, TXT + links (100MB)',
+      'IA Premium com precisão máxima e contexto profundo',
+      'Suporte VIP dedicado com resposta imediata',
+    ],
+    cta: 'Começar Agora',
+    highlighted: true,
+  },
 ];
 
 export function Pricing() {
-    const router = useRouter();
-    const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+  const router = useRouter();
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
 
-    const handlePlanClick = (planId: string) => {
-        router.push("/auth");
-    };
+  const handlePlanClick = (planId: string) => {
+    router.push('/auth');
+  };
 
-    const formatPrice = (plan: (typeof plans)[0]) => {
-        if (plan.monthlyPrice === 0) return "Grátis";
+  const formatPrice = (plan: (typeof plans)[0]) => {
+    if (plan.monthlyPrice === 0) return 'Grátis';
 
-        const price = billingPeriod === "monthly" ? plan.monthlyPrice : plan.annualPrice;
-        return `R$ ${price.toFixed(2).replace(".", ",")}`;
-    };
+    const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
+    return `R$ ${price.toFixed(2).replace('.', ',')}`;
+  };
 
-    const getPeriod = (plan: (typeof plans)[0]) => {
-        if (plan.monthlyPrice === 0) return "";
-        return billingPeriod === "monthly" ? "/mês" : "/ano";
-    };
+  const getPeriod = (plan: (typeof plans)[0]) => {
+    if (plan.monthlyPrice === 0) return '';
+    return billingPeriod === 'monthly' ? '/mês' : '/ano';
+  };
 
-    return (
-        <section id="pricing" className="py-20 bg-muted/50">
-            <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-4">Planos e Preços</h2>
-                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                        Escolha o plano que se encaixa no seu ritmo de trabalho. Todos com acesso completo às
-                        funcionalidades principais.
-                    </p>
+  return (
+    <section id="pricing" className="py-20 bg-muted/50">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Planos e Preços</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Escolha o plano que se encaixa no seu ritmo de trabalho. Todos com acesso completo às funcionalidades
+            principais.
+          </p>
 
-                    {/* Billing Period Toggle */}
-                    <div className="flex items-center justify-center gap-4 mt-8">
-                        <Button
-                            variant={billingPeriod === "monthly" ? "default" : "outline"}
-                            onClick={() => setBillingPeriod("monthly")}
-                            className="min-w-[120px]"
-                        >
-                            Mensal
-                        </Button>
-                        <Button
-                            variant={billingPeriod === "annual" ? "default" : "outline"}
-                            onClick={() => setBillingPeriod("annual")}
-                            className="min-w-[120px] relative"
-                        >
-                            Anual
-                            <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">
-                                -25%
-                            </Badge>
-                        </Button>
-                    </div>
-                    {billingPeriod === "annual" && (
-                        <p className="text-sm text-green-600 mt-2 font-medium">
-                            🎉 Economize ~75 dias (equivalente a 2,5 meses) ao escolher o plano anual!
-                        </p>
-                    )}
-                </div>
+          {/* Billing Period Toggle */}
+          <div className="flex items-center justify-center gap-4 mt-8">
+            <Button
+              variant={billingPeriod === 'monthly' ? 'default' : 'outline'}
+              onClick={() => setBillingPeriod('monthly')}
+              className="min-w-[120px]"
+            >
+              Mensal
+            </Button>
+            <Button
+              variant={billingPeriod === 'annual' ? 'default' : 'outline'}
+              onClick={() => setBillingPeriod('annual')}
+              className="min-w-[120px] relative"
+            >
+              Anual
+              <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">-25%</Badge>
+            </Button>
+          </div>
+          {billingPeriod === 'annual' && (
+            <p className="text-sm text-green-600 mt-2 font-medium">
+              🎉 Economize ~75 dias (equivalente a 2,5 meses) ao escolher o plano anual!
+            </p>
+          )}
+        </div>
 
-                {/* Scroll horizontal container */}
-                <div className="overflow-x-auto py-8">
-                    <div
-                        className="flex gap-8 min-w-max px-4 mx-auto no-scrollbar"
-                        style={{ justifyContent: "center" }}
-                    >
-                        {plans.map((plan) => (
-                            <Card
-                                key={plan.id}
-                                className={`relative flex flex-col w-[280px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-                                    plan.highlighted ? "border-primary border-2 shadow-lg" : "border-border"
-                                }`}
-                            >
-                                {plan.highlighted && (
-                                    <div className="absolute -top-4 left-0 right-0 text-center">
-                                        <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
-                                    </div>
-                                )}
+        {/* Scroll horizontal container */}
+        <div className="overflow-x-auto py-8">
+          <div className="flex gap-8 min-w-max px-4 mx-auto no-scrollbar" style={{ justifyContent: 'center' }}>
+            {plans.map((plan) => (
+              <Card
+                key={plan.id}
+                className={`relative flex flex-col w-[280px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+                  plan.highlighted ? 'border-primary border-2 shadow-lg' : 'border-border'
+                }`}
+              >
+                {plan.highlighted && (
+                  <div className="absolute -top-4 left-0 right-0 text-center">
+                    <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
+                  </div>
+                )}
 
-                                <CardHeader className="pb-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <CardTitle className="text-xl">{plan.name}</CardTitle>
-                                        <Badge variant="outline" className="text-xs whitespace-nowrap">
-                                            {plan.aiLevel}
-                                        </Badge>
-                                    </div>
-                                    <CardDescription className="text-xs min-h-[32px]">
-                                        {plan.description}
-                                    </CardDescription>
-                                    <div className="mt-4">
-                                        <span className="text-3xl font-bold">{formatPrice(plan)}</span>
-                                        {getPeriod(plan) && (
-                                            <span className="text-sm text-muted-foreground">{getPeriod(plan)}</span>
-                                        )}
-                                    </div>
-                                </CardHeader>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <CardTitle className="text-xl">{plan.name}</CardTitle>
+                    <Badge variant="outline" className="text-xs whitespace-nowrap">
+                      {plan.aiLevel}
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs min-h-[32px]">{plan.description}</CardDescription>
+                  <div className="mt-4">
+                    <span className="text-3xl font-bold">{formatPrice(plan)}</span>
+                    {getPeriod(plan) && <span className="text-sm text-muted-foreground">{getPeriod(plan)}</span>}
+                  </div>
+                </CardHeader>
 
-                                <CardContent className="flex-grow pt-0">
-                                    <ul className="space-y-2.5">
-                                        {plan.features.map((feature) => (
-                                            <li key={feature} className="flex items-start gap-2">
-                                                <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                                <span className="text-xs leading-relaxed">{feature}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </CardContent>
+                <CardContent className="flex-grow pt-0">
+                  <ul className="space-y-2.5">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span className="text-xs leading-relaxed">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
 
-                                <CardFooter className="pt-4">
-                                    <Button
-                                        className="w-full"
-                                        variant={plan.highlighted ? "default" : "outline"}
-                                        onClick={() => handlePlanClick(plan.id)}
-                                    >
-                                        {plan.cta}
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
+                <CardFooter className="pt-4">
+                  <Button
+                    className="w-full"
+                    variant={plan.highlighted ? 'default' : 'outline'}
+                    onClick={() => handlePlanClick(plan.id)}
+                  >
+                    {plan.cta}
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
 
-                {/* Scroll hint for mobile */}
-                <div className="text-center mt-4 text-xs text-muted-foreground md:hidden">
-                    ← Deslize para ver todos os planos →
-                </div>
-            </div>
-        </section>
-    );
+        {/* Scroll hint for mobile */}
+        <div className="text-center mt-4 text-xs text-muted-foreground md:hidden">
+          ← Deslize para ver todos os planos →
+        </div>
+      </div>
+    </section>
+  );
 }
