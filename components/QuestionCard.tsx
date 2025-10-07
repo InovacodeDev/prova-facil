@@ -657,6 +657,23 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
     </div>
   );
 
+  const getQuestionTypeLabel = () => {
+    const labels: Record<string, string> = {
+      multiple_choice: 'Múltipla Escolha',
+      true_false: 'Verdadeiro/Falso',
+      sum: 'Somatória',
+      matching_columns: 'Associação',
+      fill_in_the_blank: 'Completar Lacunas',
+      open: 'Dissertativa',
+      problem_solving: 'Resolução de Problemas',
+      essay: 'Redação',
+      project_based: 'Projeto',
+      gamified: 'Gamificada',
+      summative: 'Avaliação Somativa',
+    };
+    return labels[question.type] || question.type;
+  };
+
   const renderQuestionContent = () => {
     if (isMultipleChoiceMetadata(metadata)) {
       return renderMultipleChoice(metadata);
@@ -683,26 +700,9 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
     // Fallback genérico
     return (
       <div className="p-3 bg-muted rounded-lg text-sm italic text-muted-foreground">
-        Conteúdo da questão (tipo: {question.type})
+        Conteúdo da questão (tipo: {getQuestionTypeLabel()})
       </div>
     );
-  };
-
-  const getQuestionTypeLabel = () => {
-    const labels: Record<string, string> = {
-      multiple_choice: 'Múltipla Escolha',
-      true_false: 'Verdadeiro/Falso',
-      sum: 'Somatória',
-      matching_columns: 'Associação',
-      fill_in_the_blank: 'Completar Lacunas',
-      open: 'Dissertativa',
-      problem_solving: 'Resolução de Problemas',
-      essay: 'Redação',
-      project_based: 'Projeto',
-      gamified: 'Gamificada',
-      summative: 'Avaliação Somativa',
-    };
-    return labels[question.type] || question.type;
   };
 
   return (
