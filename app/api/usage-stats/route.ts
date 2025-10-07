@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserUsageStats } from "@/lib/usage-tracking";
+import { logError } from "@/lib/error-logs-service";
 
 export async function GET() {
     try {
@@ -23,6 +24,17 @@ export async function GET() {
 
         return NextResponse.json(stats);
     } catch (error) {
+        // Log do erro no banco de dados
+        await logError({
+            message: error instanceof Error ? error.message : 'Unknown error fetching usage stats',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                endpoint: '/api/usage-stats',
+                method: 'GET',
+            },
+        });
+
         console.error("Error in usage-stats API:", error);
         return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
     }

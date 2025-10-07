@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logError } from "@/lib/error-logs-service";
 
 export async function POST(request: NextRequest) {
     try {
@@ -76,6 +77,18 @@ export async function POST(request: NextRequest) {
             });
         }
     } catch (error: any) {
+        // Log do erro no banco de dados
+        await logError({
+            message: error instanceof Error ? error.message : 'Unknown error copying question',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                endpoint: '/api/copy-question',
+                method: 'POST',
+                userId: error.userId || undefined,
+            },
+        });
+
         console.error("Error copying question:", error);
         return NextResponse.json(
             {

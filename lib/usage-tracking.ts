@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "./supabase/server";
+import { logError } from './error-logs-service';
 
 export interface SubjectUsage {
     subject: string;
@@ -89,6 +90,17 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
         };
     } catch (error) {
         console.error("Error getting user usage stats:", error);
+        
+        await logError({
+            message: error instanceof Error ? error.message : 'Error getting user usage stats',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                function: 'getUserUsageStats',
+                userId,
+            },
+        });
+        
         throw error;
     }
 }
@@ -162,6 +174,19 @@ export async function updateProfileLogsCycle(userId: string, subject: string, co
         }
     } catch (error) {
         console.error("Error updating profile logs cycle:", error);
+        
+        await logError({
+            message: error instanceof Error ? error.message : 'Error updating profile logs cycle',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                function: 'updateProfileLogsCycle',
+                userId,
+                subject,
+                count,
+            },
+        });
+        
         throw error;
     }
 }
@@ -188,6 +213,18 @@ export async function getUserUsageHistory(userId: string, limit: number = 12): P
         return data || [];
     } catch (error) {
         console.error("Error getting user usage history:", error);
+        
+        await logError({
+            message: error instanceof Error ? error.message : 'Error getting user usage history',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                function: 'getUserUsageHistory',
+                userId,
+                limit,
+            },
+        });
+        
         return [];
     }
 }

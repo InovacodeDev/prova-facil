@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { logError } from '../error-logs-service';
 
 export interface ValidationResult {
     valid: boolean;
@@ -71,6 +72,18 @@ export async function validateQuestionType(userId: string, questionType: string)
         return { valid: true };
     } catch (error) {
         console.error("Error validating question type:", error);
+        
+        await logError({
+            message: error instanceof Error ? error.message : 'Error validating question type',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                function: 'validateQuestionType',
+                userId,
+                questionType,
+            },
+        });
+        
         return {
             valid: false,
             error: "Erro ao validar tipo de questão",
@@ -112,6 +125,17 @@ export async function getAllowedQuestionTypes(userId: string): Promise<string[]>
         return (planData.allowed_questions as string[]) || [];
     } catch (error) {
         console.error("Error getting allowed question types:", error);
+        
+        await logError({
+            message: error instanceof Error ? error.message : 'Error getting allowed question types',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                function: 'getAllowedQuestionTypes',
+                userId,
+            },
+        });
+        
         return [];
     }
 }

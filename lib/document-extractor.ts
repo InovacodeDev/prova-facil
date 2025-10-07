@@ -9,6 +9,7 @@
  */
 
 import mammoth from "mammoth";
+import { logError } from './error-logs-service';
 
 /**
  * Tipos de arquivo aceitos
@@ -76,6 +77,18 @@ async function extractTextFromPDF(file: File): Promise<ExtractedText> {
         };
     } catch (error) {
         console.error("Erro ao extrair texto do PDF:", error);
+        
+        await logError({
+            message: error instanceof Error ? error.message : 'Error extracting text from PDF',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                function: 'extractTextFromPDF',
+                fileName: file.name,
+                fileSize: file.size,
+            },
+        });
+        
         throw new Error(
             `Falha ao extrair texto de ${file.name}: ${error instanceof Error ? error.message : "Erro desconhecido"}`
         );
@@ -105,6 +118,18 @@ async function extractTextFromDOCX(file: File): Promise<ExtractedText> {
         };
     } catch (error) {
         console.error("Erro ao extrair texto do DOCX:", error);
+        
+        await logError({
+            message: error instanceof Error ? error.message : 'Error extracting text from DOCX',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                function: 'extractTextFromDOCX',
+                fileName: file.name,
+                fileSize: file.size,
+            },
+        });
+        
         throw new Error(
             `Falha ao extrair texto de ${file.name}: ${error instanceof Error ? error.message : "Erro desconhecido"}`
         );
@@ -142,6 +167,18 @@ async function extractTextFromDOC(file: File): Promise<ExtractedText> {
         };
     } catch (error) {
         console.error("Erro ao extrair texto do DOC:", error);
+        
+        await logError({
+            message: error instanceof Error ? error.message : 'Error extracting text from DOC',
+            stack: error instanceof Error ? error.stack : undefined,
+            level: 'error',
+            context: {
+                function: 'extractTextFromDOC',
+                fileName: file.name,
+                fileSize: file.size,
+            },
+        });
+        
         throw new Error(
             `Falha ao extrair texto de ${file.name}. Arquivos .doc antigos têm suporte limitado. Por favor, converta para .docx ou .pdf.`
         );
