@@ -13,6 +13,7 @@ Generate {{count}} open-ended questions about "{{subject}}"{{#if academicLevel}}
 The questions should fit the following context: {{questionContextDescription}}.
 
 Instructions:
+- **All output must be in Brazilian Portuguese (pt-BR).**
 - Formulate a question that requires analysis, synthesis, or evaluation, not just memorization.
 - Avoid questions that can be answered with a simple "yes" or "no".
 - For each question, provide a model answer or a detailed guideline in the 'expected_answer' field. This should summarize the key points, arguments, and evidence a student is expected to provide for a comprehensive response.

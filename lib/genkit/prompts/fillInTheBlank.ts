@@ -13,6 +13,7 @@ Generate {{count}} fill-in-the-blank questions about "{{subject}}"{{#if academic
 The questions should fit the following context: {{questionContextDescription}}.
 
 Instructions:
+- **All output must be in Brazilian Portuguese (pt-BR).**
 - Write a sentence or paragraph with one or more words or phrases removed.
 - In the question text, use placeholders like \`{{blank_1}}\`, \`{{blank_2}}\`, etc., for each missing piece of information.
 - For each blank, provide a corresponding ID (e.g., "blank_1") and the exact correct answer.
