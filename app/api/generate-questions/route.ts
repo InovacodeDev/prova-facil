@@ -36,7 +36,9 @@ export async function POST(request: NextRequest) {
   try {
     // 1. Authenticate user and get profile
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
       .select('model')
       .eq('plan', profile.plan)
       .single();
-    const aiModel = planModelData?.model || 'gemini-1.5-flash-latest';
+    const aiModel = planModelData?.model || 'gemini-2.5-flash-lite';
 
     // 3. Parse and validate request body
     const body: GenerateQuestionsRequest = await request.json();
@@ -68,7 +70,14 @@ export async function POST(request: NextRequest) {
     } = body;
 
     const totalRequestedQuestions = Math.max(1, Math.floor(Number(requestedQuestionCount) || 0));
-    if (totalRequestedQuestions === 0 || !title || !subject || !questionTypes || questionTypes.length === 0 || !questionContext) {
+    if (
+      totalRequestedQuestions === 0 ||
+      !title ||
+      !subject ||
+      !questionTypes ||
+      questionTypes.length === 0 ||
+      !questionContext
+    ) {
       return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
     }
 
@@ -76,7 +85,10 @@ export async function POST(request: NextRequest) {
     const hasQuota = await checkUserQuota(profile.id, totalRequestedQuestions);
     if (!hasQuota) {
       return NextResponse.json(
-        { error: 'You have reached your monthly question generation limit. Please upgrade your plan or wait for the next cycle.' },
+        {
+          error:
+            'You have reached your monthly question generation limit. Please upgrade your plan or wait for the next cycle.',
+        },
         { status: 403 }
       );
     }
@@ -109,7 +121,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (totalRequestedQuestions < typeCount) {
-        console.warn(`Requested questions (${totalRequestedQuestions}) is less than selected types (${typeCount}). Adjusting to ${typeCount} total questions.`);
+      console.warn(
+        `Requested questions (${totalRequestedQuestions}) is less than selected types (${typeCount}). Adjusting to ${typeCount} total questions.`
+      );
     }
 
     console.log('📊 Question distribution by type:', distribution);
@@ -119,21 +133,40 @@ export async function POST(request: NextRequest) {
       const count = distribution[type];
       if (!count) return null;
 
-      const input: GenerateQuestionsInput = { subject, count, questionContext, academicLevel, documentContent, pdfFiles, aiModel };
+      const input: GenerateQuestionsInput = {
+        subject,
+        count,
+        questionContext,
+        academicLevel,
+        documentContent,
+        pdfFiles,
+        aiModel,
+      };
 
       try {
         switch (type) {
-          case 'multiple_choice': return await generateMcqQuestions(input);
-          case 'true_false': return await generateTfQuestions(input);
-          case 'open': return await generateDissertativeQuestions(input);
-          case 'sum': return await generateSumQuestions(input);
-          case 'fill_in_the_blank': return await generateFillInTheBlankQuestions(input);
-          case 'matching_columns': return await generateMatchingColumnsQuestions(input);
-          case 'problem_solving': return await generateProblemSolvingQuestions(input);
-          case 'essay': return await generateEssayQuestions(input);
-          case 'project_based': return await generateProjectBasedQuestions(input);
-          case 'gamified': return await generateGamifiedQuestions(input);
-          case 'summative': return await generateSummativeQuestions(input);
+          case 'multiple_choice':
+            return await generateMcqQuestions(input);
+          case 'true_false':
+            return await generateTfQuestions(input);
+          case 'open':
+            return await generateDissertativeQuestions(input);
+          case 'sum':
+            return await generateSumQuestions(input);
+          case 'fill_in_the_blank':
+            return await generateFillInTheBlankQuestions(input);
+          case 'matching_columns':
+            return await generateMatchingColumnsQuestions(input);
+          case 'problem_solving':
+            return await generateProblemSolvingQuestions(input);
+          case 'essay':
+            return await generateEssayQuestions(input);
+          case 'project_based':
+            return await generateProjectBasedQuestions(input);
+          case 'gamified':
+            return await generateGamifiedQuestions(input);
+          case 'summative':
+            return await generateSummativeQuestions(input);
           default:
             console.warn(`Unsupported question type: ${type}`);
             return null;
@@ -145,7 +178,7 @@ export async function POST(request: NextRequest) {
     });
 
     const results = await Promise.all(generationPromises);
-    const allGeneratedQuestions = results.flatMap(result => result?.questions || []);
+    const allGeneratedQuestions = results.flatMap((result) => result?.questions || []);
 
     if (allGeneratedQuestions.length === 0) {
       await supabase.from('assessments').delete().eq('id', assessment.id);
@@ -154,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     // 8. Insert validated questions into the database
     // Data is pre-validated by Zod schemas in the Genkit layer. No further sanitization needed.
-    const questionsToInsert = allGeneratedQuestions.map(q => ({
+    const questionsToInsert = allGeneratedQuestions.map((q) => ({
       assessment_id: assessment!.id,
       type: q.type,
       question: q.question,
@@ -175,7 +208,6 @@ export async function POST(request: NextRequest) {
       assessment_id: assessment.id,
       questions_generated: allGeneratedQuestions.length,
     });
-
   } catch (error: any) {
     console.error('Unhandled error in generate-questions endpoint:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });

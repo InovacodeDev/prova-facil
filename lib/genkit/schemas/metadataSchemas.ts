@@ -16,7 +16,8 @@ export const McqMetadataSchema = z.object({
         is_correct: z.boolean().describe('Indicates if this is the correct answer.'),
       })
     )
-    .min(2, 'Must have at least two answer options.')
+    .min(4, 'Must have at least two answer options.')
+    .max(5, 'Can have at most five answer options.')
     .describe('A list of possible answers for the question.'),
 });
 
@@ -32,7 +33,8 @@ export const TfMetadataSchema = z.object({
         is_correct: z.boolean().describe('Indicates if the statement is true or false.'),
       })
     )
-    .min(1, 'Must have at least one statement.')
+    .min(4, 'Must have at least one statement.')
+    .max(5, 'Can have at most five statements.')
     .describe('A list of statements to be evaluated as true or false.'),
 });
 
@@ -49,7 +51,8 @@ export const SumMetadataSchema = z.object({
         is_correct: z.boolean().describe('Indicates if the statement is correct and should be included in the sum.'),
       })
     )
-    .min(1, 'Must have at least one statement.')
+    .min(4, 'Must have at least four statements.')
+    .max(7, 'Can have at most seven statements.')
     .describe('A list of numbered statements to be evaluated for a final sum.'),
 });
 
@@ -68,6 +71,7 @@ export const FillInTheBlankMetadataSchema = z.object({
       })
     )
     .min(1, 'Must have at least one blank to fill.')
+    .max(4, 'Can have at most four blanks.')
     .describe('A list of blanks and their corresponding correct answers.'),
 });
 
@@ -94,15 +98,18 @@ const CorrectMatchSchema = z.object({
 export const MatchingColumnsMetadataSchema = z.object({
   column_a: z
     .array(MatchingColumnItemSchema)
-    .min(1, 'Column A must have at least one item.')
+    .min(3, 'Column A must have at least three items.')
+    .max(5, 'Column A can have at most five items.')
     .describe('The first column of items to be matched.'),
   column_b: z
     .array(MatchingColumnItemSchema)
-    .min(1, 'Column B must have at least one item.')
+    .min(3, 'Column B must have at least three items.')
+    .max(5, 'Column B can have at most five items.')
     .describe('The second column of items to be matched.'),
   correct_matches: z
     .array(CorrectMatchSchema)
-    .min(1, 'There must be at least one correct match defined.')
+    .min(3, 'There must be at least three correct matches defined.')
+    .max(5, 'There can be at most five correct matches defined.')
     .describe('The correct pairings between items from column_a and column_b.'),
 });
 
@@ -158,8 +165,8 @@ export const ProjectBasedMetadataSchema = z.object({
  */
 export const GamifiedMetadataSchema = z.object({
   scenario: z.string().describe('The narrative or scenario for the gamified challenge.'),
-  score_points: z.number().int().min(1).describe('Points awarded for a correct answer.'),
-  time_limit_seconds: z.number().int().min(1).optional().describe('An optional time limit in seconds for the question.'),
+  score_points: z.number().int().min(2).max(5).describe('Points awarded for a correct answer.'),
+  time_limit_seconds: z.number().int().min(2).max(5).optional().describe('An optional time limit in seconds for the question.'),
 });
 
 /**
