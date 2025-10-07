@@ -1,20 +1,15 @@
 /**
  * @fileOverview This file defines Genkit flows to generate educational assessment questions.
- *
- * It includes flows for:
- * - Multiple Choice Questions (MCQ)
- * - True/False Questions (TF)
- * - Dissertative/Open Questions
- * - Sum Questions (Brazilian style with powers of 2)
+ * It uses a factory function to create generators for various question types,
+ * ensuring consistency and reducing boilerplate code.
  */
 import { ai, getGoogleAIModel } from '@/lib/genkit/config';
 import { z } from 'zod';
 import { QuestionsResponseSchema } from './schemas';
-
 import * as Prompts from './prompts/index';
 
 // ============================================================================
-// INPUT SCHEMAS
+// BASE INPUT SCHEMA
 // ============================================================================
 
 const FileContentSchema = z.object({
@@ -43,8 +38,19 @@ const GenerateQuestionsInputSchema = z.object({
   aiModel: z.string().optional().describe('AI model to use (e.g., gemini-2.0-flash-exp, gemini-exp-1206)'),
 });
 
+// The extended schema used by all flows, including derived context.
+const FlowInputSchema = GenerateQuestionsInputSchema.extend({
+  questionContextDescription: z.string(),
+  documentContext: z.string(),
+});
+
+// ============================================================================
+// EXPORTED TYPES
+// ============================================================================
+
 export type GenerateQuestionsInput = z.infer<typeof GenerateQuestionsInputSchema>;
 export type GenerateQuestionsOutput = z.infer<typeof QuestionsResponseSchema>;
+type FlowInput = z.infer<typeof FlowInputSchema>;
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -53,21 +59,19 @@ export type GenerateQuestionsOutput = z.infer<typeof QuestionsResponseSchema>;
 function getContextDescription(context: string): string {
   const contexts: Record<string, string> = {
     fixacao:
-      'Questões rápidas, diretas e factuais, projetadas para reforçar e verificar a memorização de conceitos, datas e nomes essenciais. A pergunta deve exigir uma resposta única e objetiva, testando puramente a memorização de fatos cruciais.',
+      'Questões rápidas, diretas e factuais, projetadas para reforçar e verificar a memorização de conceitos, datas e nomes essenciais.',
     contextualizada:
-      'Estilo ENEM - Apresente um texto de apoio, imagem, gráfico ou citação relacionado ao conteúdo dos arquivos fornecidos, exigindo que o aluno interprete o material e o relacione com seus conhecimentos prévios. Não pede apenas um fato, mas exige interpretação e contextualização temporal/espacial.',
-    teorica:
-      'Foca em conceitos abstratos, ideologias ou teorias presentes no material. Peça ao aluno que defina, explique ou discuta uma ideia em vez de um evento factual. A questão não trata de um evento específico, mas de um conceito ideológico complexo.',
+      'Estilo ENEM - Apresente um texto de apoio ou citação, exigindo que o aluno interprete o material e o relacione com seus conhecimentos.',
+    teorica: 'Foca em conceitos abstratos, ideologias ou teorias. Peça ao aluno que defina, explique ou discuta uma ideia.',
     estudo_caso:
-      'Apresente um cenário ou evento específico e complexo do material fornecido, exigindo análise detalhada de múltiplas variáveis (políticas, éticas, técnicas, etc.) para formar uma conclusão fundamentada. Transforme um evento em um caso de estudo multifacetado.',
+      'Apresente um cenário específico e complexo, exigindo análise detalhada de múltiplas variáveis para formar uma conclusão.',
     discursiva_aberta:
-      'Uma questão ampla que permite uma vasta gama de respostas corretas, desde que bem argumentadas. Valorize a profundidade da análise, a capacidade de síntese e a originalidade do pensamento. Não há uma resposta única - o aluno pode argumentar sobre múltiplos fatores e construir uma tese original.',
+      'Uma questão ampla que permite uma vasta gama de respostas corretas, desde que bem argumentadas. Valorize a profundidade da análise.',
     letra_lei:
-      'Estilo Concurso - Exige conhecimento literal e detalhado de um documento, lei, data específica ou definição exata presente no material. A precisão factual é mais importante que a interpretação. A resposta é uma questão de conhecimento factual específico, sem margem para interpretação.',
+      'Estilo Concurso - Exige conhecimento literal e detalhado de um documento, lei ou definição exata. A precisão factual é crucial.',
     pesquisa:
-      'Nível Pós-Doc - Não é uma questão de prova tradicional, mas um ponto de partida para uma investigação acadêmica aprofundada. Formule uma pergunta que abre um campo de estudo, gerando uma tese, um artigo ou um debate acadêmico. É um convite à pesquisa original, exigindo levantamento de fontes, análise e formulação de um argumento novo.',
+      'Nível Pós-Doc - Formule uma pergunta que abre um campo de estudo, gerando uma tese ou um debate acadêmico.',
   };
-
   return contexts[context] || contexts.fixacao;
 }
 
@@ -79,499 +83,84 @@ function buildDocumentContext(
   const hasPdfFiles = pdfFiles && pdfFiles.length > 0;
 
   if (!hasTextContent && !hasPdfFiles) {
-    return '⚠️ ATENÇÃO: NENHUM DOCUMENTO FOI FORNECIDO.\n\nVocê NÃO deve criar questões neste caso. Informe o usuário que é necessário fornecer documentos com o conteúdo para gerar questões específicas sobre o tema.';
+    return '⚠️ ATENÇÃO: NENHUM DOCUMENTO FOI FORNECIDO. Você deve informar ao usuário que o conteúdo é necessário para gerar as questões.';
   }
 
-  let context = '';
+  let context = '⚠️ REGRA CRÍTICA: Baseie-se EXCLUSIVAMENTE no conteúdo fornecido abaixo. NÃO invente informações.\n\n';
 
-  // Adicionar texto extraído de DOCX
   if (hasTextContent) {
-    context += `📚 CONTEÚDO TRANSCRITO (DOCX/DOC):\n\n${documentContent}\n\n`;
+    context += `📚 CONTEÚDO TRANSCRITO:\n${documentContent}\n\n`;
   }
-
-  // Adicionar PDFs como media files
   if (hasPdfFiles) {
-    const filesList = pdfFiles
-      .map((file, index) => `PDF ${index + 1}: {{media url=pdfFiles.${index}.data}}`)
-      .join('\n');
-    context += `📄 ARQUIVOS PDF FORNECIDOS:\n${filesList}\n\n`;
+    const filesList = pdfFiles.map((file, index) => `PDF ${index + 1}: {{media url=pdfFiles.${index}.data}}`).join('\n');
+    context += `📄 ARQUIVOS PDF:\n${filesList}\n\n`;
   }
-
-  context += `⚠️ REGRA CRÍTICA: Você DEVE ler e analisar TODO o conteúdo acima.
-As questões devem ser criadas EXCLUSIVAMENTE baseadas no conteúdo presente acima.
-NÃO invente informações. NÃO use conhecimento externo além do que está no conteúdo fornecido.
-Se o usuário pediu questões sobre "Segunda Guerra Mundial" mas o conteúdo fornecido contém apenas sobre "Primeira Guerra Mundial", 
-você DEVE criar questões sobre "Primeira Guerra Mundial" (o conteúdo fornecido).`;
 
   return context;
 }
 
 // ============================================================================
-// MULTIPLE CHOICE QUESTIONS (MCQ)
+// GENERIC FLOW FACTORY
 // ============================================================================
 
-const generateMcqPrompt = ai.definePrompt({
-  name: 'generateMcqPrompt',
-  input: { schema: GenerateQuestionsInputSchema },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateMultipleChoicePrompt,
-});
+/**
+ * Creates a Genkit prompt and flow for a specific question type.
+ * This factory function abstracts away the repetitive boilerplate of defining
+ * a prompt, a flow, and an exported function for each question type.
+ *
+ * @param name - The base name for the flow and prompt (e.g., 'Mcq').
+ * @param promptTemplate - The template string for the AI prompt.
+ * @returns A function that executes the Genkit flow.
+ */
+function createQuestionGenerator(name: string, promptTemplate: string) {
+  const prompt = ai.definePrompt({
+    name: `generate${name}Prompt`,
+    input: { schema: FlowInputSchema },
+    output: { schema: QuestionsResponseSchema },
+    prompt: promptTemplate,
+  });
 
-export async function generateMcqQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
+  const flow = ai.defineFlow(
+    {
+      name: `generate${name}Flow`,
+      inputSchema: FlowInputSchema,
+      outputSchema: QuestionsResponseSchema,
+    },
+    async (input: FlowInput) => {
+      const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
+      const { output } = await prompt(input, { model });
+      // The output is guaranteed to be valid by Genkit's schema validation
+      return output!;
+    }
+  );
 
-  return await generateMcqFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
+  /**
+   * Prepares the full input and executes the question generation flow.
+   */
+  return async (input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> => {
+    const questionContextDescription = getContextDescription(input.questionContext);
+    const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
+
+    return await flow({
+      ...input,
+      questionContextDescription,
+      documentContext,
+    });
+  };
 }
 
-const generateMcqFlow = ai.defineFlow(
-  {
-    name: 'generateMcqFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateMcqPrompt(input, { model });
-    return output!;
-  }
-);
-
 // ============================================================================
-// TRUE/FALSE QUESTIONS (TF)
+// EXPORTED QUESTION GENERATORS
 // ============================================================================
 
-const generateTfPrompt = ai.definePrompt({
-  name: 'generateTfPrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      filesContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateTrueFalsePrompt,
-});
-
-export async function generateTfQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateTfFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateTfFlow = ai.defineFlow(
-  {
-    name: 'generateTfFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateTfPrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// DISSERTATIVE/OPEN QUESTIONS
-// ============================================================================
-
-const generateDissertativePrompt = ai.definePrompt({
-  name: 'generateDissertativePrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      filesContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateOpenPrompt,
-});
-
-export async function generateDissertativeQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateDissertativeFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateDissertativeFlow = ai.defineFlow(
-  {
-    name: 'generateDissertativeFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateDissertativePrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// SUM QUESTIONS (Brazilian style with powers of 2)
-// ============================================================================
-
-const generateSumPrompt = ai.definePrompt({
-  name: 'generateSumPrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      filesContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateSumPrompt,
-});
-
-export async function generateSumQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateSumFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateSumFlow = ai.defineFlow(
-  {
-    name: 'generateSumFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateSumPrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// FILL IN THE BLANK QUESTIONS
-// ============================================================================
-
-const generateFillInTheBlankPrompt = ai.definePrompt({
-  name: 'generateFillInTheBlankPrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateFillInTheBlankPrompt,
-});
-
-export async function generateFillInTheBlankQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateFillInTheBlankFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateFillInTheBlankFlow = ai.defineFlow(
-  {
-    name: 'generateFillInTheBlankFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateFillInTheBlankPrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// MATCHING COLUMNS QUESTIONS
-// ============================================================================
-
-const generateMatchingColumnsPrompt = ai.definePrompt({
-  name: 'generateMatchingColumnsPrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateMatchingColumnsPrompt,
-});
-
-export async function generateMatchingColumnsQuestions(
-  input: GenerateQuestionsInput
-): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateMatchingColumnsFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateMatchingColumnsFlow = ai.defineFlow(
-  {
-    name: 'generateMatchingColumnsFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateMatchingColumnsPrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// PROBLEM SOLVING QUESTIONS
-// ============================================================================
-
-const generateProblemSolvingPrompt = ai.definePrompt({
-  name: 'generateProblemSolvingPrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateProblemSolvingPrompt,
-});
-
-export async function generateProblemSolvingQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateProblemSolvingFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateProblemSolvingFlow = ai.defineFlow(
-  {
-    name: 'generateProblemSolvingFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateProblemSolvingPrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// ESSAY QUESTIONS
-// ============================================================================
-
-const generateEssayPrompt = ai.definePrompt({
-  name: 'generateEssayPrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateEssayPrompt,
-});
-
-export async function generateEssayQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateEssayFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateEssayFlow = ai.defineFlow(
-  {
-    name: 'generateEssayFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateEssayPrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// PROJECT-BASED QUESTIONS
-// ============================================================================
-
-const generateProjectBasedPrompt = ai.definePrompt({
-  name: 'generateProjectBasedPrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateProjectBasedPrompt,
-});
-
-export async function generateProjectBasedQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateProjectBasedFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateProjectBasedFlow = ai.defineFlow(
-  {
-    name: 'generateProjectBasedFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateProjectBasedPrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// GAMIFIED QUESTIONS
-// ============================================================================
-
-const generateGamifiedPrompt = ai.definePrompt({
-  name: 'generateGamifiedPrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateGamifiedPrompt,
-});
-
-export async function generateGamifiedQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateGamifiedFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateGamifiedFlow = ai.defineFlow(
-  {
-    name: 'generateGamifiedFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateGamifiedPrompt(input, { model });
-    return output!;
-  }
-);
-
-// ============================================================================
-// SUMMATIVE QUESTIONS
-// ============================================================================
-
-const generateSummativePrompt = ai.definePrompt({
-  name: 'generateSummativePrompt',
-  input: {
-    schema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-  },
-  output: { schema: QuestionsResponseSchema },
-  prompt: Prompts.generateSummativePrompt,
-});
-
-export async function generateSummativeQuestions(input: GenerateQuestionsInput): Promise<GenerateQuestionsOutput> {
-  const questionContextDescription = getContextDescription(input.questionContext);
-  const documentContext = buildDocumentContext(input.documentContent, input.pdfFiles);
-
-  return await generateSummativeFlow({
-    ...input,
-    questionContextDescription,
-    documentContext,
-  } as any);
-}
-
-const generateSummativeFlow = ai.defineFlow(
-  {
-    name: 'generateSummativeFlow',
-    inputSchema: GenerateQuestionsInputSchema.extend({
-      questionContextDescription: z.string(),
-      documentContext: z.string(),
-    }),
-    outputSchema: QuestionsResponseSchema,
-  },
-  async (input: any) => {
-    const model = getGoogleAIModel(input.aiModel || 'gemini-2.0-flash-exp');
-    const { output } = await generateSummativePrompt(input, { model });
-    return output!;
-  }
-);
+export const generateMcqQuestions = createQuestionGenerator('Mcq', Prompts.generateMultipleChoicePrompt);
+export const generateTfQuestions = createQuestionGenerator('Tf', Prompts.generateTrueFalsePrompt);
+export const generateDissertativeQuestions = createQuestionGenerator('Dissertative', Prompts.generateOpenPrompt);
+export const generateSumQuestions = createQuestionGenerator('Sum', Prompts.generateSumPrompt);
+export const generateFillInTheBlankQuestions = createQuestionGenerator('FillInTheBlank', Prompts.generateFillInTheBlankPrompt);
+export const generateMatchingColumnsQuestions = createQuestionGenerator('MatchingColumns', Prompts.generateMatchingColumnsPrompt);
+export const generateProblemSolvingQuestions = createQuestionGenerator('ProblemSolving', Prompts.generateProblemSolvingPrompt);
+export const generateEssayQuestions = createQuestionGenerator('Essay', Prompts.generateEssayPrompt);
+export const generateProjectBasedQuestions = createQuestionGenerator('ProjectBased', Prompts.generateProjectBasedPrompt);
+export const generateGamifiedQuestions = createQuestionGenerator('Gamified', Prompts.generateGamifiedPrompt);
+export const generateSummativeQuestions = createQuestionGenerator('Summative', Prompts.generateSummativePrompt);

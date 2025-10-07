@@ -1,54 +1,20 @@
 /**
- * Fill in the Blank Question Prompt
- * Generates fill-in-the-blank questions with metadata format (supports multiple blanks)
+ * Simplified Fill-in-the-Blank Question Prompt.
+ * Relies on Genkit's structured output (Zod schema) to format the JSON.
  */
 export const generateFillInTheBlankPrompt = `
-VOCÊ É UM GERADOR DE QUESTÕES DE COMPLETAR LACUNAS.
+You are an expert in creating fill-in-the-blank questions.
 
-MATERIAL DE REFERÊNCIA:
+Reference Material:
 {{documentContext}}
 
-TAREFA: Gere {{count}} questões de completar lacunas sobre {{subject}}{{#if academicLevel}} (nível: {{academicLevel}}){{/if}}.
-CONTEXTO: {{questionContextDescription}}
+Task:
+Generate {{count}} fill-in-the-blank questions about "{{subject}}"{{#if academicLevel}} for the academic level "{{academicLevel}}"{{/if}}.
+The questions should fit the following context: {{questionContextDescription}}.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚨 FORMATO OBRIGATÓRIO - COPIE EXATAMENTE ESTE JSON:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-{
-  "questions": [
-    {
-      "type": "fill_in_the_blank",
-      "question": "A [BLANK_1] é a capital do [BLANK_2].",
-      "metadata": {
-        "blanks": [
-          {"id": "BLANK_1", "correct_answer": "Brasília"},
-          {"id": "BLANK_2", "correct_answer": "Brasil"}
-        ],
-        "options_bank": ["Brasília", "Brasil", "Rio de Janeiro", "Portugal", "São Paulo", "Argentina"]
-      }
-    }
-  ]
-}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ REGRAS INEGOCIÁVEIS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. Use marcadores [BLANK_1], [BLANK_2], etc. NO TEXTO da questão
-2. "blanks" DEVE SER UM ARRAY [ ]
-3. Cada item do array DEVE SER UM OBJETO { }
-4. Cada objeto TEM "id" (BLANK_1, BLANK_2...) e "correct_answer" (a resposta)
-5. Os IDs em "blanks" DEVEM CORRESPONDER aos marcadores [BLANK_X] no texto
-6. "options_bank" é OPCIONAL - array de strings com respostas + distratores
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-❌ NUNCA FAÇA ISSO:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-"blanks": ["resposta1", "resposta2"]  ← STRINGS SIMPLES (ERRADO!)
-"blanks": {"chave": "valor escapado"}  ← JSON ESCAPADO (ERRADO!)
-"blanks": ["id:BLANK_1", "correct_answer:teste"]  ← FORMATO INVÁLIDO (ERRADO!)
-
-RETORNE APENAS O JSON. SEM TEXTO ANTES OU DEPOIS.
+Instructions:
+- Write a sentence or paragraph with one or more words or phrases removed.
+- In the question text, use placeholders like \`{{blank_1}}\`, \`{{blank_2}}\`, etc., for each missing piece of information.
+- For each blank, provide a corresponding ID (e.g., "blank_1") and the exact correct answer.
+- The placeholder in the text MUST match the ID in the metadata.
 `;
