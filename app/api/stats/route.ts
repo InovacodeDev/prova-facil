@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/error-logs-service';
 
 export const revalidate = 3600; // Revalidar a cada 1 hora
+export const dynamic = 'force-dynamic'; // Necessário pois usa cookies via logError
 
 export async function GET() {
   try {

@@ -21,6 +21,7 @@ import { logError } from '@/lib/error-logs-service';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 60-second timeout for AI calls
+export const dynamic = 'force-dynamic'; // Necessário pois usa cookies via logError
 
 interface GenerateQuestionsRequest {
   title: string;

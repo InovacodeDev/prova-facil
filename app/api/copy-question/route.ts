@@ -9,6 +9,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/error-logs-service';
 
+export const dynamic = 'force-dynamic'; // Necessário pois usa cookies via logError
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Verificar autenticação
