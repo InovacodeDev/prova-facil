@@ -280,3 +280,19 @@ ON profile_logs_cycle
 FOR ALL
 USING (true)
 WITH CHECK (true);
+
+-- 3. (OPCIONAL) Se você quiser uma policy mais restritiva que só permite
+-- agregações e NÃO permite SELECT de colunas individuais, você pode
+-- criar uma VIEW com permissões específicas:
+CREATE OR REPLACE VIEW public_profiles_count AS
+SELECT 
+  COUNT(*) as total_profiles,
+  COUNT(CASE WHEN email_verified = true THEN 1 END) as verified_profiles,
+  COUNT(CASE WHEN email_verified = false THEN 1 END) as unverified_profiles
+FROM profiles;
+
+-- Garantir que a view é acessível publicamente
+GRANT SELECT ON public_profiles_count TO anon, authenticated;
+
+COMMENT ON VIEW public_profiles_count IS 
+'View pública para estatísticas agregadas de profiles. Não expõe dados individuais.';
