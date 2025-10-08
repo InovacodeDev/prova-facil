@@ -78,12 +78,14 @@ type PlanConfig = {
   monthlyQuestionLimit: number;
   docTypes: string[];
   maxQuestionTypes: number;
+  maxDocumentSizeMB: number;
 };
 
 const DEFAULT_PLAN_CONFIG: PlanConfig = {
   id: 'starter',
-  monthlyQuestionLimit: 30,
+  monthlyQuestionLimit: 25,
   docTypes: ['text', 'docx', 'txt'],
+  maxDocumentSizeMB: 10,
   maxQuestionTypes: 1,
 };
 
@@ -154,6 +156,7 @@ export default function NewAssessmentPage() {
             monthlyQuestionLimit: plan.questions_month ?? DEFAULT_PLAN_CONFIG.monthlyQuestionLimit,
             docTypes: plan.doc_type ?? DEFAULT_PLAN_CONFIG.docTypes,
             maxQuestionTypes: plan.max_question_types ?? DEFAULT_PLAN_CONFIG.maxQuestionTypes,
+            maxDocumentSizeMB: plan.docs_size ?? DEFAULT_PLAN_CONFIG.maxDocumentSizeMB,
           }
         : DEFAULT_PLAN_CONFIG,
     [plan]
@@ -1008,8 +1011,8 @@ export default function NewAssessmentPage() {
                         <p className="text-sm text-muted-foreground">Arraste arquivos aqui ou clique para selecionar</p>
                         <p className="text-xs text-muted-foreground">
                           {canUploadPdf
-                            ? 'PDF, DOC ou DOCX - Máximo 10MB por arquivo, 30MB total'
-                            : 'DOC ou DOCX - Máximo 10MB por arquivo, 30MB total'}
+                            ? `PDF, DOC ou DOCX - Máximo 10MB por arquivo, ${planConfig.maxDocumentSizeMB}MB total`
+                            : `DOC ou DOCX - Máximo 10MB por arquivo, ${planConfig.maxDocumentSizeMB}MB total`}
                         </p>
                         <Input
                           id="files"
