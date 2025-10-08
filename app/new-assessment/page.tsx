@@ -156,7 +156,7 @@ export default function NewAssessmentPage() {
             monthlyQuestionLimit: plan.questions_month ?? DEFAULT_PLAN_CONFIG.monthlyQuestionLimit,
             docTypes: plan.doc_type ?? DEFAULT_PLAN_CONFIG.docTypes,
             maxQuestionTypes: plan.max_question_types ?? DEFAULT_PLAN_CONFIG.maxQuestionTypes,
-            maxDocumentSizeMB: plan.docs_size ?? 10,
+            maxDocumentSizeMB: plan.docs_size ?? DEFAULT_PLAN_CONFIG.maxDocumentSizeMB,
           }
         : DEFAULT_PLAN_CONFIG,
     [plan]
