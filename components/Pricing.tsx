@@ -16,7 +16,7 @@ export const plans = [
     description: 'Ideal para testar a plataforma',
     aiLevel: 'IA Básica',
     features: [
-      'Até 30 questões/mês para suas primeiras turmas',
+      'Até 25 questões/mês para suas primeiras turmas',
       '1 tipo de questão personalizável',
       'Upload de arquivos TXT e DOCX (10MB)',
       'Entrada de texto direto',
@@ -33,7 +33,7 @@ export const plans = [
     description: 'Perfeito para 2-3 turmas pequenas',
     aiLevel: 'IA Básica',
     features: [
-      'Até 75 questões/mês, ideal para aulas semanais',
+      'Até 50 questões/mês, ideal para aulas semanais',
       'Até 2 tipos de questões disponíveis',
       'Upload de arquivos TXT e DOCX (20MB)',
       'Entrada de texto direto',
@@ -50,7 +50,7 @@ export const plans = [
     description: 'Ótimo para 4-5 turmas regulares',
     aiLevel: 'IA Avançada',
     features: [
-      'Até 100 questões/mês para diversas disciplinas',
+      'Até 75 questões/mês para diversas disciplinas',
       'Até 3 tipos de questões disponíveis',
       'Upload de PDF, DOCX, TXT e links externos (30MB)',
       'IA avançada com maior precisão contextual',
@@ -67,7 +67,7 @@ export const plans = [
     description: 'Completo para múltiplas turmas',
     aiLevel: 'IA Avançada',
     features: [
-      'Até 150 questões/mês, liberdade para criar sem limites',
+      'Até 100 questões/mês, liberdade para criar sem limites',
       'Até 4 tipos de questões disponíveis',
       'Upload de PPTX, PDF, DOCX, TXT + links (40MB)',
       'IA avançada otimizada para contextos técnicos',
@@ -84,9 +84,9 @@ export const plans = [
     description: 'Máxima capacidade para instituições',
     aiLevel: 'IA Premium',
     features: [
-      'Até 200 questões/mês com máxima qualidade',
+      'Até 150 questões/mês com máxima qualidade',
       'Todos os 6 tipos de questões disponíveis',
-      'Upload de PPTX, PDF, DOCX, TXT + links (100MB)',
+      'Upload de PPTX, PDF, DOCX, TXT + links (50MB)',
       'IA Premium com precisão máxima e contexto profundo',
       'Suporte VIP dedicado com resposta imediata',
     ],
