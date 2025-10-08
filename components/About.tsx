@@ -9,11 +9,11 @@ const values = [
     title: 'Educação de Qualidade',
     description: 'Comprometidos em facilitar a criação de avaliações pedagógicas eficazes e inovadoras.',
   },
-  {
-    icon: Users,
-    title: 'Comunidade',
-    description: 'Conectamos educadores de todo o Brasil, promovendo compartilhamento de conhecimento.',
-  },
+  // {
+  //   icon: Users,
+  //   title: 'Comunidade',
+  //   description: 'Conectamos educadores de todo o Brasil, promovendo compartilhamento de conhecimento.',
+  // },
   {
     icon: Zap,
     title: 'Tecnologia Simples',
@@ -22,7 +22,7 @@ const values = [
   {
     icon: Shield,
     title: 'Segurança e Privacidade',
-    description: 'Seus dados e os de seus alunos estão protegidos com os mais altos padrões de segurança.',
+    description: 'Seus dados estão protegidos com os mais altos padrões de segurança.',
   },
 ];
 
@@ -39,12 +39,12 @@ export function About() {
           </p>
           <p className="text-lg text-muted-foreground">
             Com inteligência artificial avançada e uma interface intuitiva, transformamos horas de trabalho em minutos,
-            oferecendo 11 tipos diferentes de questões contextualizadas que mantêm a qualidade e personalização que cada
+            oferecendo 6 tipos diferentes de questões contextualizadas que mantêm a qualidade e personalização que cada
             turma merece.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {values.map((value) => {
             const Icon = value.icon;
             return (

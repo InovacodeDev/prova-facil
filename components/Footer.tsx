@@ -17,15 +17,15 @@ export const Footer = () => {
                         <div className="space-y-2 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
                                 <Mail className="w-4 h-4" />
-                                <span>contato@provafacil.ai</span>
+                                <span>prova-facil@inovacode.dev</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Phone className="w-4 h-4" />
-                                <span>+55 (11) 9999-9999</span>
+                                <span>+55 (48) 9999-9999</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4" />
-                                <span>São Paulo, Brasil</span>
+                                <span>Santa Catarina, Brasil</span>
                             </div>
                         </div>
                     </div>
@@ -108,7 +108,7 @@ export const Footer = () => {
                 </div>
 
                 <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-                    <p className="text-sm text-muted-foreground">© 2024 ProvaFácil AI. Todos os direitos reservados.</p>
+                    <p className="text-sm text-muted-foreground">© 2025 ProvaFácil AI. Todos os direitos reservados.</p>
                     <div className="flex gap-6 text-sm text-muted-foreground mt-4 md:mt-0">
                         <a href="/privacy" className="hover:text-foreground transition-colors">
                             Privacidade

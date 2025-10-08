@@ -50,7 +50,7 @@ export const plans = [
     description: 'Ótimo para 4-5 turmas regulares',
     aiLevel: 'IA Avançada',
     features: [
-      'Até 150 questões/mês para diversas disciplinas',
+      'Até 100 questões/mês para diversas disciplinas',
       'Até 3 tipos de questões disponíveis',
       'Upload de PDF, DOCX, TXT e links externos (30MB)',
       'IA avançada com maior precisão contextual',
@@ -67,9 +67,9 @@ export const plans = [
     description: 'Completo para múltiplas turmas',
     aiLevel: 'IA Avançada',
     features: [
-      'Até 250 questões/mês, liberdade para criar sem limites',
+      'Até 150 questões/mês, liberdade para criar sem limites',
       'Até 4 tipos de questões disponíveis',
-      'Upload de todos os formatos + links (40MB)',
+      'Upload de PPTX, PDF, DOCX, TXT + links (40MB)',
       'IA avançada otimizada para contextos técnicos',
       'Suporte VIP com atendimento prioritário',
     ],
@@ -84,7 +84,7 @@ export const plans = [
     description: 'Máxima capacidade para instituições',
     aiLevel: 'IA Premium',
     features: [
-      'Até 300 questões/mês com máxima qualidade',
+      'Até 200 questões/mês com máxima qualidade',
       'Todos os 6 tipos de questões disponíveis',
       'Upload de PPTX, PDF, DOCX, TXT + links (100MB)',
       'IA Premium com precisão máxima e contexto profundo',
