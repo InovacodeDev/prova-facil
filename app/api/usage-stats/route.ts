@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { getUserUsageStats } from '@/lib/usage-tracking';
 import { logError } from '@/lib/error-logs-service';
 
+export const dynamic = 'force-dynamic'; // Necessário pois usa cookies via logError
+
 export async function GET() {
   try {
     const supabase = await createClient();
