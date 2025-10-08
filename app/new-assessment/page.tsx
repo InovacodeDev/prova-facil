@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { invalidateDashboardCache } from '@/lib/cache';
 import { track } from '@vercel/analytics';
 import { Autocomplete } from '@/components/ui/autocomplete';
+import { logClientError } from '@/lib/client-error-logger';
 import {
   QUESTION_TYPES,
   getContextRecommendationsForType,
@@ -263,6 +264,7 @@ export default function NewAssessmentPage() {
         setTitleSuggestions(uniqueTitles);
       } catch (error) {
         console.error('Erro ao buscar títulos:', error);
+        logClientError(error, { component: 'NewAssessment', action: 'fetchAssessmentTitles' });
       }
     };
 
@@ -286,6 +288,7 @@ export default function NewAssessmentPage() {
         setSubjectSuggestions(uniqueSubjects);
       } catch (error) {
         console.error('Erro ao buscar matérias:', error);
+        logClientError(error, { component: 'NewAssessment', action: 'fetchSubjectSuggestions' });
       }
     };
 
@@ -315,6 +318,7 @@ export default function NewAssessmentPage() {
         }
       } catch (error) {
         console.error('Erro ao buscar nível acadêmico:', error);
+        logClientError(error, { component: 'NewAssessment', action: 'fetchAcademicLevel' });
       }
     };
 
@@ -386,6 +390,11 @@ export default function NewAssessmentPage() {
       }
     } catch (error: any) {
       console.error('Erro ao extrair texto:', error);
+      logClientError(error, {
+        component: 'NewAssessment',
+        action: 'handleFileChange',
+        filesCount: selectedFiles.length,
+      });
       toast({
         title: 'Erro na extração',
         description: error.message || 'Não foi possível extrair o texto dos arquivos.',
@@ -566,6 +575,13 @@ export default function NewAssessmentPage() {
       router.push('/my-assessments');
     } catch (error: any) {
       console.error('Erro ao criar questões:', error);
+      logClientError(error, {
+        component: 'NewAssessment',
+        action: 'handleSubmit',
+        questionCount,
+        questionTypes,
+        hasFiles: files.length > 0,
+      });
       toast({
         title: 'Erro',
         description: error.message || 'Não foi possível criar as questões. Tente novamente.',

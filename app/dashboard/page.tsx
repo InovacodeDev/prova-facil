@@ -12,6 +12,7 @@ import { ProvaFacilLogo } from '@/assets/logo';
 import { DashboardSkeleton } from '@/components/ui/loading';
 import { useProfile, usePlan, useMonthlyUsage } from '@/hooks/use-cache';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { logClientError } from '@/lib/client-error-logger';
 
 interface QuestionStats {
   total: number;
@@ -153,6 +154,7 @@ export default function DashboardPage() {
       }
     } catch (error: any) {
       console.error('Erro ao carregar estatísticas:', error);
+      logClientError(error, { component: 'Dashboard', action: 'fetchStats' });
     }
   }, [profile?.id, supabase]);
 
@@ -177,6 +179,7 @@ export default function DashboardPage() {
       await fetchStats();
     } catch (error) {
       console.error('Erro ao carregar cache:', error);
+      logClientError(error, { component: 'Dashboard', action: 'fetchStatsWithCache' });
       await fetchStats();
     }
   }, [profile?.id, fetchStats]);

@@ -28,6 +28,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useProfile, invalidateProfileCache } from '@/hooks/use-cache';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { QUESTION_TYPES } from '@/lib/question-types';
+import { logClientError } from '@/lib/client-error-logger';
 import { getQuestionTypeHint } from '@/lib/question-type-hints';
 import {
   AlertDialog,
@@ -122,6 +123,7 @@ export default function ProfilePage() {
       }
     } catch (error: any) {
       console.error('Erro ao carregar dados do usuário:', error);
+      logClientError(error, { component: 'Profile', action: 'loadUserData' });
       toast({
         title: 'Erro',
         description: 'Não foi possível carregar os dados do perfil.',
@@ -204,6 +206,7 @@ export default function ProfilePage() {
       await fetchUserData();
     } catch (error: any) {
       console.error('Erro ao salvar perfil:', error);
+      logClientError(error, { component: 'Profile', action: 'handleSaveProfile' });
       toast({
         title: 'Erro',
         description: 'Não foi possível salvar as alterações.',
@@ -261,6 +264,7 @@ export default function ProfilePage() {
       });
     } catch (error: any) {
       console.error('Erro ao enviar email de verificação:', error);
+      logClientError(error, { component: 'Profile', action: 'handleSendVerificationEmail' });
       toast({
         title: 'Erro',
         description: error.message || 'Não foi possível enviar o email de verificação. Tente novamente.',
@@ -292,6 +296,7 @@ export default function ProfilePage() {
       router.push('/');
     } catch (error: any) {
       console.error('Erro ao excluir conta:', error);
+      logClientError(error, { component: 'Profile', action: 'handleDeleteAccount' });
       toast({
         title: 'Erro',
         description: 'Não foi possível excluir a conta. Tente novamente.',

@@ -10,6 +10,7 @@ interface StatsData {
     questionsGenerated: number;
     questionsCopied: number;
     totalActions: number;
+    uniqueProfiles: number;
     uniqueAssessments: number;
     meanQuestionsPerAssessment: number;
   };
@@ -38,7 +39,7 @@ export const Hero = () => {
   };
 
   const questionsGenerated = stats?.totals.questionsGenerated || 0;
-  const usersCount = Math.ceil(questionsGenerated / 10); // Aproximação de usuários
+  const usersCount = stats?.totals.uniqueProfiles || 0;
   const uniqueAssessments = stats?.totals.uniqueAssessments || 0;
 
   return (

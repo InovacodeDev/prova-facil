@@ -17,6 +17,7 @@ import {
 } from '@/lib/genkit/prompts';
 import { QuestionType } from '@/db/schema';
 import { checkUserQuota, updateProfileLogsCycle } from '@/lib/usage-tracking';
+import { logError } from '@/lib/error-logs-service';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 60-second timeout for AI calls
@@ -210,6 +211,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Unhandled error in generate-questions endpoint:', error);
+
+    await logError({
+      message: error instanceof Error ? error.message : 'Unknown error in generate-questions',
+      stack: error instanceof Error ? error.stack : undefined,
+      level: 'error',
+      context: {
+        endpoint: '/api/generate-questions',
+        method: 'POST',
+      },
+    });
+
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
