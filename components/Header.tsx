@@ -54,16 +54,16 @@ export const Header = () => {
                             Recursos
                         </a>
                         <a
-                            href="#pricing"
-                            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            Preços
-                        </a>
-                        <a
                             href="#about"
                             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                         >
                             Sobre
+                        </a>
+                        <a
+                            href="#pricing"
+                            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            Preços
                         </a>
                     </nav>
 
