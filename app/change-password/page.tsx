@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BookOpen, ArrowLeft, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { logClientError } from '@/lib/client-error-logger';
+import { AppLayout, PageHeader } from '@/components/layout';
 
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -73,32 +74,16 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/profile')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-            <div className="flex items-center gap-2">
-              <Lock className="h-6 w-6 text-primary" />
-              <span className="text-lg font-semibold">Alterar Senha</span>
-            </div>
-          </div>
-        </div>
-      </header>
+    <AppLayout>
+      <PageHeader
+        title="Alterar Senha"
+        description="Digite sua nova senha para alterar a senha da sua conta"
+      />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Alterar Senha</CardTitle>
-              <CardDescription>Digite sua nova senha para alterar a senha da sua conta</CardDescription>
-            </CardHeader>
-            <CardContent>
+      <div className="max-w-md mx-auto">
+        <Card>
+          <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Senha Atual</Label>
@@ -194,7 +179,6 @@ export default function ChangePasswordPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </AppLayout>
   );
 }
