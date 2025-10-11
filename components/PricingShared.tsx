@@ -148,7 +148,7 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
       </div>
       {billingPeriod === 'annual' && (
         <p className="text-sm text-green-600 text-center font-medium">
-          🎉 Economize ~75 dias (equivalente a 2,5 meses) ao escolher o plano anual!
+          {getAnnualSavingsMessage(plans)}
         </p>
       )}
 
