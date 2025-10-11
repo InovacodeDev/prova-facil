@@ -9,8 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Upload, ArrowLeft, FileText, Loader2, X, Check, Lock, AlertCircle, Link, Type } from 'lucide-react';
-import { ProvaFacilLogo } from '@/assets/logo';
+import { Upload, FileText, Loader2, X, Check, Lock, AlertCircle, Link, Type } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useProfile, usePlan, useMonthlyUsage, invalidateUsageCache } from '@/hooks/use-cache';
@@ -31,6 +30,7 @@ import {
   ACCEPTED_FILE_EXTENSIONS,
   type ExtractedText,
 } from '@/lib/document-extractor';
+import { AppLayout, PageHeader } from '@/components/layout';
 
 const SUBJECTS = [
   'Matemática',
@@ -616,641 +616,622 @@ export default function NewAssessmentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-            <ProvaFacilLogo className="h-6" />
-          </div>
-        </div>
-      </header>
+    <AppLayout>
+      <PageHeader
+        title="Criar Questões com IA"
+        description="Preencha os campos abaixo para gerar questões automaticamente com inteligência artificial"
+      />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-[920px] mx-auto">
-          <Card className="overflow-visible">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Criar Questões com IA
-              </CardTitle>
-              <CardDescription>
-                Preencha os campos abaixo para gerar questões automaticamente com inteligência artificial
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Título da Avaliação com Autocomplete */}
-                <div className="space-y-2">
-                  <Label htmlFor="title">Título da Avaliação *</Label>
-                  <Autocomplete
-                    id="title"
-                    value={title}
-                    onValueChange={setTitle}
-                    options={titleOptions}
-                    placeholder="Selecione ou digite o título da avaliação"
-                    emptyText="Nenhum título encontrado. Digite para criar um novo."
-                    searchPlaceholder="Buscar título..."
-                  />
-                  <div className="flex items-start gap-2 p-2 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-                    <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-blue-800 dark:text-blue-300">
-                      <strong>Dica:</strong> Use o mesmo título para agrupar questões relacionadas. Isso facilita
-                      encontrar e filtrar suas questões depois!
+      <div className="max-w-[920px] mx-auto">
+        <Card className="overflow-visible">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Título da Avaliação com Autocomplete */}
+              <div className="space-y-2">
+                <Label htmlFor="title">Título da Avaliação *</Label>
+                <Autocomplete
+                  id="title"
+                  value={title}
+                  onValueChange={setTitle}
+                  options={titleOptions}
+                  placeholder="Selecione ou digite o título da avaliação"
+                  emptyText="Nenhum título encontrado. Digite para criar um novo."
+                  searchPlaceholder="Buscar título..."
+                />
+                <div className="flex items-start gap-2 p-2 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                  <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-800 dark:text-blue-300">
+                    <strong>Dica:</strong> Use o mesmo título para agrupar questões relacionadas. Isso facilita
+                    encontrar e filtrar suas questões depois!
+                  </p>
+                </div>
+              </div>
+
+              {/* Contexto/Nível da Questão */}
+              <div className="space-y-2">
+                <Label htmlFor="questionContext">Contexto/Nível da Questão *</Label>
+                <Select value={questionContext} onValueChange={setQuestionContext}>
+                  <SelectTrigger id="questionContext">
+                    <SelectValue placeholder="Selecione o contexto da questão" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" sideOffset={5}>
+                    {QUESTION_CONTEXTS.map((ctx) => (
+                      <SelectItem key={ctx.value} value={ctx.value}>
+                        {ctx.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Define o estilo e a complexidade das questões que serão geradas
+                </p>
+
+                {/* Recomendações baseadas no nível acadêmico */}
+                {academicLevelName &&
+                  (contextSuggestions.primary.length > 0 || contextSuggestions.secondary.length > 0) && (
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                      <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-blue-800 dark:text-blue-300 space-y-1">
+                        <p>
+                          <strong>💡 Recomendado para {academicLevelName}:</strong>
+                        </p>
+                        {contextSuggestions.primary.length > 0 && (
+                          <p>
+                            <span className="font-medium">Ideais:</span>{' '}
+                            {contextSuggestions.primary
+                              .map((ctx) => QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label)
+                              .filter(Boolean)
+                              .join(', ')}
+                          </p>
+                        )}
+                        {contextSuggestions.secondary.length > 0 && (
+                          <p>
+                            <span className="font-medium">Alternativos:</span>{' '}
+                            {contextSuggestions.secondary
+                              .map((ctx) => QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label)
+                              .filter(Boolean)
+                              .join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Aviso sobre compatibilidade com tipos selecionados */}
+                {questionContext && questionTypes.length > 0 && !contextRecommendations.includes(questionContext) && (
+                  <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
+                      <strong>⚠️ Atenção:</strong> O contexto selecionado pode não ser ideal para os tipos de questões
+                      escolhidos. Tipos compatíveis com{' '}
+                      <strong>{QUESTION_CONTEXTS.find((c) => c.value === questionContext)?.label}</strong>:{' '}
+                      {questionTypes
+                        .filter((type) => getContextRecommendationsForType(type).includes(questionContext))
+                        .map((type) => QUESTION_TYPES.find((t) => t.id === type)?.label)
+                        .filter(Boolean)
+                        .join(', ') || 'Nenhum'}
                     </p>
                   </div>
-                </div>
+                )}
+              </div>
 
-                {/* Contexto/Nível da Questão */}
+              {/* Quantidade e Matéria */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="questionContext">Contexto/Nível da Questão *</Label>
-                  <Select value={questionContext} onValueChange={setQuestionContext}>
-                    <SelectTrigger id="questionContext">
-                      <SelectValue placeholder="Selecione o contexto da questão" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" sideOffset={5}>
-                      {QUESTION_CONTEXTS.map((ctx) => (
-                        <SelectItem key={ctx.value} value={ctx.value}>
-                          {ctx.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="questionCount">Quantidade de Questões *</Label>
+                  <Input
+                    id="questionCount"
+                    type="number"
+                    min={maxQuestions === 0 ? 0 : 1}
+                    max={Math.max(0, maxQuestions)}
+                    value={questionCount}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      const capped = maxQuestions === 0 ? 0 : Math.max(1, Math.min(val, maxQuestions));
+                      setQuestionCount(capped.toString());
+                    }}
+                    required
+                    disabled={maxQuestions === 0}
+                  />
                   <p className="text-xs text-muted-foreground">
-                    Define o estilo e a complexidade das questões que serão geradas
+                    Plano {userPlan}: {monthlyUsage}/{planConfig.monthlyQuestionLimit} questões usadas este mês.{' '}
+                    <strong>Disponível: {maxQuestions}</strong>
                   </p>
 
-                  {/* Recomendações baseadas no nível acadêmico */}
-                  {academicLevelName &&
-                    (contextSuggestions.primary.length > 0 || contextSuggestions.secondary.length > 0) && (
-                      <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-                        <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                        <div className="text-xs text-blue-800 dark:text-blue-300 space-y-1">
-                          <p>
-                            <strong>💡 Recomendado para {academicLevelName}:</strong>
-                          </p>
-                          {contextSuggestions.primary.length > 0 && (
-                            <p>
-                              <span className="font-medium">Ideais:</span>{' '}
-                              {contextSuggestions.primary
-                                .map((ctx) => QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label)
-                                .filter(Boolean)
-                                .join(', ')}
-                            </p>
-                          )}
-                          {contextSuggestions.secondary.length > 0 && (
-                            <p>
-                              <span className="font-medium">Alternativos:</span>{' '}
-                              {contextSuggestions.secondary
-                                .map((ctx) => QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label)
-                                .filter(Boolean)
-                                .join(', ')}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Aviso sobre compatibilidade com tipos selecionados */}
-                  {questionContext && questionTypes.length > 0 && !contextRecommendations.includes(questionContext) && (
-                    <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                  {/* Aviso sobre quantidade mínima */}
+                  {minimumQuestions > 0 && parseInt(questionCount, 10) < minimumQuestions && (
+                    <div className="flex items-start gap-2 p-2 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
                       <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-amber-800 dark:text-amber-300">
-                        <strong>⚠️ Atenção:</strong> O contexto selecionado pode não ser ideal para os tipos de questões
-                        escolhidos. Tipos compatíveis com{' '}
-                        <strong>{QUESTION_CONTEXTS.find((c) => c.value === questionContext)?.label}</strong>:{' '}
-                        {questionTypes
-                          .filter((type) => getContextRecommendationsForType(type).includes(questionContext))
-                          .map((type) => QUESTION_TYPES.find((t) => t.id === type)?.label)
-                          .filter(Boolean)
-                          .join(', ') || 'Nenhum'}
+                        <strong>ℹ️ Ajuste automático:</strong> Você selecionou {minimumQuestions} tipo(s) de questão.
+                        Para garantir pelo menos 1 questão de cada tipo, o sistema gerará{' '}
+                        <strong>{minimumQuestions} questões</strong>
+                        (em vez de {questionCount}).
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Info sobre distribuição */}
+                  {minimumQuestions > 0 && parseInt(questionCount, 10) >= minimumQuestions && (
+                    <div className="flex items-start gap-2 p-2 rounded-md bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-800">
+                      <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-green-800 dark:text-green-300">
+                        ✅ Cada um dos {minimumQuestions} tipos terá pelo menos 1 questão.
+                        {adjustedQuestionCount > minimumQuestions && (
+                          <>
+                            {' '}
+                            As {adjustedQuestionCount - minimumQuestions} questões restantes serão distribuídas
+                            proporcionalmente.
+                          </>
+                        )}
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* Quantidade e Matéria */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="questionCount">Quantidade de Questões *</Label>
-                    <Input
-                      id="questionCount"
-                      type="number"
-                      min={maxQuestions === 0 ? 0 : 1}
-                      max={Math.max(0, maxQuestions)}
-                      value={questionCount}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        const capped = maxQuestions === 0 ? 0 : Math.max(1, Math.min(val, maxQuestions));
-                        setQuestionCount(capped.toString());
-                      }}
-                      required
-                      disabled={maxQuestions === 0}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Plano {userPlan}: {monthlyUsage}/{planConfig.monthlyQuestionLimit} questões usadas este mês.{' '}
-                      <strong>Disponível: {maxQuestions}</strong>
-                    </p>
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Conteúdo das Questões *</Label>
+                  <Autocomplete
+                    id="subject"
+                    value={subject}
+                    onValueChange={setSubject}
+                    options={subjectOptions}
+                    placeholder="Selecione ou digite a matéria/tema"
+                    emptyText="Nenhuma matéria encontrada. Digite para criar uma nova."
+                    searchPlaceholder="Buscar matéria ou tema..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Escolha uma matéria comum ou digite um tema específico
+                  </p>
+                </div>
+              </div>
 
-                    {/* Aviso sobre quantidade mínima */}
-                    {minimumQuestions > 0 && parseInt(questionCount, 10) < minimumQuestions && (
-                      <div className="flex items-start gap-2 p-2 rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
-                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-800 dark:text-amber-300">
-                          <strong>ℹ️ Ajuste automático:</strong> Você selecionou {minimumQuestions} tipo(s) de questão.
-                          Para garantir pelo menos 1 questão de cada tipo, o sistema gerará{' '}
-                          <strong>{minimumQuestions} questões</strong>
-                          (em vez de {questionCount}).
-                        </p>
-                      </div>
+              {/* Upload de Arquivos / Documentos */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    Material de Referência *
+                    {files.length === 0 &&
+                      documentTexts.every((t) => !t.trim()) &&
+                      documentUrls.every((u) => !u.trim()) && (
+                        <span className="text-xs text-destructive font-normal">(Obrigatório)</span>
+                      )}
+                  </Label>
+                  <div className="flex gap-1">
+                    {allowedDocModes.includes('text') && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant={documentMode === 'text' ? 'default' : 'outline'}
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => setDocumentMode('text')}
+                            >
+                              <Type className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Digitar texto direto</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
 
-                    {/* Info sobre distribuição */}
-                    {minimumQuestions > 0 && parseInt(questionCount, 10) >= minimumQuestions && (
-                      <div className="flex items-start gap-2 p-2 rounded-md bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-800">
-                        <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-green-800 dark:text-green-300">
-                          ✅ Cada um dos {minimumQuestions} tipos terá pelo menos 1 questão.
-                          {adjustedQuestionCount > minimumQuestions && (
-                            <>
-                              {' '}
-                              As {adjustedQuestionCount - minimumQuestions} questões restantes serão distribuídas
-                              proporcionalmente.
-                            </>
-                          )}
-                        </p>
-                      </div>
+                    {allowedDocModes.includes('url') && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant={documentMode === 'url' ? 'default' : 'outline'}
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => setDocumentMode('url')}
+                            >
+                              <Link className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Inserir link/URL</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Conteúdo das Questões *</Label>
-                    <Autocomplete
-                      id="subject"
-                      value={subject}
-                      onValueChange={setSubject}
-                      options={subjectOptions}
-                      placeholder="Selecione ou digite a matéria/tema"
-                      emptyText="Nenhuma matéria encontrada. Digite para criar uma nova."
-                      searchPlaceholder="Buscar matéria ou tema..."
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Escolha uma matéria comum ou digite um tema específico
-                    </p>
+                    {allowedDocModes.includes('file') && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant={documentMode === 'file' ? 'default' : 'outline'}
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => setDocumentMode('file')}
+                            >
+                              <Upload className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Enviar arquivo (DOC/DOCX
+                              {canUploadPdf ? '/PDF' : ''})
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                 </div>
 
-                {/* Upload de Arquivos / Documentos */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
-                      Material de Referência *
-                      {files.length === 0 &&
-                        documentTexts.every((t) => !t.trim()) &&
-                        documentUrls.every((u) => !u.trim()) && (
-                          <span className="text-xs text-destructive font-normal">(Obrigatório)</span>
-                        )}
-                    </Label>
-                    <div className="flex gap-1">
-                      {allowedDocModes.includes('text') && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant={documentMode === 'text' ? 'default' : 'outline'}
-                                size="sm"
-                                className="h-8 px-2"
-                                onClick={() => setDocumentMode('text')}
-                              >
-                                <Type className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Digitar texto direto</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-
-                      {allowedDocModes.includes('url') && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant={documentMode === 'url' ? 'default' : 'outline'}
-                                size="sm"
-                                className="h-8 px-2"
-                                onClick={() => setDocumentMode('url')}
-                              >
-                                <Link className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Inserir link/URL</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-
-                      {allowedDocModes.includes('file') && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant={documentMode === 'file' ? 'default' : 'outline'}
-                                size="sm"
-                                className="h-8 px-2"
-                                onClick={() => setDocumentMode('file')}
-                              >
-                                <Upload className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                Enviar arquivo (DOC/DOCX
-                                {canUploadPdf ? '/PDF' : ''})
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Text Mode - Multiple Texts */}
-                  {documentMode === 'text' && (
-                    <div className="space-y-3">
-                      {documentTexts.map((text, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs text-muted-foreground">Texto {index + 1}</Label>
-                            {documentTexts.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setDocumentTexts(documentTexts.filter((_, i) => i !== index));
-                                }}
-                                className="h-6 px-2 text-xs"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                          <div className="relative">
-                            <textarea
-                              placeholder="Cole ou digite o conteúdo do material de referência aqui..."
-                              value={text}
-                              onChange={(e) => {
-                                const newTexts = [...documentTexts];
-                                newTexts[index] = e.target.value;
-                                setDocumentTexts(newTexts);
+                {/* Text Mode - Multiple Texts */}
+                {documentMode === 'text' && (
+                  <div className="space-y-3">
+                    {documentTexts.map((text, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs text-muted-foreground">Texto {index + 1}</Label>
+                          {documentTexts.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDocumentTexts(documentTexts.filter((_, i) => i !== index));
                               }}
-                              className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-                              rows={6}
-                            />
-                            <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-1 rounded">
-                              {text.split(/\s+/).filter((w) => w.length > 0).length} palavras
-                            </div>
+                              className="h-6 px-2 text-xs"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="relative">
+                          <textarea
+                            placeholder="Cole ou digite o conteúdo do material de referência aqui..."
+                            value={text}
+                            onChange={(e) => {
+                              const newTexts = [...documentTexts];
+                              newTexts[index] = e.target.value;
+                              setDocumentTexts(newTexts);
+                            }}
+                            className="min-h-[150px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                            rows={6}
+                          />
+                          <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-1 rounded">
+                            {text.split(/\s+/).filter((w) => w.length > 0).length} palavras
                           </div>
                         </div>
-                      ))}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDocumentTexts([...documentTexts, ''])}
+                      className="w-full"
+                    >
+                      <Type className="h-4 w-4 mr-2" />
+                      Adicionar outro texto
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      💡 Cole textos, trechos de livros, artigos ou qualquer conteúdo textual
+                    </p>
+                  </div>
+                )}
+
+                {/* URL Mode - Multiple URLs */}
+                {documentMode === 'url' && (
+                  <div className="space-y-3">
+                    {documentUrls.map((url, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="url"
+                            placeholder={`https://exemplo.com/artigo-${index + 1}`}
+                            value={url}
+                            onChange={(e) => {
+                              const newUrls = [...documentUrls];
+                              newUrls[index] = e.target.value;
+                              setDocumentUrls(newUrls);
+                            }}
+                            className="flex-1"
+                          />
+                          {documentUrls.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDocumentUrls(documentUrls.filter((_, i) => i !== index));
+                              }}
+                              className="h-10 px-3"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDocumentUrls([...documentUrls, ''])}
+                      className="w-full"
+                    >
+                      <Link className="h-4 w-4 mr-2" />
+                      Adicionar outro link
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      🔗 Insira links para artigos, PDFs online, páginas da web ou recursos educacionais
+                    </p>
+                    {!allowedDocModes.includes('url') && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-muted border border-border">
+                        <Lock className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="text-xs text-muted-foreground">
+                          <p className="font-semibold">Links não disponíveis no plano {userPlan}</p>
+                          <p>Faça upgrade para Essentials ou superior para usar URLs</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* File Mode */}
+                {documentMode === 'file' && (
+                  <div
+                    className={cn(
+                      'border-2 border-dashed rounded-lg p-6 transition-colors',
+                      files.length === 0 ? 'border-destructive/50 bg-destructive/5' : 'border-border'
+                    )}
+                  >
+                    <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <div className="space-y-2 text-center">
+                      <p className="text-sm text-muted-foreground">Arraste arquivos aqui ou clique para selecionar</p>
+                      <p className="text-xs text-muted-foreground">
+                        {canUploadPdf
+                          ? `PDF, DOC ou DOCX - Máximo 10MB por arquivo, ${planConfig.maxDocumentSizeMB}MB total`
+                          : `DOC ou DOCX - Máximo 10MB por arquivo, ${planConfig.maxDocumentSizeMB}MB total`}
+                      </p>
+                      <Input
+                        id="files"
+                        type="file"
+                        accept={ACCEPTED_FILE_EXTENSIONS}
+                        multiple
+                        onChange={handleFileChange}
+                        className="hidden"
+                        disabled={extracting}
+                      />
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
-                        onClick={() => setDocumentTexts([...documentTexts, ''])}
-                        className="w-full"
+                        onClick={() => document.getElementById('files')?.click()}
+                        disabled={extracting}
                       >
-                        <Type className="h-4 w-4 mr-2" />
-                        Adicionar outro texto
+                        {extracting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Extraindo texto...
+                          </>
+                        ) : (
+                          'Selecionar Arquivos'
+                        )}
                       </Button>
-                      <p className="text-xs text-muted-foreground">
-                        💡 Cole textos, trechos de livros, artigos ou qualquer conteúdo textual
-                      </p>
                     </div>
-                  )}
 
-                  {/* URL Mode - Multiple URLs */}
-                  {documentMode === 'url' && (
-                    <div className="space-y-3">
-                      {documentUrls.map((url, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="url"
-                              placeholder={`https://exemplo.com/artigo-${index + 1}`}
-                              value={url}
-                              onChange={(e) => {
-                                const newUrls = [...documentUrls];
-                                newUrls[index] = e.target.value;
-                                setDocumentUrls(newUrls);
-                              }}
-                              className="flex-1"
-                            />
-                            {documentUrls.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setDocumentUrls(documentUrls.filter((_, i) => i !== index));
-                                }}
-                                className="h-10 px-3"
-                              >
+                    {/* Progresso de extração */}
+                    {extracting && extractionProgress.total > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Processando {extractionProgress.current} de {extractionProgress.total}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {Math.round((extractionProgress.current / extractionProgress.total) * 100)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-secondary rounded-full h-2">
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${(extractionProgress.current / extractionProgress.total) * 100}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{extractionProgress.fileName}</p>
+                      </div>
+                    )}
+
+                    {files.length > 0 && !extracting && (
+                      <div className="mt-4 space-y-2">
+                        {files.map((file, index) => {
+                          const extracted = extractedTexts[index];
+                          return (
+                            <div key={index} className="flex items-start justify-between bg-muted p-3 rounded gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{file.name}</p>
+                                {extracted && (
+                                  <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                                    <span>{extracted.wordCount} palavras</span>
+                                    {extracted.pageCount && <span>{extracted.pageCount} páginas</span>}
+                                    <span className="text-green-600">✓ Texto extraído</span>
+                                  </div>
+                                )}
+                              </div>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => removeFile(index)}>
                                 <X className="h-4 w-4" />
                               </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDocumentUrls([...documentUrls, ''])}
-                        className="w-full"
-                      >
-                        <Link className="h-4 w-4 mr-2" />
-                        Adicionar outro link
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        🔗 Insira links para artigos, PDFs online, páginas da web ou recursos educacionais
-                      </p>
-                      {!allowedDocModes.includes('url') && (
-                        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted border border-border">
-                          <Lock className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div className="text-xs text-muted-foreground">
-                            <p className="font-semibold">Links não disponíveis no plano {userPlan}</p>
-                            <p>Faça upgrade para Essentials ou superior para usar URLs</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* File Mode */}
-                  {documentMode === 'file' && (
-                    <div
-                      className={cn(
-                        'border-2 border-dashed rounded-lg p-6 transition-colors',
-                        files.length === 0 ? 'border-destructive/50 bg-destructive/5' : 'border-border'
-                      )}
-                    >
-                      <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <div className="space-y-2 text-center">
-                        <p className="text-sm text-muted-foreground">Arraste arquivos aqui ou clique para selecionar</p>
-                        <p className="text-xs text-muted-foreground">
-                          {canUploadPdf
-                            ? `PDF, DOC ou DOCX - Máximo 10MB por arquivo, ${planConfig.maxDocumentSizeMB}MB total`
-                            : `DOC ou DOCX - Máximo 10MB por arquivo, ${planConfig.maxDocumentSizeMB}MB total`}
-                        </p>
-                        <Input
-                          id="files"
-                          type="file"
-                          accept={ACCEPTED_FILE_EXTENSIONS}
-                          multiple
-                          onChange={handleFileChange}
-                          className="hidden"
-                          disabled={extracting}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById('files')?.click()}
-                          disabled={extracting}
-                        >
-                          {extracting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Extraindo texto...
-                            </>
-                          ) : (
-                            'Selecionar Arquivos'
-                          )}
-                        </Button>
+                            </div>
+                          );
+                        })}
                       </div>
+                    )}
 
-                      {/* Progresso de extração */}
-                      {extracting && extractionProgress.total > 0 && (
-                        <div className="mt-4 space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              Processando {extractionProgress.current} de {extractionProgress.total}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {Math.round((extractionProgress.current / extractionProgress.total) * 100)}%
-                            </span>
-                          </div>
-                          <div className="w-full bg-secondary rounded-full h-2">
-                            <div
-                              className="bg-primary h-2 rounded-full transition-all duration-300"
-                              style={{
-                                width: `${(extractionProgress.current / extractionProgress.total) * 100}%`,
-                              }}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">{extractionProgress.fileName}</p>
-                        </div>
-                      )}
+                    <p className="text-xs text-muted-foreground mt-4 italic">
+                      * O texto é extraído no seu navegador e apenas o conteúdo textual é enviado para a IA
+                    </p>
+                  </div>
+                )}
+              </div>
 
-                      {files.length > 0 && !extracting && (
-                        <div className="mt-4 space-y-2">
-                          {files.map((file, index) => {
-                            const extracted = extractedTexts[index];
-                            return (
-                              <div key={index} className="flex items-start justify-between bg-muted p-3 rounded gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">{file.name}</p>
-                                  {extracted && (
-                                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                                      <span>{extracted.wordCount} palavras</span>
-                                      {extracted.pageCount && <span>{extracted.pageCount} páginas</span>}
-                                      <span className="text-green-600">✓ Texto extraído</span>
+              {/* Tipos de Questões */}
+              <div className="space-y-2">
+                <Label>Tipos de Questões *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Selecione um ou mais tipos para diversificar sua avaliação
+                </p>
+                {allowedQuestionTypes.length === 0 && (
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+                    <p className="text-sm text-amber-900 dark:text-amber-300">
+                      ⚠️ Você ainda não selecionou tipos de questões. Vá para{' '}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-amber-900 dark:text-amber-300 underline"
+                        onClick={() => router.push('/profile')}
+                      >
+                        Perfil
+                      </Button>{' '}
+                      para escolher seus tipos.
+                    </p>
+                  </div>
+                )}
+                <TooltipProvider>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {QUESTION_TYPES.map((type) => {
+                      const isAllowed = allowedQuestionTypes.includes(type.id);
+                      const workingOn = [].includes(type.id);
+                      const recommendedContexts = getContextRecommendationsForType(type.id);
+
+                      return (
+                        <div
+                          key={type.id}
+                          className={cn(
+                            'flex items-start space-x-3 px-3 rounded-lg border transition-all',
+                            isAllowed && !workingOn
+                              ? 'border-border hover:border-primary hover:bg-primary/5 cursor-pointer'
+                              : 'border-border bg-muted/50 opacity-50 cursor-not-allowed'
+                          )}
+                        >
+                          {isAllowed && !workingOn ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-start space-x-3 w-full">
+                                  <div className="pt-3">
+                                    <Checkbox
+                                      id={type.id}
+                                      checked={questionTypes.includes(type.id)}
+                                      onCheckedChange={() => toggleQuestionType(type.id)}
+                                      className="mt-0.5"
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p
+                                      className="text-sm font-medium leading-tight cursor-pointer pt-3"
+                                      onClick={() => toggleQuestionType(type.id)}
+                                    >
+                                      {type.label}
+                                    </p>
+                                    <p
+                                      className="text-xs text-muted-foreground mt-1 pb-3"
+                                      onClick={() => toggleQuestionType(type.id)}
+                                    >
+                                      {type.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[280px]">
+                                <div className="space-y-1">
+                                  <p className="font-medium text-xs">{type.label}</p>
+                                  <p className="text-xs">{type.description}</p>
+                                  {recommendedContexts.length > 0 && (
+                                    <div className="pt-2 border-t border-border/50 mt-2">
+                                      <p className="text-xs font-medium mb-1">💡 Contextos recomendados:</p>
+                                      <ul className="text-xs space-y-0.5 list-disc list-inside">
+                                        {recommendedContexts.slice(0, 3).map((ctx) => {
+                                          const contextLabel = QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label;
+                                          return contextLabel ? <li key={ctx}>{contextLabel}</li> : null;
+                                        })}
+                                      </ul>
                                     </div>
                                   )}
                                 </div>
-                                <Button type="button" variant="ghost" size="sm" onClick={() => removeFile(index)}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            );
-                          })}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-start space-x-3 w-full py-3">
+                                  <Checkbox id={type.id} checked={false} disabled className="mt-0.5" />
+                                  <div className="flex-1">
+                                    <Label
+                                      htmlFor={type.id}
+                                      className="text-sm font-medium cursor-not-allowed flex items-center gap-1 leading-tight"
+                                    >
+                                      {type.label}
+                                      <Lock className="h-3 w-3" />
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground mt-1">{type.description}</p>
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {workingOn && <p className="text-xs">Em breve!</p>}
+                                {!workingOn && (
+                                  <p className="text-xs">
+                                    Este tipo de questão não está disponível no plano <strong>{userPlan}</strong>. Faça
+                                    upgrade para desbloquear.
+                                  </p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
-                      )}
+                      );
+                    })}
+                  </div>
+                </TooltipProvider>
+              </div>
 
-                      <p className="text-xs text-muted-foreground mt-4 italic">
-                        * O texto é extraído no seu navegador e apenas o conteúdo textual é enviado para a IA
-                      </p>
-                    </div>
-                  )}
-                </div>
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => router.push('/dashboard')} className="flex-1">
+                  Cancelar
+                </Button>
 
-                {/* Tipos de Questões */}
-                <div className="space-y-2">
-                  <Label>Tipos de Questões *</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Selecione um ou mais tipos para diversificar sua avaliação
-                  </p>
-                  {allowedQuestionTypes.length === 0 && (
-                    <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
-                      <p className="text-sm text-amber-900 dark:text-amber-300">
-                        ⚠️ Você ainda não selecionou tipos de questões. Vá para{' '}
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto text-amber-900 dark:text-amber-300 underline"
-                          onClick={() => router.push('/profile')}
-                        >
-                          Perfil
-                        </Button>{' '}
-                        para escolher seus tipos.
-                      </p>
-                    </div>
-                  )}
-                  <TooltipProvider>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {QUESTION_TYPES.map((type) => {
-                        const isAllowed = allowedQuestionTypes.includes(type.id);
-                        const workingOn = [].includes(type.id);
-                        const recommendedContexts = getContextRecommendationsForType(type.id);
-
-                        return (
-                          <div
-                            key={type.id}
-                            className={cn(
-                              'flex items-start space-x-3 px-3 rounded-lg border transition-all',
-                              isAllowed && !workingOn
-                                ? 'border-border hover:border-primary hover:bg-primary/5 cursor-pointer'
-                                : 'border-border bg-muted/50 opacity-50 cursor-not-allowed'
-                            )}
-                          >
-                            {isAllowed && !workingOn ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-start space-x-3 w-full">
-                                    <div className="pt-3">
-                                      <Checkbox
-                                        id={type.id}
-                                        checked={questionTypes.includes(type.id)}
-                                        onCheckedChange={() => toggleQuestionType(type.id)}
-                                        className="mt-0.5"
-                                      />
-                                    </div>
-                                    <div className="flex-1">
-                                      <p
-                                        className="text-sm font-medium leading-tight cursor-pointer pt-3"
-                                        onClick={() => toggleQuestionType(type.id)}
-                                      >
-                                        {type.label}
-                                      </p>
-                                      <p
-                                        className="text-xs text-muted-foreground mt-1 pb-3"
-                                        onClick={() => toggleQuestionType(type.id)}
-                                      >
-                                        {type.description}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-[280px]">
-                                  <div className="space-y-1">
-                                    <p className="font-medium text-xs">{type.label}</p>
-                                    <p className="text-xs">{type.description}</p>
-                                    {recommendedContexts.length > 0 && (
-                                      <div className="pt-2 border-t border-border/50 mt-2">
-                                        <p className="text-xs font-medium mb-1">💡 Contextos recomendados:</p>
-                                        <ul className="text-xs space-y-0.5 list-disc list-inside">
-                                          {recommendedContexts.slice(0, 3).map((ctx) => {
-                                            const contextLabel = QUESTION_CONTEXTS.find((c) => c.value === ctx)?.label;
-                                            return contextLabel ? <li key={ctx}>{contextLabel}</li> : null;
-                                          })}
-                                        </ul>
-                                      </div>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-start space-x-3 w-full py-3">
-                                    <Checkbox id={type.id} checked={false} disabled className="mt-0.5" />
-                                    <div className="flex-1">
-                                      <Label
-                                        htmlFor={type.id}
-                                        className="text-sm font-medium cursor-not-allowed flex items-center gap-1 leading-tight"
-                                      >
-                                        {type.label}
-                                        <Lock className="h-3 w-3" />
-                                      </Label>
-                                      <p className="text-xs text-muted-foreground mt-1">{type.description}</p>
-                                    </div>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {workingOn && <p className="text-xs">Em breve!</p>}
-                                  {!workingOn && (
-                                    <p className="text-xs">
-                                      Este tipo de questão não está disponível no plano <strong>{userPlan}</strong>.
-                                      Faça upgrade para desbloquear.
-                                    </p>
-                                  )}
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </TooltipProvider>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button type="button" variant="outline" onClick={() => router.push('/dashboard')} className="flex-1">
-                    Cancelar
-                  </Button>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex-1">
-                          <Button type="submit" disabled={uploading || !canGenerate} className="w-full">
-                            {uploading ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Gerando Questões...
-                              </>
-                            ) : (
-                              <>
-                                {!canGenerate && <AlertCircle className="h-4 w-4 mr-2" />}
-                                Gerar Questões
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      {!canGenerate && getBlockReason() && (
-                        <TooltipContent>
-                          <p className="text-xs max-w-[250px]">{getBlockReason()}</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex-1">
+                        <Button type="submit" disabled={uploading || !canGenerate} className="w-full">
+                          {uploading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Gerando Questões...
+                            </>
+                          ) : (
+                            <>
+                              {!canGenerate && <AlertCircle className="h-4 w-4 mr-2" />}
+                              Gerar Questões
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    {!canGenerate && getBlockReason() && (
+                      <TooltipContent>
+                        <p className="text-xs max-w-[250px]">{getBlockReason()}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
   );
 }
