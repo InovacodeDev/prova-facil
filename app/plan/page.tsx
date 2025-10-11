@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Check, Crown, Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
-import { UserMenu } from '@/components/UserMenu';
 import { plans } from '@/components/Pricing';
 import { logClientError } from '@/lib/client-error-logger';
+import { AppLayout, PageHeader } from '@/components/layout';
 
 export default function PlanPage() {
   const [currentPlan, setCurrentPlan] = useState<string>('starter');
@@ -104,38 +104,22 @@ export default function PlanPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-      </div>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-              <div className="flex items-center gap-2">
-                <Crown className="h-6 w-6 text-primary" />
-                <span className="text-lg font-semibold">Planos</span>
-              </div>
-            </div>
-            <UserMenu />
-          </div>
-        </div>
-      </header>
+    <AppLayout>
+      <PageHeader title="Planos" description="Escolha o plano ideal para suas necessidades" />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Escolha seu plano</h1>
-          <p className="text-xl text-muted-foreground">
+      <div className="space-y-8">
+        <div className="text-center">
+          <p className="text-lg text-muted-foreground">
             Todos os planos incluem as funcionalidades principais. Escolha o que melhor atende seu ritmo.
           </p>
 
@@ -229,7 +213,7 @@ export default function PlanPage() {
         <div className="text-center mt-4 text-sm text-muted-foreground md:hidden">
           ← Deslize para ver todos os planos →
         </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
