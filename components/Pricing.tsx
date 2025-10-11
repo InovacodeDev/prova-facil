@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export const plans = [
   {
@@ -24,6 +23,11 @@ export const plans = [
     ],
     cta: 'Começar Grátis',
     highlighted: false,
+    stripeProductId: null, // Plano gratuito não tem product_id
+    stripePriceIds: {
+      monthly: null, // Plano gratuito não tem price_id
+      annual: null,
+    },
   },
   {
     id: 'basic',
@@ -41,6 +45,11 @@ export const plans = [
     ],
     cta: 'Começar Agora',
     highlighted: false,
+    stripeProductId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_BASIC || 'prod_TCS8S7wBmvsW3g',
+    stripePriceIds: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_BASIC_MONTHLY || '',
+      annual: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_BASIC_ANNUAL || '',
+    },
   },
   {
     id: 'essentials',
@@ -58,6 +67,11 @@ export const plans = [
     ],
     cta: 'Começar Agora',
     highlighted: false,
+    stripeProductId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_ESSENTIALS || 'prod_TCS9mLq5I4Ocsd',
+    stripePriceIds: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ESSENTIALS_MONTHLY || '',
+      annual: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ESSENTIALS_ANNUAL || '',
+    },
   },
   {
     id: 'plus',
@@ -75,6 +89,11 @@ export const plans = [
     ],
     cta: 'Começar Agora',
     highlighted: false,
+    stripeProductId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_PLUS || 'prod_TCSAL9dxY7XDmh',
+    stripePriceIds: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PLUS_MONTHLY || '',
+      annual: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PLUS_ANNUAL || '',
+    },
   },
   {
     id: 'advanced',
@@ -92,16 +111,39 @@ export const plans = [
     ],
     cta: 'Começar Agora',
     highlighted: true,
+    stripeProductId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_ADVANCED || 'prod_TCSAOytSIbuuYi',
+    stripePriceIds: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ADVANCED_MONTHLY || '',
+      annual: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ADVANCED_ANNUAL || '',
+    },
   },
 ];
 
-export function Pricing() {
-  const router = useRouter();
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+type Props = {
+  className?: string;
+  currentPlanId?: string;
+  handleSelectPlan: (planId: string) => void;
+};
 
-  const handlePlanClick = (planId: string) => {
-    router.push('/auth');
-  };
+export function Pricing({ className, currentPlanId, handleSelectPlan }: Props) {
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [stripeProducts, setStripeProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/stripe/products', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setStripeProducts(data.products);
+      })
+      .catch((error) => {
+        console.error('Erro ao carregar produtos do Stripe:', error);
+      });
+  }, []);
 
   const formatPrice = (plan: (typeof plans)[0]) => {
     if (plan.monthlyPrice === 0) return 'Grátis';
@@ -116,11 +158,11 @@ export function Pricing() {
   };
 
   return (
-    <section id="pricing" className="py-20 bg-muted/50">
+    <section id="pricing" className={className ?? 'py-20 bg-muted/50'}>
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
+        <div className="mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Planos e Preços</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl">
             Escolha o plano que se encaixa no seu ritmo de trabalho. Todos com acesso completo às funcionalidades
             principais.
           </p>
@@ -151,57 +193,69 @@ export function Pricing() {
         </div>
 
         {/* Scroll horizontal container */}
-        <div className="overflow-x-auto py-8">
-          <div className="flex gap-8 min-w-max px-4 mx-auto no-scrollbar" style={{ justifyContent: 'center' }}>
-            {plans.map((plan) => (
-              <Card
-                key={plan.id}
-                className={`relative flex flex-col w-[280px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-                  plan.highlighted ? 'border-primary border-2 shadow-lg' : 'border-border'
-                }`}
-              >
-                {plan.highlighted && (
-                  <div className="absolute -top-4 left-0 right-0 text-center">
-                    <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
-                  </div>
-                )}
+        <div className="overflow-x-auto py-8 no-scrollbar">
+          <div className="flex gap-6 min-w-max px-4 mx-auto" style={{ justifyContent: 'center' }}>
+            {plans.map((plan) => {
+              const stripeProduct = (stripeProducts ?? []).find((p) => p.id === plan.stripeProductId);
+              if (!stripeProduct && plan.id !== 'starter') return null;
+              const priceId = billingPeriod === 'monthly' ? plan.stripePriceIds.monthly : plan.stripePriceIds.annual;
 
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <CardTitle className="text-xl">{plan.name}</CardTitle>
-                    <Badge variant="outline" className="text-xs whitespace-nowrap">
-                      {plan.aiLevel}
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-xs min-h-[32px]">{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-3xl font-bold">{formatPrice(plan)}</span>
-                    {getPeriod(plan) && <span className="text-sm text-muted-foreground">{getPeriod(plan)}</span>}
-                  </div>
-                </CardHeader>
+              return (
+                <Card
+                  key={plan.id}
+                  className={`relative flex flex-col w-[320px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+                    plan.highlighted ? 'border-primary border-2 shadow-lg' : ''
+                  }`}
+                >
+                  {plan.highlighted && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
+                    </div>
+                  )}
 
-                <CardContent className="flex-grow pt-0">
-                  <ul className="space-y-2.5">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <span className="text-xs leading-relaxed">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center justify-between mb-2">
+                      {currentPlanId === plan.id && (
+                        <Badge variant="secondary" className="text-xs mr-4">
+                          Atual
+                        </Badge>
+                      )}
+                      <span className="flex-grow">{plan.name}</span>
+                      <Badge variant="outline" className="text-xs whitespace-nowrap">
+                        {plan.aiLevel}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="text-sm min-h-[40px]">{plan.description}</CardDescription>
+                    <div className="mt-4">
+                      <span className="text-3xl font-bold">{formatPrice(plan)}</span>
+                      {getPeriod(plan) && <span className="text-sm text-muted-foreground">{getPeriod(plan)}</span>}
+                    </div>
+                  </CardHeader>
 
-                <CardFooter className="pt-4">
-                  <Button
-                    className="w-full"
-                    variant={plan.highlighted ? 'default' : 'outline'}
-                    onClick={() => handlePlanClick(plan.id)}
-                  >
-                    {plan.cta}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                  <CardContent className="flex-grow pt-0">
+                    <ul className="space-y-3">
+                      {plan.features.map((feature, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <span className="text-sm leading-relaxed">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+
+                  <CardFooter className="pt-4">
+                    <Button
+                      className="w-full"
+                      variant={currentPlanId === plan.id ? 'secondary' : 'default'}
+                      disabled={currentPlanId === plan.id}
+                      onClick={() => handleSelectPlan(plan.id)}
+                    >
+                      {currentPlanId === plan.id ? 'Plano Atual' : 'Selecionar Plano'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         </div>
 

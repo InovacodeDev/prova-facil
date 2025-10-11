@@ -143,9 +143,8 @@ export const profiles = pgTable('profiles', {
   email: varchar('email', { length: 320 }).notNull().unique(),
   email_verified: boolean('email_verified').default(false).notNull(),
   email_verified_at: timestamp('email_verified_at'),
-  plan: planEnum().notNull().default('starter'),
-  plan_expire_at: timestamp('plan_expire_at', { mode: 'date' }),
-  renew_status: renewStatusEnum().notNull().default('none'),
+  plan: planEnum().notNull().default('starter'), // Cache do plano para queries rápidas
+  stripe_customer_id: varchar('stripe_customer_id', { length: 255 }).unique(), // Customer ID do Stripe - ÚNICA fonte da verdade aqui
   academic_level_id: integer('academic_level_id').references(() => academicLevels.id),
   allowed_cookies: text('allowed_cookies').array().notNull().default([]), // jsonb stored as text
   selected_question_types: questionTypeEnum('selected_question_types').array().notNull().default([]),
@@ -225,10 +224,75 @@ export const errorLogs = pgTable('error_logs', {
   created_at: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Stripe Subscription Status
+export const SubscriptionStatus = {
+  active: 'active',
+  canceled: 'canceled',
+  incomplete: 'incomplete',
+  incomplete_expired: 'incomplete_expired',
+  past_due: 'past_due',
+  trialing: 'trialing',
+  unpaid: 'unpaid',
+} as const;
+
+export const subscriptionStatusEnum = pgEnum('subscription_status', [
+  'active',
+  'canceled',
+  'incomplete',
+  'incomplete_expired',
+  'past_due',
+  'trialing',
+  'unpaid',
+]);
+
+// Stripe subscriptions table (AUDIT TRAIL - não usar como fonte da verdade)
+// A fonte da verdade é sempre o Stripe API
+// Esta tabela serve apenas para histórico e relatórios
+export const subscriptions = pgTable('subscriptions', {
+  id: uuid('id').defaultRandom().primaryKey().notNull(),
+  user_id: uuid('user_id')
+    .references(() => profiles.id)
+    .notNull(),
+  stripe_customer_id: varchar('stripe_customer_id', { length: 255 }).notNull(),
+  stripe_subscription_id: varchar('stripe_subscription_id', { length: 255 }).notNull(),
+  stripe_price_id: varchar('stripe_price_id', { length: 255 }).notNull(),
+  status: subscriptionStatusEnum().notNull(),
+  plan_id: planEnum().notNull(),
+  event_type: varchar('event_type', { length: 100 }).notNull(), // created, updated, deleted, etc
+  created_at: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Stripe payment history table
+export const payments = pgTable('payments', {
+  id: uuid('id').defaultRandom().primaryKey().notNull(),
+  user_id: uuid('user_id')
+    .references(() => profiles.id)
+    .notNull(),
+  subscription_id: uuid('subscription_id').references(() => subscriptions.id),
+  stripe_payment_intent_id: varchar('stripe_payment_intent_id', { length: 255 }).notNull().unique(),
+  amount: integer('amount').notNull(), // Amount in cents
+  currency: varchar('currency', { length: 3 }).notNull().default('brl'),
+  status: varchar('status', { length: 50 }).notNull(),
+  payment_method: varchar('payment_method', { length: 50 }),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
   academicLevel: one(academicLevels, { fields: [profiles.academic_level_id], references: [academicLevels.id] }),
   logsCycles: many(profileLogsCycle),
+  subscriptions: many(subscriptions),
+  payments: many(payments),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one, many }) => ({
+  user: one(profiles, { fields: [subscriptions.user_id], references: [profiles.id] }),
+  payments: many(payments),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  user: one(profiles, { fields: [payments.user_id], references: [profiles.id] }),
+  subscription: one(subscriptions, { fields: [payments.subscription_id], references: [subscriptions.id] }),
 }));
 
 export const assessmentsRelations = relations(assessments, ({ one, many }) => ({

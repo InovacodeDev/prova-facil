@@ -3,19 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Loader2, Filter } from 'lucide-react';
-import { ProvaFacilLogo, ProvaFacilIcon } from '@/assets/logo';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, Loader2, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useProfile } from '@/hooks/use-cache';
-import { UserMenu } from '@/components/UserMenu';
 import { Question, QuestionCard } from '@/components/QuestionCard';
 import { QUESTION_TYPES } from '@/lib/question-types';
 import { logClientError } from '@/lib/client-error-logger';
+import { Sidebar } from '@/components/Sidebar';
+import { PageHeader } from '@/components/PageHeader';
+import { AppLayout } from '@/components/layout';
 
 interface Subject {
   id: string;
@@ -163,105 +166,144 @@ export default function MyAssessmentsPage() {
   const subjectsWithQuestions = subjects.filter((s) => groupedData[s.id]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-              <ProvaFacilLogo className="h-6" />
+    <AppLayout>
+      {/* Header da Página */}
+      <PageHeader
+        title="Minhas Questões"
+        description="Visualize e gerencie suas questões criadas"
+        action={
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* Filtro de tipo de questão */}
+            {/* Mobile: popover com select */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" className="md:hidden" title="Filtrar por tipo">
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="end">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Filtrar por tipo</h4>
+                  <Select value={questionTypeFilter} onValueChange={setQuestionTypeFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {QUESTION_TYPE_FILTERS.map((filter) => (
+                        <SelectItem key={filter.id} value={filter.id}>
+                          {filter.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Desktop: ícone + select inline */}
+            <div className="hidden md:flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={questionTypeFilter} onValueChange={setQuestionTypeFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filtrar por tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUESTION_TYPE_FILTERS.map((filter) => (
+                    <SelectItem key={filter.id} value={filter.id}>
+                      {filter.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-center gap-3">
-              {/* Filtro de tipo de questão */}
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={questionTypeFilter} onValueChange={setQuestionTypeFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Filtrar por tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {QUESTION_TYPE_FILTERS.map((filter) => (
-                      <SelectItem key={filter.id} value={filter.id}>
-                        {filter.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={() => router.push('/new-assessment')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Questão
-              </Button>
-              <UserMenu />
-            </div>
+
+            {/* Botão Nova Questão */}
+            {/* Mobile: apenas ícone */}
+            <Button
+              onClick={() => router.push('/new-assessment')}
+              size="icon"
+              className="md:hidden"
+              title="Nova Questão"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+
+            {/* Desktop: ícone + texto */}
+            <Button onClick={() => router.push('/new-assessment')} className="hidden md:flex">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Questão
+            </Button>
           </div>
-        </div>
-      </header>
+        }
+      />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {subjectsWithQuestions.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <ProvaFacilIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold mb-2">Nenhuma questão encontrada</h3>
-              <p className="text-muted-foreground mb-6">
-                Você ainda não criou nenhuma questão. Comece criando sua primeira!
-              </p>
-              <Button onClick={() => router.push('/new-assessment')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Primeira Questão
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Tabs defaultValue={subjectsWithQuestions[0]?.id} className="w-full">
-            <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
-              {subjectsWithQuestions.map((subject) => (
-                <TabsTrigger key={subject.id} value={subject.id}>
+      {subjectsWithQuestions.length === 0 ? (
+        <Card className="text-center py-12">
+          <CardContent>
+            <div className="h-12 w-12 mx-auto mb-4 opacity-50 bg-muted rounded-full" />
+            <h3 className="text-xl font-semibold mb-2">Nenhuma questão encontrada</h3>
+            <p className="text-muted-foreground mb-6">
+              Você ainda não criou nenhuma questão. Comece criando sua primeira!
+            </p>
+            <Button onClick={() => router.push('/new-assessment')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Primeira Questão
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue={subjectsWithQuestions[0]?.id} className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+            {subjectsWithQuestions.map((subject) => {
+              // Calcular total de questões por matéria
+              const totalQuestions = Object.values(groupedData[subject.id].assessments)
+                .flat()
+                .filter((q) => questionTypeFilter === 'all' || q.type === questionTypeFilter).length;
+
+              return (
+                <TabsTrigger key={subject.id} value={subject.id} className="gap-2">
                   {subject.name}
+                  <Badge variant="secondary" className="ml-1">
+                    {totalQuestions}
+                  </Badge>
                 </TabsTrigger>
-              ))}
-            </TabsList>
+              );
+            })}
+          </TabsList>
 
-            {subjectsWithQuestions.map((subject) => (
-              <TabsContent key={subject.id} value={subject.id} className="space-y-8 mt-6">
-                <Accordion type="multiple" className="w-full space-y-4">
-                  {Object.entries(groupedData[subject.id].assessments).map(([title, questions]) => {
-                    const filteredQuestions = filterQuestionsByType(questions);
+          {subjectsWithQuestions.map((subject) => (
+            <TabsContent key={subject.id} value={subject.id} className="space-y-8 mt-6">
+              <Accordion type="multiple" className="w-full space-y-4">
+                {Object.entries(groupedData[subject.id].assessments).map(([title, questions]) => {
+                  const filteredQuestions = filterQuestionsByType(questions);
 
-                    // Não mostrar seção se não houver questões após filtro
-                    if (filteredQuestions.length === 0) return null;
+                  // Não mostrar seção se não houver questões após filtro
+                  if (filteredQuestions.length === 0) return null;
 
-                    return (
-                      <AccordionItem key={title} value={title} className="border rounded-lg px-4">
-                        <AccordionTrigger className="hover:no-underline">
-                          <div className="flex items-center gap-3">
-                            <div className="h-1 w-1 rounded-full bg-primary" />
-                            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-                            <span className="text-sm text-muted-foreground">({filteredQuestions.length} questões)</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-6 pl-2">
-                          <div className="masonry-grid">
-                            {filteredQuestions.map((question) => (
-                              <QuestionCard key={question.id} question={question} />
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
-              </TabsContent>
-            ))}
-          </Tabs>
-        )}
-      </main>
-    </div>
+                  return (
+                    <AccordionItem key={title} value={title} className="border rounded-lg px-4">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="h-1 w-1 rounded-full bg-primary" />
+                          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+                          <span className="text-sm text-muted-foreground">({filteredQuestions.length} questões)</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-6 pl-2">
+                        <div className="masonry-grid">
+                          {filteredQuestions.map((question) => (
+                            <QuestionCard key={question.id} question={question} />
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
+    </AppLayout>
   );
 }

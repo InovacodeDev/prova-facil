@@ -258,9 +258,6 @@ CREATE POLICY "Allow admin to manage plans"
         )
     );
 
--- Create index for faster lookups
-CREATE INDEX idx_plans_id ON public.plans(id);
-
 -- ================================
 -- Notes:
 -- - Policies use column names directly in WITH CHECK (evaluated against the new row).
@@ -281,18 +278,122 @@ FOR ALL
 USING (true)
 WITH CHECK (true);
 
--- 3. (OPCIONAL) Se você quiser uma policy mais restritiva que só permite
--- agregações e NÃO permite SELECT de colunas individuais, você pode
--- criar uma VIEW com permissões específicas:
-CREATE OR REPLACE VIEW public_profiles_count AS
-SELECT 
-  COUNT(*) as total_profiles,
-  COUNT(CASE WHEN email_verified = true THEN 1 END) as verified_profiles,
-  COUNT(CASE WHEN email_verified = false THEN 1 END) as unverified_profiles
-FROM profiles;
-
 -- Garantir que a view é acessível publicamente
 GRANT SELECT ON public_profiles_count TO anon, authenticated;
 
 COMMENT ON VIEW public_profiles_count IS 
 'View pública para estatísticas agregadas de profiles. Não expõe dados individuais.';
+
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- Policy: usuários podem ver apenas suas próprias subscriptions
+CREATE POLICY "Users can view their own subscriptions"
+ON subscriptions
+FOR SELECT
+USING (user_id = auth.uid() OR user_id IN (
+  SELECT id FROM profiles WHERE user_id = auth.uid()
+));
+
+-- Habilita Row-Level Security na tabela subscriptions e cria políticas:
+-- - INSERT: apenas usuários autenticados e apenas inserindo rows com user_id = auth.uid()
+-- - UPDATE: apenas o proprietário (user_id) pode atualizar; impede mudança de owner
+
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- INSERT: somente usuários autenticados e apenas para seu próprio user_id
+CREATE POLICY subscriptions_insert_authenticated
+  ON public.subscriptions
+  FOR INSERT
+  WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND auth.uid()::uuid = user_id
+  );
+
+-- UPDATE: somente o proprietário pode atualizar a sua subscription.
+-- USING filtra as linhas que podem ser afetadas (owner apenas).
+-- WITH CHECK garante que o user_id não seja alterado para outro owner durante o UPDATE.
+CREATE POLICY subscriptions_update_owner
+  ON public.subscriptions
+  FOR UPDATE
+  USING (
+    auth.uid() IS NOT NULL
+    AND auth.uid()::uuid = user_id
+  )
+  WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND auth.uid()::uuid = user_id
+  );
+
+DROP POLICY IF EXISTS "Users can view their own subscriptions" ON public.subscriptions;
+DROP POLICY IF EXISTS subscriptions_select_owner ON public.subscriptions;
+
+CREATE POLICY subscriptions_select_owner
+  ON public.subscriptions
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = public.subscriptions.user_id
+        AND p.user_id = auth.uid()
+    )
+  );
+
+-- Nota:
+-- 1) Estas políticas usam a função auth.uid() (Supabase/Postgres JWT helper). 
+--    Se seu ambiente não expõe auth.uid(), substitua por current_setting('request.jwt.claims.sub', true).
+-- 2) Considere criar políticas adicionais para SELECT/DELETE conforme necessidade.
+
+-- Adiciona políticas RLS para a tabela `payments`
+-- - SELECT: somente o usuário que criou (owner) pode ler
+-- - INSERT: somente usuários autenticados podem inserir e apenas para seu próprio profile
+-- - UPDATE: somente o owner pode atualizar; impede alteração do owner
+
+ALTER TABLE IF EXISTS public.payments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS payments_select_owner ON public.payments;
+CREATE POLICY payments_select_owner
+  ON public.payments
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = public.payments.user_id
+        AND p.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS payments_insert_auth ON public.payments;
+CREATE POLICY payments_insert_auth
+  ON public.payments
+  FOR INSERT
+  WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = public.payments.user_id
+        AND p.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS payments_update_owner ON public.payments;
+CREATE POLICY payments_update_owner
+  ON public.payments
+  FOR UPDATE
+  USING (
+    auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = public.payments.user_id
+        AND p.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = public.payments.user_id
+        AND p.user_id = auth.uid()
+    )
+  );

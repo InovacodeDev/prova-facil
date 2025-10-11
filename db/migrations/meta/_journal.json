@@ -15,6 +15,34 @@
       "when": 1759873238583,
       "tag": "0001_chunky_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1759936655101,
+      "tag": "0002_brave_layla_miller",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1759957430207,
+      "tag": "0003_messy_the_enforcers",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1759968218260,
+      "tag": "0004_damp_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1759972437956,
+      "tag": "0005_fair_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

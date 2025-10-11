@@ -186,13 +186,14 @@ export default function AuthPage() {
       // Não bloqueamos aqui, pois tentaremos criar o profile no login se necessário
     }
 
-    // 3. Se o email já está confirmado (ex: domínios permitidos), redirecionar
+    // 3. Se o email já está confirmado (ex: domínios permitidos), redirecionar para a página de planos
     if (signUpData.session) {
       toast({
         title: 'Conta criada com sucesso!',
-        description: 'Você já está logado e será redirecionado.',
+        description: 'Escolha seu plano para começar.',
       });
-      router.push('/dashboard');
+      // Redirecionar para página de planos com modal aberto para plano recomendado
+      router.push('/plan?openModal=true&planId=essentials');
       router.refresh();
       setIsLoading(false);
       return;
@@ -201,8 +202,7 @@ export default function AuthPage() {
     // 4. Caso contrário, solicitar confirmação de email
     toast({
       title: 'Conta criada com sucesso!',
-      description:
-        'Enviamos um email de confirmação. Por favor, verifique sua caixa de entrada e clique no link para ativar sua conta.',
+      description: 'Enviamos um email de confirmação. Após confirmar, você poderá escolher seu plano.',
       duration: 10000,
     });
 

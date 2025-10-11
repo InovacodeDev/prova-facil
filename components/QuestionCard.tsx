@@ -1070,8 +1070,8 @@ export const QuestionCard = ({ question }: QuestionCardProps) => {
 
   return (
     <Card className="overflow-hidden">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2">
           <Badge variant="secondary" className="text-xs">
             {getQuestionTypeLabel()}
           </Badge>

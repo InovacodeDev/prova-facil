@@ -6,23 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  BookOpen,
-  ArrowLeft,
-  User,
-  Camera,
-  Loader2,
-  Trash2,
-  AlertCircle,
-  CheckCircle2,
-  Lock,
-  Info,
-} from 'lucide-react';
+import { Camera, Loader2, Trash2, AlertCircle, CheckCircle2, Lock, Info } from 'lucide-react';
 import { ProvaFacilIcon } from '@/assets/logo';
+import { PageHeader } from '@/components/PageHeader';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useProfile, invalidateProfileCache } from '@/hooks/use-cache';
@@ -41,6 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { AppLayout } from '@/components/layout';
 
 interface Profile {
   id: string;
@@ -329,30 +321,21 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-            <div className="flex items-center gap-2">
-              <User className="h-6 w-6 text-primary" />
-              <span className="text-lg font-semibold">Meu Perfil</span>
-            </div>
-          </div>
-        </div>
-      </header>
+    <AppLayout>
+      <PageHeader title="Perfil" description="Gerencie suas informações pessoais e configurações da conta" />
+      <Tabs defaultValue="personal">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
+          <TabsTrigger value="preferences">Preferências</TabsTrigger>
+          <TabsTrigger value="security">Segurança</TabsTrigger>
+        </TabsList>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
+        {/* Tab: Dados Pessoais */}
+        <TabsContent value="personal">
           <Card>
             <CardHeader>
-              <CardTitle>Informações do Perfil</CardTitle>
-              <CardDescription>Gerencie suas informações pessoais e configurações da conta</CardDescription>
+              <CardTitle>Informações Pessoais</CardTitle>
+              <CardDescription>Atualize seus dados básicos e status de verificação</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Avatar Section */}
@@ -450,8 +433,33 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <Button onClick={handleSave} disabled={saving} className="flex-1">
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    'Salvar Alterações'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Preferências */}
+        <TabsContent value="preferences">
+          <Card>
+            <CardHeader>
+              <CardTitle>Preferências de Questões</CardTitle>
+              <CardDescription>Configure os tipos de questões que você deseja utilizar na plataforma</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               {/* Question Types Selection */}
-              <div className="space-y-4 pt-4 border-t border-border">
+              <div className="space-y-4">
                 <div>
                   <Label className="text-base">Tipos de Questões Disponíveis</Label>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -559,10 +567,30 @@ export default function ProfilePage() {
                       Salvando...
                     </>
                   ) : (
-                    'Salvar Alterações'
+                    'Salvar Preferências'
                   )}
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Segurança */}
+        <TabsContent value="security">
+          <Card>
+            <CardHeader>
+              <CardTitle>Segurança da Conta</CardTitle>
+              <CardDescription>Gerencie senha e configurações de segurança</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Change Password Action */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-base">Senha de Acesso</Label>
+                  <p className="text-sm text-muted-foreground mt-1">Mantenha sua senha atualizada e segura</p>
+                </div>
                 <Button variant="outline" onClick={() => router.push('/change-password')}>
+                  <Lock className="h-4 w-4 mr-2" />
                   Alterar Senha
                 </Button>
               </div>
@@ -612,8 +640,8 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </main>
-    </div>
+        </TabsContent>
+      </Tabs>
+    </AppLayout>
   );
 }

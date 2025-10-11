@@ -38,6 +38,9 @@ export async function GET(request: NextRequest) {
         if (profileError) {
           console.error('Erro ao criar profile no callback:', profileError);
         }
+
+        // Redirecionar novo usuário para página de planos
+        return NextResponse.redirect(new URL('/plan?openModal=true&planId=essentials', requestUrl.origin));
       } else {
         // Atualizar status de verificação de email se necessário
         if (data.user.email_confirmed_at) {
