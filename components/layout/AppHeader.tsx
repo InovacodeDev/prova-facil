@@ -120,7 +120,7 @@ export function AppHeader({ onMenuClick }: AppHeaderProps) {
             <Button variant="ghost" size="icon" onClick={onMenuClick} className="flex-shrink-0">
               <Menu className="h-5 w-5" />
             </Button>
-            <ProvaFacilText className="h-6" clickable={false} />
+            <ProvaFacilText className="h-5" clickable={false} />
           </div>
 
           {/* Right side: User menu */}
