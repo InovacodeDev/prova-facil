@@ -11,18 +11,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
-  BookOpen,
-  ArrowLeft,
-  User,
   Camera,
   Loader2,
   Trash2,
   AlertCircle,
   CheckCircle2,
-  Lock,
   Info,
 } from 'lucide-react';
-import { ProvaFacilIcon } from '@/assets/logo';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useProfile, invalidateProfileCache } from '@/hooks/use-cache';
@@ -41,6 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { AppLayout, PageHeader } from '@/components/layout';
 
 interface Profile {
   id: string;
@@ -319,42 +315,32 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <ProvaFacilIcon className="h-8 w-8 mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Carregando perfil...</p>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-primary" />
+            <p className="text-muted-foreground">Carregando perfil...</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-            <div className="flex items-center gap-2">
-              <User className="h-6 w-6 text-primary" />
-              <span className="text-lg font-semibold">Meu Perfil</span>
-            </div>
-          </div>
-        </div>
-      </header>
+    <AppLayout>
+      <PageHeader
+        title="Meu Perfil"
+        description="Gerencie suas informações pessoais e preferências"
+      />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informações do Perfil</CardTitle>
-              <CardDescription>Gerencie suas informações pessoais e configurações da conta</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações do Perfil</CardTitle>
+            <CardDescription>Gerencie suas informações pessoais e configurações da conta</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
               {/* Avatar Section */}
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
@@ -612,8 +598,7 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
