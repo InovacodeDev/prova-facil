@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, BarChart3, Loader2, TrendingUp, AlertCircle } from 'lucide-react';
+import { Loader2, TrendingUp, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
-import { UserMenu } from '@/components/UserMenu';
 import { UsageChart } from '@/components/UsageChart';
 import type { UsageStats } from '@/lib/usage-tracking';
 import { logClientError } from '@/lib/client-error-logger';
+import { AppLayout, PageHeader } from '@/components/layout';
 
 export default function UsagePage() {
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
@@ -58,33 +58,37 @@ export default function UsagePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-          <span className="text-lg text-gray-600">Carregando...</span>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-lg text-muted-foreground">Carregando...</span>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!usageStats) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-              Erro
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">Não foi possível carregar suas estatísticas.</p>
-            <Button onClick={() => router.push('/dashboard')} className="mt-4">
-              Voltar ao Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Card className="max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                Erro
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Não foi possível carregar suas estatísticas.</p>
+              <Button onClick={() => router.push('/dashboard')} className="mt-4">
+                Voltar ao Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
     );
   }
 
@@ -93,33 +97,14 @@ export default function UsagePage() {
   const isOverLimit = percentageUsed >= 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => router.push('/dashboard')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Button>
-            <UserMenu />
-          </div>
-        </div>
-      </div>
+    <AppLayout>
+      <PageHeader
+        title="Cotas de Uso"
+        description={`Acompanhe sua utilização mensal de questões • Período: ${usageStats.currentMonth}`}
+      />
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Title */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="h-8 w-8 text-blue-500" />
-            Cotas de Uso
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Acompanhe sua utilização mensal de questões • Período: {usageStats.currentMonth}
-          </p>
-        </div>
-
+      <div className="space-y-8">
         {usageStats.totalQuestions === 0 && (
           <div className="mb-8 rounded-lg border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-600">
             Nenhuma questão foi gerada neste ciclo ainda. Assim que criar suas primeiras questões, o consumo aparecerá
@@ -262,6 +247,6 @@ export default function UsagePage() {
           </Card>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
