@@ -308,318 +308,314 @@ export default function ProfilePage() {
       .slice(0, 2);
   };
 
-  if (loading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-primary" />
-            <p className="text-muted-foreground">Carregando perfil...</p>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout>
       <PageHeader title="Meu Perfil" description="Gerencie suas informações pessoais e preferências" />
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto">
-        <Tabs defaultValue="personal" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
-            <TabsTrigger value="preferences">Preferências</TabsTrigger>
-            <TabsTrigger value="security">Segurança</TabsTrigger>
-          </TabsList>
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-primary" />
+              <p className="text-muted-foreground">Carregando perfil...</p>
+            </div>
+          </div>
+        ) : (
+          <Tabs defaultValue="personal" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
+              <TabsTrigger value="preferences">Preferências</TabsTrigger>
+              <TabsTrigger value="security">Segurança</TabsTrigger>
+            </TabsList>
 
-          {/* Personal Data Tab */}
-          <TabsContent value="personal" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações Pessoais</CardTitle>
-                <CardDescription>Gerencie suas informações básicas de perfil</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Avatar Section */}
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-20 w-20">
-                    <AvatarFallback className="text-lg">{getInitials(fullName || user?.email || '')}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <Button variant="outline" size="sm" disabled>
-                      <Camera className="h-4 w-4 mr-2" />
-                      Alterar Foto
-                    </Button>
-                    <p className="text-sm text-muted-foreground mt-1">Em breve - Upload de avatar</p>
-                  </div>
-                </div>
-
-                {/* Form Fields */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Nome Completo</Label>
-                    <Input
-                      id="fullName"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Seu nome completo"
-                    />
+            {/* Personal Data Tab */}
+            <TabsContent value="personal" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informações Pessoais</CardTitle>
+                  <CardDescription>Gerencie suas informações básicas de perfil</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Avatar Section */}
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarFallback className="text-lg">{getInitials(fullName || user?.email || '')}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <Button variant="outline" size="sm" disabled>
+                        <Camera className="h-4 w-4 mr-2" />
+                        Alterar Foto
+                      </Button>
+                      <p className="text-sm text-muted-foreground mt-1">Em breve - Upload de avatar</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="seu@email.com"
-                    />
-                    <p className="text-sm text-muted-foreground">Alterar o email pode exigir verificação</p>
-                  </div>
-
-                  {/* Email Verification Section */}
-                  <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          Status de Verificação de Email
-                          {emailVerified ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <AlertCircle className="h-4 w-4 text-orange-500" />
-                          )}
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {emailVerified
-                            ? 'Seu email está verificado e ativo.'
-                            : 'Recomendamos verificar seu email para garantir acesso completo à plataforma.'}
-                        </p>
-                      </div>
-                      {emailVerified ? (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
-                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                          <span className="text-sm font-medium text-green-700 dark:text-green-300">Verificado</span>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSendVerificationEmail}
-                          disabled={sendingVerification}
-                        >
-                          {sendingVerification ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Enviando...
-                            </>
-                          ) : (
-                            'Enviar Verificação'
-                          )}
-                        </Button>
-                      )}
+                  {/* Form Fields */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Nome Completo</Label>
+                      <Input
+                        id="fullName"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Seu nome completo"
+                      />
                     </div>
 
-                    {emailVerified && cachedProfile?.email_verified_at && (
-                      <p className="text-xs text-muted-foreground">
-                        Verificado em:{' '}
-                        {new Date(cachedProfile.email_verified_at).toLocaleDateString('pt-BR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                      />
+                      <p className="text-sm text-muted-foreground">Alterar o email pode exigir verificação</p>
+                    </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-4">
-                  <Button onClick={handleSave} disabled={saving} className="flex-1">
-                    {saving ? (
+                    {/* Email Verification Section */}
+                    <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <Label className="text-sm font-medium flex items-center gap-2">
+                            Status de Verificação de Email
+                            {emailVerified ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-orange-500" />
+                            )}
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {emailVerified
+                              ? 'Seu email está verificado e ativo.'
+                              : 'Recomendamos verificar seu email para garantir acesso completo à plataforma.'}
+                          </p>
+                        </div>
+                        {emailVerified ? (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <span className="text-sm font-medium text-green-700 dark:text-green-300">Verificado</span>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSendVerificationEmail}
+                            disabled={sendingVerification}
+                          >
+                            {sendingVerification ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Enviando...
+                              </>
+                            ) : (
+                              'Enviar Verificação'
+                            )}
+                          </Button>
+                        )}
+                      </div>
+
+                      {emailVerified && cachedProfile?.email_verified_at && (
+                        <p className="text-xs text-muted-foreground">
+                          Verificado em:{' '}
+                          {new Date(cachedProfile.email_verified_at).toLocaleDateString('pt-BR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-4">
+                    <Button onClick={handleSave} disabled={saving} className="flex-1">
+                      {saving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        'Salvar Alterações'
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Danger Zone */}
+                  <div className="pt-6 border-t border-border">
+                    <CardTitle className="text-destructive mb-2">Zona de Perigo</CardTitle>
+                    <CardDescription className="mb-4">
+                      Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.
+                    </CardDescription>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={deleting}>
+                          {deleting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Excluindo...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir Conta
+                            </>
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmar Exclusão da Conta</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita e todos os seus
+                            dados serão permanentemente removidos.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeleteAccount}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Sim, Excluir Conta
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Preferences Tab */}
+            <TabsContent value="preferences" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preferências de Questões</CardTitle>
+                  <CardDescription>
+                    {cachedProfile ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Salvando...
+                        Selecione até {PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1} tipos de questões para
+                        usar ({selectedQuestionTypes.length}/{PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1}{' '}
+                        selecionados)
                       </>
                     ) : (
-                      'Salvar Alterações'
+                      'Carregando informações do plano...'
                     )}
-                  </Button>
-                </div>
-
-                {/* Danger Zone */}
-                <div className="pt-6 border-t border-border">
-                  <CardTitle className="text-destructive mb-2">Zona de Perigo</CardTitle>
-                  <CardDescription className="mb-4">
-                    Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.
                   </CardDescription>
-
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" disabled={deleting}>
-                        {deleting ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Excluindo...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir Conta
-                          </>
-                        )}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmar Exclusão da Conta</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita e todos os seus
-                          dados serão permanentemente removidos.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDeleteAccount}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Sim, Excluir Conta
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Preferences Tab */}
-          <TabsContent value="preferences" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Preferências de Questões</CardTitle>
-                <CardDescription>
-                  {cachedProfile ? (
-                    <>
-                      Selecione até {PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1} tipos de questões para
-                      usar ({selectedQuestionTypes.length}/{PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1}{' '}
-                      selecionados)
-                    </>
-                  ) : (
-                    'Carregando informações do plano...'
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!canUpdateTypes && nextUpdateDate && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Limite de Alterações Mensal</AlertTitle>
+                      <AlertDescription>
+                        Você só pode alterar os tipos de questões uma vez por mês. Próxima alteração disponível em:{' '}
+                        <strong>{nextUpdateDate}</strong>
+                      </AlertDescription>
+                    </Alert>
                   )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {!canUpdateTypes && nextUpdateDate && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Limite de Alterações Mensal</AlertTitle>
-                    <AlertDescription>
-                      Você só pode alterar os tipos de questões uma vez por mês. Próxima alteração disponível em:{' '}
-                      <strong>{nextUpdateDate}</strong>
+
+                  <TooltipProvider>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {QUESTION_TYPES.map((type) => {
+                        const isSelected = selectedQuestionTypes.includes(type.id);
+                        const isDisabled = !canUpdateTypes || !cachedProfile;
+                        const hint = getQuestionTypeHint(type.id);
+
+                        return (
+                          <Tooltip key={type.id} delayDuration={200}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${
+                                  isSelected ? 'bg-primary/5 border-primary' : 'border-border hover:border-primary/50'
+                                } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                onClick={() => !isDisabled && handleToggleQuestionType(type.id)}
+                              >
+                                <Checkbox
+                                  id={type.id}
+                                  checked={isSelected}
+                                  disabled={isDisabled}
+                                  onCheckedChange={() => handleToggleQuestionType(type.id)}
+                                  className="mt-1"
+                                />
+                                <div className="flex-1">
+                                  <Label
+                                    htmlFor={type.id}
+                                    className={`font-medium cursor-pointer flex items-center gap-1.5 ${
+                                      isDisabled ? 'cursor-not-allowed' : ''
+                                    }`}
+                                  >
+                                    {type.label}
+                                    {hint && <Info className="h-3.5 w-3.5 text-muted-foreground" />}
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
+                                </div>
+                                {isSelected && <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />}
+                              </div>
+                            </TooltipTrigger>
+                            {hint && (
+                              <TooltipContent side="top" className="max-w-sm p-4">
+                                <div className="space-y-2">
+                                  <div>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                      Melhores Disciplinas
+                                    </p>
+                                    <p className="text-sm">{hint.bestDisciplines}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                      Nível Indicado
+                                    </p>
+                                    <p className="text-sm">{hint.educationLevel}</p>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </TooltipProvider>
+
+                  <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+                    <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <AlertTitle className="text-blue-900 dark:text-blue-300">Dica de Uso</AlertTitle>
+                    <AlertDescription className="text-blue-800 dark:text-blue-400">
+                      Escolha os tipos de questões que você mais utiliza. Você poderá alterá-los novamente após 30 dias.
+                      Para desbloquear mais tipos, considere fazer upgrade do seu plano.
                     </AlertDescription>
                   </Alert>
-                )}
 
-                <TooltipProvider>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {QUESTION_TYPES.map((type) => {
-                      const isSelected = selectedQuestionTypes.includes(type.id);
-                      const isDisabled = !canUpdateTypes || !cachedProfile;
-                      const hint = getQuestionTypeHint(type.id);
-
-                      return (
-                        <Tooltip key={type.id} delayDuration={200}>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={`flex items-start space-x-3 p-3 rounded-lg border transition-all ${
-                                isSelected ? 'bg-primary/5 border-primary' : 'border-border hover:border-primary/50'
-                              } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                              onClick={() => !isDisabled && handleToggleQuestionType(type.id)}
-                            >
-                              <Checkbox
-                                id={type.id}
-                                checked={isSelected}
-                                disabled={isDisabled}
-                                onCheckedChange={() => handleToggleQuestionType(type.id)}
-                                className="mt-1"
-                              />
-                              <div className="flex-1">
-                                <Label
-                                  htmlFor={type.id}
-                                  className={`font-medium cursor-pointer flex items-center gap-1.5 ${
-                                    isDisabled ? 'cursor-not-allowed' : ''
-                                  }`}
-                                >
-                                  {type.label}
-                                  {hint && <Info className="h-3.5 w-3.5 text-muted-foreground" />}
-                                </Label>
-                                <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
-                              </div>
-                              {isSelected && <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />}
-                            </div>
-                          </TooltipTrigger>
-                          {hint && (
-                            <TooltipContent side="top" className="max-w-sm p-4">
-                              <div className="space-y-2">
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                    Melhores Disciplinas
-                                  </p>
-                                  <p className="text-sm">{hint.bestDisciplines}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                    Nível Indicado
-                                  </p>
-                                  <p className="text-sm">{hint.educationLevel}</p>
-                                </div>
-                              </div>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      );
-                    })}
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-4">
+                    <Button onClick={handleSave} disabled={saving} className="flex-1">
+                      {saving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        'Salvar Preferências'
+                      )}
+                    </Button>
                   </div>
-                </TooltipProvider>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-                  <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <AlertTitle className="text-blue-900 dark:text-blue-300">Dica de Uso</AlertTitle>
-                  <AlertDescription className="text-blue-800 dark:text-blue-400">
-                    Escolha os tipos de questões que você mais utiliza. Você poderá alterá-los novamente após 30 dias.
-                    Para desbloquear mais tipos, considere fazer upgrade do seu plano.
-                  </AlertDescription>
-                </Alert>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-4">
-                  <Button onClick={handleSave} disabled={saving} className="flex-1">
-                    {saving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      'Salvar Preferências'
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Security Tab */}
-          <TabsContent value="security">
-            <SecurityTab />
-          </TabsContent>
-        </Tabs>
+            {/* Security Tab */}
+            <TabsContent value="security">
+              <SecurityTab />
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </AppLayout>
   );

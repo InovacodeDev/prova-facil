@@ -148,19 +148,6 @@ export default function MyAssessmentsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 text-primary mx-auto mb-4 animate-spin" />
-            <p className="text-muted-foreground">Carregando questões...</p>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
   const subjectsWithQuestions = subjects.filter((s) => groupedData[s.id]);
 
   return (
@@ -195,7 +182,14 @@ export default function MyAssessmentsPage() {
       />
 
       {/* Main Content */}
-      {subjectsWithQuestions.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 text-primary mx-auto mb-4 animate-spin" />
+            <p className="text-muted-foreground">Carregando questões...</p>
+          </div>
+        </div>
+      ) : subjectsWithQuestions.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
             <div className="mx-auto mb-4 p-3 bg-secondary/10 rounded-full w-fit">

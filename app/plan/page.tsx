@@ -86,30 +86,29 @@ export default function PlanPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        </div>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout>
       <PageHeader title="Planos" description="Escolha o plano ideal para suas necessidades" />
 
       {/* Main Content */}
-      <div className="space-y-8">
-        <div className="text-center">
-          <p className="text-lg text-muted-foreground">
-            Todos os planos incluem as funcionalidades principais. Escolha o que melhor atende seu ritmo.
-          </p>
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando planos...</p>
+          </div>
         </div>
+      ) : (
+        <div className="space-y-8">
+          <div className="text-center">
+            <p className="text-lg text-muted-foreground">
+              Todos os planos incluem as funcionalidades principais. Escolha o que melhor atende seu ritmo.
+            </p>
+          </div>
 
-        <PricingShared currentPlan={currentPlan} onPlanClick={handleSelectPlan} />
-      </div>
+          <PricingShared currentPlan={currentPlan} onPlanClick={handleSelectPlan} />
+        </div>
+      )}
     </AppLayout>
   );
 }
