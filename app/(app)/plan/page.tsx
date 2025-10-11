@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { PricingShared } from '@/components/PricingShared';
 import { logClientError } from '@/lib/client-error-logger';
-import { AppLayout, PageHeader } from '@/components/layout';
+import { PageHeader } from '@/components/layout';
 
 export default function PlanPage() {
   const [currentPlan, setCurrentPlan] = useState<string>('starter');
@@ -87,7 +87,7 @@ export default function PlanPage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <PageHeader title="Planos" description="Escolha o plano ideal para suas necessidades" />
 
       {/* Main Content */}
@@ -109,6 +109,6 @@ export default function PlanPage() {
           <PricingShared currentPlan={currentPlan} onPlanClick={handleSelectPlan} />
         </div>
       )}
-    </AppLayout>
+    </>
   );
 }

@@ -30,7 +30,7 @@ import {
   ACCEPTED_FILE_EXTENSIONS,
   type ExtractedText,
 } from '@/lib/document-extractor';
-import { AppLayout, PageHeader } from '@/components/layout';
+import { PageHeader } from '@/components/layout';
 
 const SUBJECTS = [
   'Matemática',
@@ -616,7 +616,7 @@ export default function NewAssessmentPage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <PageHeader
         title="Criar Questões com IA"
         description="Preencha os campos abaixo para gerar questões automaticamente com inteligência artificial"
@@ -1232,6 +1232,6 @@ export default function NewAssessmentPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </>
   );
 }

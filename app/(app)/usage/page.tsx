@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/client';
 import { UsageChart } from '@/components/UsageChart';
 import type { UsageStats } from '@/lib/usage-tracking';
 import { logClientError } from '@/lib/client-error-logger';
-import { AppLayout, PageHeader } from '@/components/layout';
+import { PageHeader } from '@/components/layout';
 
 export default function UsagePage() {
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
@@ -57,7 +57,7 @@ export default function UsagePage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <PageHeader
         title="Cotas de Uso"
         description={
@@ -254,6 +254,6 @@ export default function UsagePage() {
           })()}
         </>
       )}
-    </AppLayout>
+    </>
   );
 }

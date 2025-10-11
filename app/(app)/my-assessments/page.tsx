@@ -14,7 +14,7 @@ import { useProfile } from '@/hooks/use-cache';
 import { Question, QuestionCard } from '@/components/QuestionCard';
 import { QUESTION_TYPES } from '@/lib/question-types';
 import { logClientError } from '@/lib/client-error-logger';
-import { AppLayout, PageHeader } from '@/components/layout';
+import { PageHeader } from '@/components/layout';
 
 interface Subject {
   id: string;
@@ -151,7 +151,7 @@ export default function MyAssessmentsPage() {
   const subjectsWithQuestions = subjects.filter((s) => groupedData[s.id]);
 
   return (
-    <AppLayout>
+    <>
       <PageHeader
         title="Minhas Questões"
         description="Visualize e gerencie suas questões criadas"
@@ -248,6 +248,6 @@ export default function MyAssessmentsPage() {
           ))}
         </Tabs>
       )}
-    </AppLayout>
+    </>
   );
 }

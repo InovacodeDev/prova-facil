@@ -11,7 +11,7 @@ import { DashboardSkeleton } from '@/components/ui/loading';
 import { useProfile, usePlan, useMonthlyUsage } from '@/hooks/use-cache';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { logClientError } from '@/lib/client-error-logger';
-import { AppLayout, PageHeader } from '@/components/layout';
+import { PageHeader } from '@/components/layout';
 
 interface QuestionStats {
   total: number;
@@ -235,10 +235,16 @@ export default function DashboardPage() {
   }, [profile?.id, fetchStatsWithCache]);
 
   return (
-    <AppLayout>
+    <>
       <PageHeader
         title="Dashboard"
         description="Bem-vindo de volta! Crie suas questões de forma rápida e inteligente."
+        actions={
+          <Button onClick={() => router.push('/new-assessment')} size="default">
+            <Upload className="h-4 w-4 mr-2" />
+            Nova Questão
+          </Button>
+        }
       />
 
       {loading ? (
@@ -496,49 +502,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Action Cards */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Create Question Card */}
-            <Card
-              className="border-primary/20 hover:border-primary/40 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
-              onClick={() => router.push('/new-assessment')}
-            >
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full w-fit">
-                  <Upload className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle>Nova Questão</CardTitle>
-                <CardDescription>Faça upload de um PDF e gere questões automaticamente</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <Button className="w-full" variant="default">
-                  Começar
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* My Questions Card */}
-            <Card
-              className="hover:shadow-lg transition-all hover:scale-105 cursor-pointer"
-              onClick={() => router.push('/my-assessments')}
-            >
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-secondary/10 rounded-full w-fit">
-                  <FileText className="h-6 w-6 text-secondary-foreground" />
-                </div>
-                <CardTitle>Minhas Questões</CardTitle>
-                <CardDescription>Visualize e gerencie suas questões criadas</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <Button className="w-full" variant="outline">
-                  Ver Questões ({stats.total})
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
         </>
       )}
-    </AppLayout>
+    </>
   );
 }

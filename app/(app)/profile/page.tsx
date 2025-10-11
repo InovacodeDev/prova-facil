@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AppLayout, PageHeader } from '@/components/layout';
+import { PageHeader } from '@/components/layout';
 import { SecurityTab } from '@/components/profile/SecurityTab';
 
 interface Profile {
@@ -309,7 +309,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <PageHeader title="Meu Perfil" description="Gerencie suas informações pessoais e preferências" />
 
       {/* Main Content */}
@@ -617,6 +617,6 @@ export default function ProfilePage() {
           </Tabs>
         )}
       </div>
-    </AppLayout>
+    </>
   );
 }

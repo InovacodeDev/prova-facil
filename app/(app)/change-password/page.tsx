@@ -10,7 +10,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { logClientError } from '@/lib/client-error-logger';
-import { AppLayout, PageHeader } from '@/components/layout';
+import { PageHeader } from '@/components/layout';
 
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -74,7 +74,7 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <PageHeader title="Alterar Senha" description="Digite sua nova senha para alterar a senha da sua conta" />
 
       {/* Main Content */}
@@ -176,6 +176,6 @@ export default function ChangePasswordPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </>
   );
 }
