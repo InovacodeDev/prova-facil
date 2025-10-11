@@ -7,15 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Loader2, Filter } from 'lucide-react';
-import { ProvaFacilLogo, ProvaFacilIcon } from '@/assets/logo';
+import { Plus, Loader2, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { useProfile } from '@/hooks/use-cache';
-import { UserMenu } from '@/components/UserMenu';
 import { Question, QuestionCard } from '@/components/QuestionCard';
 import { QUESTION_TYPES } from '@/lib/question-types';
 import { logClientError } from '@/lib/client-error-logger';
+import { AppLayout, PageHeader } from '@/components/layout';
 
 interface Subject {
   id: string;
@@ -151,117 +150,110 @@ export default function MyAssessmentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 text-primary mx-auto mb-4 animate-spin" />
-          <p className="text-muted-foreground">Carregando questões...</p>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 text-primary mx-auto mb-4 animate-spin" />
+            <p className="text-muted-foreground">Carregando questões...</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   const subjectsWithQuestions = subjects.filter((s) => groupedData[s.id]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-              <ProvaFacilLogo className="h-6" />
+    <AppLayout>
+      <PageHeader
+        title="Minhas Questões"
+        description="Visualize e gerencie suas questões criadas"
+        actions={
+          <div className="flex items-center gap-3">
+            {/* Filtro de tipo de questão */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={questionTypeFilter} onValueChange={setQuestionTypeFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filtrar por tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUESTION_TYPE_FILTERS.map((filter) => (
+                    <SelectItem key={filter.id} value={filter.id}>
+                      {filter.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-center gap-3">
-              {/* Filtro de tipo de questão */}
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={questionTypeFilter} onValueChange={setQuestionTypeFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Filtrar por tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {QUESTION_TYPE_FILTERS.map((filter) => (
-                      <SelectItem key={filter.id} value={filter.id}>
-                        {filter.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={() => router.push('/new-assessment')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Questão
-              </Button>
-              <UserMenu />
-            </div>
+            <Button onClick={() => router.push('/new-assessment')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Questão
+            </Button>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {subjectsWithQuestions.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <ProvaFacilIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold mb-2">Nenhuma questão encontrada</h3>
-              <p className="text-muted-foreground mb-6">
-                Você ainda não criou nenhuma questão. Comece criando sua primeira!
-              </p>
-              <Button onClick={() => router.push('/new-assessment')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Primeira Questão
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Tabs defaultValue={subjectsWithQuestions[0]?.id} className="w-full">
-            <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
-              {subjectsWithQuestions.map((subject) => (
-                <TabsTrigger key={subject.id} value={subject.id}>
-                  {subject.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
+      {subjectsWithQuestions.length === 0 ? (
+        <Card className="text-center py-12">
+          <CardContent>
+            <div className="mx-auto mb-4 p-3 bg-secondary/10 rounded-full w-fit">
+              <Plus className="h-12 w-12 text-secondary-foreground opacity-50" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Nenhuma questão encontrada</h3>
+            <p className="text-muted-foreground mb-6">
+              Você ainda não criou nenhuma questão. Comece criando sua primeira!
+            </p>
+            <Button onClick={() => router.push('/new-assessment')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Primeira Questão
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue={subjectsWithQuestions[0]?.id} className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
             {subjectsWithQuestions.map((subject) => (
-              <TabsContent key={subject.id} value={subject.id} className="space-y-8 mt-6">
-                <Accordion type="multiple" className="w-full space-y-4">
-                  {Object.entries(groupedData[subject.id].assessments).map(([title, questions]) => {
-                    const filteredQuestions = filterQuestionsByType(questions);
-
-                    // Não mostrar seção se não houver questões após filtro
-                    if (filteredQuestions.length === 0) return null;
-
-                    return (
-                      <AccordionItem key={title} value={title} className="border rounded-lg px-4">
-                        <AccordionTrigger className="hover:no-underline">
-                          <div className="flex items-center gap-3">
-                            <div className="h-1 w-1 rounded-full bg-primary" />
-                            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-                            <span className="text-sm text-muted-foreground">({filteredQuestions.length} questões)</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-6 pl-2">
-                          <div className="masonry-grid">
-                            {filteredQuestions.map((question) => (
-                              <QuestionCard key={question.id} question={question} />
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
-              </TabsContent>
+              <TabsTrigger key={subject.id} value={subject.id}>
+                {subject.name}
+              </TabsTrigger>
             ))}
-          </Tabs>
-        )}
-      </main>
-    </div>
+          </TabsList>
+
+          {subjectsWithQuestions.map((subject) => (
+            <TabsContent key={subject.id} value={subject.id} className="space-y-8 mt-6">
+              <Accordion type="multiple" className="w-full space-y-4">
+                {Object.entries(groupedData[subject.id].assessments).map(([title, questions]) => {
+                  const filteredQuestions = filterQuestionsByType(questions);
+
+                  // Não mostrar seção se não houver questões após filtro
+                  if (filteredQuestions.length === 0) return null;
+
+                  return (
+                    <AccordionItem key={title} value={title} className="border rounded-lg px-4">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="h-1 w-1 rounded-full bg-primary" />
+                          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+                          <span className="text-sm text-muted-foreground">({filteredQuestions.length} questões)</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-6 pl-2">
+                        <div className="masonry-grid">
+                          {filteredQuestions.map((question) => (
+                            <QuestionCard key={question.id} question={question} />
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
+    </AppLayout>
   );
 }
