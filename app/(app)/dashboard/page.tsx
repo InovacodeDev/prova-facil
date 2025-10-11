@@ -7,12 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, FileText, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { UserMenu } from '@/components/UserMenu';
-import { ProvaFacilLogo } from '@/assets/logo';
 import { DashboardSkeleton } from '@/components/ui/loading';
 import { useProfile, usePlan, useMonthlyUsage } from '@/hooks/use-cache';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { logClientError } from '@/lib/client-error-logger';
+import { PageHeader } from '@/components/layout';
 
 interface QuestionStats {
   total: number;
@@ -235,49 +234,49 @@ export default function DashboardPage() {
     }
   }, [profile?.id, fetchStatsWithCache]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="border-b border-border bg-card">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <ProvaFacilLogo className="h-6" />
-              <UserMenu />
-            </div>
-          </div>
-        </header>
-
-        {/* Loading Skeleton */}
-        <main>
-          <DashboardSkeleton />
-        </main>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <ProvaFacilLogo className="h-6" />
-            <UserMenu />
+    <>
+      <PageHeader
+        title="Dashboard"
+        description="Bem-vindo de volta! Crie suas questões de forma rápida e inteligente."
+        actions={
+          <Button onClick={() => router.push('/new-assessment')} size="default">
+            <Upload className="h-4 w-4 mr-2" />
+            Nova Questão
+          </Button>
+        }
+      />
+
+      {loading ? (
+        <div className="space-y-8">
+          {/* Stats Cards Skeleton */}
+          <div className="grid gap-4 md:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="pb-2">
+                  <div className="h-4 w-24 bg-muted rounded" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-8 w-16 bg-muted rounded mb-2" />
+                  <div className="h-3 w-20 bg-muted rounded" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
+
+          {/* Content Skeleton */}
+          <Card className="animate-pulse">
+            <CardHeader>
+              <div className="h-6 w-32 bg-muted rounded mb-2" />
+              <div className="h-4 w-48 bg-muted rounded" />
+            </CardHeader>
+            <CardContent>
+              <div className="h-24 bg-muted rounded" />
+            </CardContent>
+          </Card>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-            <p className="text-muted-foreground">
-              Bem-vindo de volta! Crie suas questões de forma rápida e inteligente.
-            </p>
-          </div>
-
+      ) : (
+        <>
           {/* Stats Cards */}
           <div className="grid gap-4 md:grid-cols-3 mb-8">
             <Card className="transition-all hover:shadow-lg hover:scale-105 border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20">
@@ -503,49 +502,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Action Cards */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Create Question Card */}
-            <Card
-              className="border-primary/20 hover:border-primary/40 transition-all hover:shadow-lg hover:scale-105 cursor-pointer"
-              onClick={() => router.push('/new-assessment')}
-            >
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full w-fit">
-                  <Upload className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle>Nova Questão</CardTitle>
-                <CardDescription>Faça upload de um PDF e gere questões automaticamente</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <Button className="w-full" variant="default">
-                  Começar
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* My Questions Card */}
-            <Card
-              className="hover:shadow-lg transition-all hover:scale-105 cursor-pointer"
-              onClick={() => router.push('/my-assessments')}
-            >
-              <CardHeader className="text-center">
-                <div className="mx-auto mb-4 p-3 bg-secondary/10 rounded-full w-fit">
-                  <FileText className="h-6 w-6 text-secondary-foreground" />
-                </div>
-                <CardTitle>Minhas Questões</CardTitle>
-                <CardDescription>Visualize e gerencie suas questões criadas</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <Button className="w-full" variant="outline">
-                  Ver Questões ({stats.total})
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </main>
-    </div>
+        </>
+      )}
+    </>
   );
 }
