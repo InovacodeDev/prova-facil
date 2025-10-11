@@ -129,14 +129,14 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
         asChild
         variant={isActive ? 'secondary' : 'ghost'}
         className={cn(
-          'w-full justify-start gap-3 transition-colors',
+          'w-full justify-start gap-3 transition-colors font-normal',
           isActive && 'bg-primary/10 text-primary hover:bg-primary/15',
           !isExpanded && 'justify-center px-2'
         )}
         onClick={handleNavigation}
       >
         <Link href={item.href}>
-          <Icon className="h-5 w-5 flex-shrink-0" />
+          <Icon size={24} strokeWidth={1.5} className="flex-shrink-0" />
           {isExpanded && <span>{item.label}</span>}
         </Link>
       </Button>

@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { ProvaFacilText } from '@/assets/logo';
 
 interface AppHeaderProps {
   onMenuClick: () => void;
@@ -119,9 +120,7 @@ export function AppHeader({ onMenuClick }: AppHeaderProps) {
             <Button variant="ghost" size="icon" onClick={onMenuClick} className="flex-shrink-0">
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-              Prova Fácil
-            </span>
+            <ProvaFacilText className="h-6" clickable={false} />
           </div>
 
           {/* Right side: User menu */}
