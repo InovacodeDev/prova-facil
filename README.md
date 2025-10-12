@@ -12,32 +12,32 @@ O sistema utiliza Supabase para autenticação e armazenamento, Drizzle ORM para
 
 ## ✨ Features
 
--   Geração automática de questões por IA (vários tipos: múltipla escolha, verdadeiro/falso, dissertativa, sumário)
--   Upload e análise de documentos (PDF) para gerar questões a partir do conteúdo
--   Banco de questões e dashboard com filtros por tipo
--   Tracking de cópias e gerações (logs automatizados via triggers SQL)
--   Autenticação via Supabase
--   Integração com Vercel Analytics para eventos customizados
+- Geração automática de questões por IA (vários tipos: múltipla escolha, verdadeiro/falso, dissertativa, sumário)
+- Upload e análise de documentos (PDF) para gerar questões a partir do conteúdo
+- Banco de questões e dashboard com filtros por tipo
+- Tracking de cópias e gerações (logs automatizados via triggers SQL)
+- Autenticação via Supabase
+- Integração com Vercel Analytics para eventos customizados
 
 ## 🛠️ Tecnologias Utilizadas
 
--   Linguagem: TypeScript (project configured via `tsconfig.json`)
--   Framework: Next.js (app router)
--   UI: React, Tailwind CSS, Radix UI
--   Database: PostgreSQL (Supabase) + Drizzle ORM
--   Auth/Storage: Supabase (`@supabase/supabase-js`, `@supabase/ssr`)
--   Dev tooling: pnpm (lockfile present), TypeScript, ESLint
--   AI: Genkit / Google AI (`@genkit-ai/googleai`)
--   Analytics: Vercel Analytics
+- Linguagem: TypeScript (project configured via `tsconfig.json`)
+- Framework: Next.js (app router)
+- UI: React, Tailwind CSS, Radix UI
+- Database: PostgreSQL (Supabase) + Drizzle ORM
+- Auth/Storage: Supabase (`@supabase/supabase-js`, `@supabase/ssr`)
+- Dev tooling: pnpm (lockfile present), TypeScript, ESLint
+- AI: Genkit / Google AI (`@genkit-ai/googleai`)
+- Analytics: Vercel Analytics
 
 ## 🚀 Começando (Do Zero ao 'Rodável')
 
 ### Pré-requisitos
 
--   Node.js >= 22 (ver `package.json` engines)
--   pnpm >= 9 (project uses `pnpm@10.17.1` as packageManager)
--   PostgreSQL (or Supabase project)
--   (Opcional) Docker & Docker Compose — caso queira rodar dependências localmente em containers
+- Node.js >= 22 (ver `package.json` engines)
+- pnpm >= 9 (project uses `pnpm@10.17.1` as packageManager)
+- PostgreSQL (or Supabase project)
+- (Opcional) Docker & Docker Compose — caso queira rodar dependências localmente em containers
 
 ### Instalação
 
@@ -63,24 +63,55 @@ cp .env.example .env.local
 
 Variáveis encontradas em `.env.example`:
 
-| Variável                      | Descrição                                              |
-| ----------------------------- | ------------------------------------------------------ |
-| NEXT_PUBLIC_SUPABASE_URL      | URL do projeto Supabase (ex.: https://xyz.supabase.co) |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | Chave pública anônima do Supabase                      |
-| DATABASE_URL                  | Connection string do banco (usado por Drizzle)         |
-| NEXT_PUBLIC_HYPERTUNE_TOKEN   | Token Hypertune (migrado/obsoleto em alguns setups)    |
-| GOOGLE_AI_API_KEY             | API key para o Genkit / Google AI                      |
+| Variável                           | Descrição                                              |
+| ---------------------------------- | ------------------------------------------------------ |
+| NEXT_PUBLIC_SUPABASE_URL           | URL do projeto Supabase (ex.: https://xyz.supabase.co) |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY      | Chave pública anônima do Supabase                      |
+| DATABASE_URL                       | Connection string do banco (usado por Drizzle)         |
+| GOOGLE_AI_API_KEY                  | API key para o Genkit / Google AI                      |
+| STRIPE_SECRET_KEY                  | Chave secreta do Stripe                                |
+| NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY | Chave pública do Stripe                                |
+| REDIS_URL                          | URL de conexão do Redis (para cache)                   |
 
 > Nota: O repositório inclui `.vercelignore` que exclui `.env.local` por padrão. Não faça commit de segredos.
 
-4. (Opcional) Inicie serviços de dependência com Docker (se você tiver um Docker setup):
+4. **🐳 Ambiente Local com Docker (Recomendado)**
+
+Para desenvolvimento local, use Docker Compose para rodar PostgreSQL e Redis:
 
 ```bash
-# Se existir um docker-compose.yml
-docker-compose up -d
+# Opção 1: Setup automático completo
+./dev.sh setup
+
+# Opção 2: Manual
+docker compose up -d
+cp .env.local.example .env.local
+# Executar migrations (ver abaixo)
 ```
 
-5. Migrações do banco de dados (Drizzle):
+**Comandos úteis do script `./dev.sh`:**
+
+```bash
+./dev.sh setup           # Setup completo (primeira vez)
+./dev.sh start           # Iniciar PostgreSQL e Redis
+./dev.sh start-tools     # Iniciar com Adminer e Redis Commander
+./dev.sh stop            # Parar serviços
+./dev.sh logs            # Ver logs
+./dev.sh status          # Ver status
+./dev.sh psql            # Acessar PostgreSQL CLI
+./dev.sh redis-cli       # Acessar Redis CLI
+./dev.sh backup          # Backup do banco
+./dev.sh help            # Ver todos os comandos
+```
+
+**Interfaces Web (quando usar `start-tools`):**
+
+- Adminer (PostgreSQL): http://localhost:8080
+- Redis Commander: http://localhost:8081
+
+📖 **Documentação completa**: Ver `DOCKER_COMPOSE_GUIDE.md`
+
+5. Migrações do banco de dados:
 
 ```bash
 pnpm db:gen
@@ -91,12 +122,12 @@ pnpm db:gen
 
 Principais scripts disponíveis em `package.json`:
 
--   `pnpm dev` — Inicia o servidor de desenvolvimento (Next.js) na porta 8800
--   `pnpm build` — Gera o build de produção
--   `pnpm start` — Inicia o servidor Next.js preparado para produção
--   `pnpm lint` — Executa o linter (ESLint)
--   `pnpm db:gen` — Gera tipos/migrations com Drizzle
--   `pnpm db:check` — Valida configurações do Drizzle
+- `pnpm dev` — Inicia o servidor de desenvolvimento (Next.js) na porta 8800
+- `pnpm build` — Gera o build de produção
+- `pnpm start` — Inicia o servidor Next.js preparado para produção
+- `pnpm lint` — Executa o linter (ESLint)
+- `pnpm db:gen` — Gera tipos/migrations com Drizzle
+- `pnpm db:check` — Valida configurações do Drizzle
 
 ### Rodando em desenvolvimento
 
@@ -166,11 +197,11 @@ pnpm-lock.yaml
 
 Breve descrição dos diretórios:
 
--   `app/` — Roteamento e páginas (Next.js App Router)
--   `components/` — Componentes UIs
--   `db/` — Migrations e schema Drizzle
--   `lib/` — Helpers (Supabase clients, logging, utils)
--   `public/` — Assets públicos
+- `app/` — Roteamento e páginas (Next.js App Router)
+- `components/` — Componentes UIs
+- `db/` — Migrations e schema Drizzle
+- `lib/` — Helpers (Supabase clients, logging, utils)
+- `public/` — Assets públicos
 
 ## 🤝 Como Contribuir
 
@@ -192,9 +223,9 @@ Se desejar publicar este projeto publicamente, adicione um arquivo `LICENSE` apr
 
 Se precisar, posso:
 
--   Adicionar exemplos de uso das APIs (payloads e responses)
--   Gerar um pequeno arquivo `CONTRIBUTING.md` e um template de Pull Request
--   Inserir instruções de deploy no Vercel e como aplicar as migrations/triggers no Supabase
+- Adicionar exemplos de uso das APIs (payloads e responses)
+- Gerar um pequeno arquivo `CONTRIBUTING.md` e um template de Pull Request
+- Inserir instruções de deploy no Vercel e como aplicar as migrations/triggers no Supabase
 
 Conjuração realizada por: Tito
 Conjuração realizada em: 01 de Outubro de 2025
@@ -209,11 +240,11 @@ Este projeto foi **migrado de Vite/React para Next.js 15** com App Router.
 
 **📊 Progresso: 30% Completo (3/10 páginas)**
 
--   ✅ Estrutura Next.js configurada
--   ✅ Supabase SSR configurado
--   ✅ Middleware de autenticação funcionando
--   ✅ Páginas migradas: `/`, `/auth`, `/dashboard`
--   ⚠️ 7 páginas pendentes (30 min - 2h de trabalho)
+- ✅ Estrutura Next.js configurada
+- ✅ Supabase SSR configurado
+- ✅ Middleware de autenticação funcionando
+- ✅ Páginas migradas: `/`, `/auth`, `/dashboard`
+- ⚠️ 7 páginas pendentes (30 min - 2h de trabalho)
 
 ### 🎯 Para Finalizar a Migração
 
@@ -227,27 +258,27 @@ Este projeto foi **migrado de Vite/React para Next.js 15** com App Router.
 
 **📚 Documentação da Migração:**
 
--   **[FINALIZE.md](./FINALIZE.md)** ⭐ **COMECE AQUI** - Guia rápido de finalização
--   [MIGRATION.md](./MIGRATION.md) - Guia detalhado completo
--   [FINAL_STATUS.md](./FINAL_STATUS.md) - Status técnico detalhado
--   [CHECKLIST.md](./CHECKLIST.md) - Checklist interativo
+- **[FINALIZE.md](./FINALIZE.md)** ⭐ **COMECE AQUI** - Guia rápido de finalização
+- [MIGRATION.md](./MIGRATION.md) - Guia detalhado completo
+- [FINAL_STATUS.md](./FINAL_STATUS.md) - Status técnico detalhado
+- [CHECKLIST.md](./CHECKLIST.md) - Checklist interativo
 
 ## 🛠 Tech Stack
 
--   **Framework**: Next.js 15 (App Router)
--   **Linguagem**: TypeScript
--   **Estilização**: Tailwind CSS
--   **UI Components**: Radix UI + shadcn/ui
--   **Autenticação**: Supabase Auth
--   **Database**: PostgreSQL (Supabase)
--   **ORM**: Drizzle ORM
--   **Feature Flags**: Hypertune (configurar)
+- **Framework**: Next.js 15 (App Router)
+- **Linguagem**: TypeScript
+- **Estilização**: Tailwind CSS
+- **UI Components**: Radix UI + shadcn/ui
+- **Autenticação**: Supabase Auth
+- **Database**: PostgreSQL (Supabase)
+- **ORM**: Drizzle ORM
+- **Feature Flags**: Hypertune (configurar)
 
 ## 📋 Pré-requisitos
 
--   Node.js 18+
--   npm, yarn, ou pnpm
--   Conta Supabase (para autenticação e banco de dados)
+- Node.js 18+
+- npm, yarn, ou pnpm
+- Conta Supabase (para autenticação e banco de dados)
 
 ## 🏃‍♂️ Como Executar
 
@@ -345,29 +376,29 @@ npm run lint       # Executa o linter
 
 A autenticação é gerenciada pelo Supabase Auth com:
 
--   Sign up / Sign in com email e senha
--   Middleware para proteção de rotas
--   Refresh automático de sessões
--   SSR-ready (Server-Side Rendering)
+- Sign up / Sign in com email e senha
+- Middleware para proteção de rotas
+- Refresh automático de sessões
+- SSR-ready (Server-Side Rendering)
 
 Rotas protegidas:
 
--   `/dashboard`
--   `/new-assessment`
--   `/my-assessments`
--   `/templates`
--   `/profile`
--   `/change-password`
--   `/plan`
--   `/usage`
+- `/dashboard`
+- `/new-assessment`
+- `/my-assessments`
+- `/templates`
+- `/profile`
+- `/change-password`
+- `/plan`
+- `/usage`
 
 ## 📚 Documentação
 
--   [Guia de Migração Completo](./MIGRATION.md)
--   [Next.js Documentation](https://nextjs.org/docs)
--   [Supabase + Next.js](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)
--   [Drizzle ORM](https://orm.drizzle.team/docs/overview)
--   [shadcn/ui](https://ui.shadcn.com)
+- [Guia de Migração Completo](./MIGRATION.md)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase + Next.js](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)
+- [Drizzle ORM](https://orm.drizzle.team/docs/overview)
+- [shadcn/ui](https://ui.shadcn.com)
 
 ## 🤝 Contribuindo
 
@@ -379,10 +410,10 @@ Rotas protegidas:
 
 ## ⚠️ Notas Importantes
 
--   Este projeto está em processo de migração de Vite para Next.js
--   Algumas páginas ainda precisam ter sua lógica migrada (ver MIGRATION.md)
--   Não use `src/integrations/supabase/client.ts` - use `lib/supabase/client.ts` ou `lib/supabase/server.ts`
--   Sempre use 'use client' em componentes que usam hooks ou eventos
+- Este projeto está em processo de migração de Vite para Next.js
+- Algumas páginas ainda precisam ter sua lógica migrada (ver MIGRATION.md)
+- Não use `src/integrations/supabase/client.ts` - use `lib/supabase/client.ts` ou `lib/supabase/server.ts`
+- Sempre use 'use client' em componentes que usam hooks ou eventos
 
 ## 📄 Licença
 

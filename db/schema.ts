@@ -1,15 +1,8 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, varchar, text, timestamp, boolean, uuid, pgEnum, integer, jsonb } from 'drizzle-orm/pg-core';
 
-export const RenewStatus = {
-  monthly: 'monthly',
-  yearly: 'yearly',
-  trial: 'trial',
-  canceled: 'canceled',
-  none: 'none',
-} as const;
-
-export const renewStatusEnum = pgEnum('renew_status', ['monthly', 'yearly', 'trial', 'canceled', 'none']);
+// Note: Plan information for profiles is now fetched from Stripe API with Redis caching
+// The planEnum is kept only for the plans configuration table
 
 export const PlanType = {
   starter: 'starter',
@@ -143,9 +136,9 @@ export const profiles = pgTable('profiles', {
   email: varchar('email', { length: 320 }).notNull().unique(),
   email_verified: boolean('email_verified').default(false).notNull(),
   email_verified_at: timestamp('email_verified_at'),
-  plan: planEnum().notNull().default('starter'),
-  plan_expire_at: timestamp('plan_expire_at', { mode: 'date' }),
-  renew_status: renewStatusEnum().notNull().default('none'),
+  // Plan information is now fetched from Stripe API with Redis caching
+  stripe_customer_id: varchar('stripe_customer_id', { length: 255 }).unique(), // Stripe Customer ID
+  stripe_subscription_id: varchar('stripe_subscription_id', { length: 255 }), // Active Stripe Subscription ID
   academic_level_id: integer('academic_level_id').references(() => academicLevels.id),
   allowed_cookies: text('allowed_cookies').array().notNull().default([]), // jsonb stored as text
   selected_question_types: questionTypeEnum('selected_question_types').array().notNull().default([]),

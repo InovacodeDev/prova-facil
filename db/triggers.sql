@@ -221,3 +221,48 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON FUNCTION can_update_question_types IS 'Check if user can update their selected question types (30 days minimum between updates)';
+
+-- =====================================================
+-- CACHE INVALIDATION TRIGGER FOR STRIPE SUBSCRIPTIONS
+-- =====================================================
+-- This trigger invalidates the Redis cache whenever stripe_customer_id
+-- or stripe_subscription_id changes, ensuring fresh data on next request
+
+-- Note: This trigger notifies the application layer to invalidate cache.
+-- The actual cache invalidation is handled by the webhook handler.
+-- We use PostgreSQL NOTIFY to send a message that can be picked up by listeners.
+
+CREATE OR REPLACE FUNCTION notify_subscription_cache_invalidation()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Check if Stripe fields changed
+    IF (OLD.stripe_customer_id IS DISTINCT FROM NEW.stripe_customer_id) OR
+       (OLD.stripe_subscription_id IS DISTINCT FROM NEW.stripe_subscription_id) THEN
+        
+        -- Notify with user_id as payload
+        PERFORM pg_notify('subscription_cache_invalidate', NEW.id::text);
+        
+        -- Log the change for debugging
+        RAISE NOTICE 'Subscription cache invalidation triggered for user_id: %', NEW.id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger on profiles table
+DROP TRIGGER IF EXISTS trigger_invalidate_subscription_cache ON profiles;
+CREATE TRIGGER trigger_invalidate_subscription_cache
+    AFTER UPDATE ON profiles
+    FOR EACH ROW
+    WHEN (
+        OLD.stripe_customer_id IS DISTINCT FROM NEW.stripe_customer_id OR
+        OLD.stripe_subscription_id IS DISTINCT FROM NEW.stripe_subscription_id
+    )
+    EXECUTE FUNCTION notify_subscription_cache_invalidation();
+
+COMMENT ON FUNCTION notify_subscription_cache_invalidation IS 
+    'Notifies application to invalidate Redis subscription cache when Stripe fields change';
+
+COMMENT ON TRIGGER trigger_invalidate_subscription_cache ON profiles IS
+    'Triggers cache invalidation notification when stripe_customer_id or stripe_subscription_id changes';

@@ -147,9 +147,7 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
         </Button>
       </div>
       {billingPeriod === 'annual' && (
-        <p className="text-sm text-green-600 text-center font-medium">
-          {getAnnualSavingsMessage(plans)}
-        </p>
+        <p className="text-sm text-green-600 text-center font-medium">💰 Economize 25% com o plano anual</p>
       )}
 
       {/* Scroll horizontal container */}
