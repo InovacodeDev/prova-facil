@@ -10,13 +10,15 @@
  * This should ONLY be used on the server (API routes, Server Components, Server Actions)
  */
 
-import Stripe from 'stripe';
-import { stripeConfig, validateStripeConfig, PRODUCT_ID_TO_PLAN, STRIPE_PRODUCTS } from './config';
 import {
   getCachedSubscription,
   setCachedSubscription,
   type CachedSubscriptionData,
 } from '@/lib/cache/subscription-cache';
+import type { PlanId } from '@/lib/plans/config';
+import Stripe from 'stripe';
+import { PRODUCT_ID_TO_PLAN, stripeConfig, validateStripeConfig } from './config';
+import { extractPlanFromSubscription } from './plan-helpers';
 
 // Validate configuration on module load (only on server)
 if (typeof window === 'undefined') {
@@ -49,7 +51,7 @@ export interface StripeProductWithPrices {
   features: string[]; // Extracted from metadata.features (JSON stringified array)
   aiLevel: string; // Extracted from metadata.aiLevel
   questionsPerMonth: number; // Extracted from metadata.questionsPerMonth
-  internalPlanId: string; // Maps to our internal plan enum (starter, basic, etc.)
+  internalPlanId: PlanId; // Maps to our internal plan enum (starter, basic, etc.)
 }
 
 /**
@@ -96,7 +98,7 @@ export async function getStripeProducts(): Promise<StripeProductWithPrices[]> {
         const questionsPerMonth = parseInt(product.metadata.questionsPerMonth || '0', 10);
 
         // Map to internal plan ID
-        const internalPlanId = PRODUCT_ID_TO_PLAN[product.id] || 'starter';
+        const internalPlanId = (PRODUCT_ID_TO_PLAN[product.id] || 'starter') as PlanId;
 
         return {
           id: product.id,
@@ -266,10 +268,15 @@ export async function createBillingPortalSession(
  *
  * This is the PRIMARY function to get subscription information.
  * It implements a cache-first strategy:
- * 1. Check Redis cache
+ * 1. Check Redis cache (fastest)
  * 2. If cache miss, fetch from Stripe API
  * 3. Store in cache with smart TTL
  * 4. Return subscription data
+ *
+ * Architecture:
+ * - Database stores: stripe_customer_id, stripe_subscription_id (references only)
+ * - Redis cache stores: full subscription data (plan, status, dates, etc.)
+ * - Stripe API is the source of truth
  *
  * @param userId - User ID (for cache key)
  * @param stripeCustomerId - Stripe Customer ID
@@ -316,31 +323,8 @@ export async function getSubscriptionData(
     // Fetch subscription from Stripe
     const subscription = await getSubscription(stripeSubscriptionId);
 
-    // Extract subscription data
-    const subscriptionItem = subscription.items.data[0];
-    const productId =
-      typeof subscriptionItem.price.product === 'string'
-        ? subscriptionItem.price.product
-        : subscriptionItem.price.product.id;
-
-    const planName = (PRODUCT_ID_TO_PLAN[productId] || 'starter') as
-      | 'starter'
-      | 'basic'
-      | 'essentials'
-      | 'plus'
-      | 'advanced';
-
-    // Determine renew status
-    let renewStatus: 'monthly' | 'yearly' | 'canceled' | 'trial' | 'none' = 'none';
-    if (subscription.cancel_at_period_end) {
-      renewStatus = 'canceled';
-    } else if (subscription.status === 'trialing') {
-      renewStatus = 'trial';
-    } else if (subscriptionItem.price.recurring?.interval === 'month') {
-      renewStatus = 'monthly';
-    } else if (subscriptionItem.price.recurring?.interval === 'year') {
-      renewStatus = 'yearly';
-    }
+    // Extract plan data using the canonical helper
+    const planData = extractPlanFromSubscription(subscription);
 
     // Extract period info (Stripe uses snake_case but TS types might differ)
     const periodEnd = (subscription as any).current_period_end as number;
@@ -351,11 +335,11 @@ export async function getSubscriptionData(
       subscriptionId: subscription.id,
       customerId: stripeCustomerId,
       status: subscription.status,
-      plan: planName,
-      planExpireAt: new Date(periodEnd * 1000).toISOString(),
-      renewStatus,
-      productId,
-      priceId: subscriptionItem.price.id,
+      plan: planData.plan,
+      planExpireAt: planData.planExpireAt ? planData.planExpireAt.toISOString() : null,
+      renewStatus: planData.renewStatus,
+      productId: planData.productId,
+      priceId: planData.priceId,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       currentPeriodEnd: periodEnd,
       currentPeriodStart: periodStart,
@@ -369,7 +353,7 @@ export async function getSubscriptionData(
   } catch (error) {
     console.error('[Stripe] Error fetching subscription:', error);
 
-    // On error, return free plan data (don't cache it)
+    // On error, return free plan data (don't cache it - let next request retry)
     return {
       subscriptionId: null,
       customerId: stripeCustomerId,

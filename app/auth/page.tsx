@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { ProvaFacilLogo } from '@/assets/logo';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, EyeOff } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { ProvaFacilLogo } from '@/assets/logo';
+import { createClient } from '@/lib/supabase/client';
+import { Eye, EyeOff } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const ACADEMIC_LEVELS = [
   { value: 'elementary_school', label: 'Ensino Fundamental' },
@@ -186,11 +186,45 @@ export default function AuthPage() {
       // Não bloqueamos aqui, pois tentaremos criar o profile no login se necessário
     }
 
-    // 3. Se o email já está confirmado (ex: domínios permitidos), redirecionar
+    // 3. Criar customer no Stripe e subscription do plano Starter (gratuito)
+    try {
+      const response = await fetch('/api/stripe/create-starter-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: signUpData.user.id,
+          email: email,
+          fullName: fullName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Erro ao criar subscription Starter:', data);
+        // Não bloqueamos o cadastro, mas logamos o erro
+        toast({
+          title: 'Aviso',
+          description:
+            'Sua conta foi criada, mas houve um problema ao configurar o plano inicial. Entre em contato com o suporte.',
+          variant: 'destructive',
+          duration: 8000,
+        });
+      } else {
+        console.log('Starter subscription criada com sucesso:', data);
+      }
+    } catch (error) {
+      console.error('Erro ao criar subscription Starter:', error);
+      // Não bloqueamos o cadastro, mas logamos o erro
+    }
+
+    // 4. Se o email já está confirmado (ex: domínios permitidos), redirecionar
     if (signUpData.session) {
       toast({
         title: 'Conta criada com sucesso!',
-        description: 'Você já está logado e será redirecionado.',
+        description: 'Você já está logado e será redirecionado. Seu plano Starter foi ativado!',
       });
       router.push('/dashboard');
       router.refresh();
@@ -198,7 +232,7 @@ export default function AuthPage() {
       return;
     }
 
-    // 4. Caso contrário, solicitar confirmação de email
+    // 5. Caso contrário, solicitar confirmação de email
     toast({
       title: 'Conta criada com sucesso!',
       description:
