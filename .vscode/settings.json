@@ -15,13 +15,14 @@
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": true,
   "explorer.fileNesting.patterns": {
-    ".env.local": ".env, .env.*.local",
-    ".env.example": ".env.local.example",
+    ".env.example": ".env, .env.*.example, .env.local",
+    ".gitignore": ".vercelignore, .dockerignore, .eslintignore",
     "*.css": "${capture}.module.css, ${capture}.styles.css",
     "*.js": "${capture}.spec.js, ${capture}.test.js",
     "*.ts": "${capture}.d.ts, ${capture}.spec.ts, ${capture}.test.ts",
     "*.tsx": "${capture}.spec.tsx, ${capture}.test.tsx, ${capture}.stories.tsx",
-    "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, pnpm-workspace.yaml"
+    "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, pnpm-workspace.yaml",
+    "tsconfig.json": "tsconfig.*.json, tsconfig.tsbuildinfo"
   },
   "explorer.openEditors.visible": 1,
   "files.associations": {
