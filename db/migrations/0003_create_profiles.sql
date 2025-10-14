@@ -74,13 +74,3 @@ COMMENT ON COLUMN profiles.question_types_updated_at IS 'Last time question type
 COMMENT ON COLUMN profiles.created_at IS 'Record creation timestamp';
 
 COMMENT ON COLUMN profiles.updated_at IS 'Record last update timestamp';
-
-COMMENT ON COLUMN profiles.last_daily_reset IS 'Last time daily counter was reset';
-
-COMMENT ON COLUMN profiles.last_copilot_reset IS 'Last time copilot counter was reset';
-
-COMMENT ON COLUMN profiles.academic_level_id IS 'Reference to user academic level preference';
-
-COMMENT ON COLUMN profiles.created_at IS 'Profile creation timestamp';
-
-COMMENT ON COLUMN profiles.updated_at IS 'Profile last update timestamp';
