@@ -1,236 +1,69 @@
--- =====================================================
--- TRIGGERS PARA ATUALIZAÇÃO AUTOMÁTICA DE LOGS
--- =====================================================
--- Execute este SQL no Supabase SQL Editor após aplicar a migration 0002
--- 
--- Estas triggers mantêm a tabela `logs` sincronizada automaticamente:
--- 1. copy_question: incrementa quando questions.copy_count aumenta
--- 2. create_new_questions: incrementa quando um assessment é criado
--- 3. new_questions: incrementa quando uma question é criada
+-- Triggers: Database Triggers for Prova Fácil
+-- Description: Automatic timestamp updates and cache invalidation
+-- Dependencies: All migrations (especially 0003_create_profiles)
+-- Created: 2025-10-13
 --
--- IMPORTANTE: Com estas triggers, você NÃO precisa mais chamar
--- incrementActionLog() manualmente no código da aplicação!
+-- This file contains:
+-- 1. Timestamp update triggers (updated_at)
+-- 2. Stripe subscription cache invalidation triggers
+-- 3. Question types update tracking and validation
 
 -- =====================================================
--- FUNÇÃO HELPER: UPSERT/INCREMENT COM SEGURANÇA
+-- 1. AUTOMATIC TIMESTAMP UPDATES
 -- =====================================================
--- Esta função incrementa o contador de logs de forma segura,
--- lidando com concorrência e criando a linha se não existir
 
-CREATE OR REPLACE FUNCTION public.increment_action_log(p_action public.action_type)
-RETURNS void 
-LANGUAGE plpgsql 
-SECURITY DEFINER
-AS $$
-DECLARE
-BEGIN
-  LOOP
-    -- Tentar atualizar linha existente
-    UPDATE public.logs
-    SET count = count + 1,
-        updated_at = now()
-    WHERE action = p_action;
-    IF FOUND THEN
-      RETURN;
-    END IF;
-
-    -- If no row was updated, try to insert one
-    BEGIN
-      INSERT INTO public.logs (action, count, created_at, updated_at)
-      VALUES (p_action, 1, now(), now());
-      RETURN;
-    EXCEPTION WHEN unique_violation THEN
-      -- Concurrent insert happened, loop and try update again
-      CONTINUE;
-    END;
-  END LOOP;
-END;
-$$;
-
-
--- Trigger function: increment log when questions.copy_count increases
-CREATE OR REPLACE FUNCTION public.trg_questions_copy_count_increment()
-RETURNS trigger LANGUAGE plpgsql AS
-$$
-BEGIN
-  -- Only act when copy_count increased
-  IF TG_OP = 'UPDATE' AND COALESCE(NEW.copy_count, 0) > COALESCE(OLD.copy_count, 0) THEN
-    PERFORM public.increment_action_log('copy_question'::public.action_type);
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
--- Attach trigger AFTER UPDATE on questions, only when copy_count changed and increased
-DROP TRIGGER IF EXISTS questions_copy_count_inc ON public.questions;
-CREATE TRIGGER questions_copy_count_inc
-AFTER UPDATE OF copy_count ON public.questions
-FOR EACH ROW
-WHEN (COALESCE(NEW.copy_count, 0) > COALESCE(OLD.copy_count, 0))
-EXECUTE FUNCTION public.trg_questions_copy_count_increment();
-
-
--- Trigger function: increment create_new_questions when an assessment is created
--- Also updates unique_assessments count
-CREATE OR REPLACE FUNCTION public.trg_assessments_after_insert()
-RETURNS trigger LANGUAGE plpgsql AS
-$$
-BEGIN
-  PERFORM public.increment_action_log('create_new_questions'::public.action_type);
-  
-  -- Update unique_assessments count (total distinct assessments)
-  UPDATE public.logs
-  SET count = (SELECT COUNT(DISTINCT id) FROM public.assessments),
-      updated_at = now()
-  WHERE action = 'unique_assessments'::public.action_type;
-  
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS assessments_after_insert_log ON public.assessments;
-CREATE TRIGGER assessments_after_insert_log
-AFTER INSERT ON public.assessments
-FOR EACH ROW
-EXECUTE FUNCTION public.trg_assessments_after_insert();
-
-
--- Trigger function: increment new_questions when a question is created
--- Also recalculates mean_questions_per_assessment
-CREATE OR REPLACE FUNCTION public.trg_questions_after_insert()
-RETURNS trigger LANGUAGE plpgsql AS
-$$
-DECLARE
-  v_mean NUMERIC;
-BEGIN
-  PERFORM public.increment_action_log('new_questions'::public.action_type);
-  
-  -- Calculate mean questions per assessment (rounded to 1 decimal place)
-  SELECT COALESCE(ROUND(AVG(question_count)::numeric, 1), 0)
-  INTO v_mean
-  FROM (
-    SELECT COUNT(q.id) AS question_count
-    FROM public.assessments a
-    LEFT JOIN public.questions q ON q.assessment_id = a.id
-    GROUP BY a.id
-  ) assessment_question_counts;
-  
-  -- Update mean_questions_per_assessment (store as integer by multiplying by 10)
-  -- We'll divide by 10 in the API to get the decimal
-  UPDATE public.logs
-  SET count = ROUND(v_mean * 10)::integer,
-      updated_at = now()
-  WHERE action = 'mean_questions_per_assessment'::public.action_type;
-  
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS questions_after_insert_log ON public.questions;
-CREATE TRIGGER questions_after_insert_log
-AFTER INSERT ON public.questions
-FOR EACH ROW
-EXECUTE FUNCTION public.trg_questions_after_insert();
-
--- Migration: Add trigger and validation for question_types updates
--- Created: 2025-10-02
--- Description: 
---   - Trigger to auto-update question_types_updated_at when selected_question_types changes
---   - Function to prevent updates within 30 days
-
--- Function: Update question_types_updated_at timestamp on change
-CREATE OR REPLACE FUNCTION update_question_types_timestamp()
+-- =====================================================
+-- 1. AUTOMATIC TIMESTAMP UPDATES
+-- =====================================================
+-- Function to automatically update the updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Only update timestamp if selected_question_types actually changed
-    IF OLD.selected_question_types IS DISTINCT FROM NEW.selected_question_types THEN
-        NEW.question_types_updated_at := NOW();
-    END IF;
+    NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger to call the function
-DROP TRIGGER IF EXISTS trigger_update_question_types_timestamp ON profiles;
-CREATE TRIGGER trigger_update_question_types_timestamp
+-- Trigger for profiles table
+CREATE TRIGGER profiles_updated_at
     BEFORE UPDATE ON profiles
     FOR EACH ROW
-    EXECUTE FUNCTION update_question_types_timestamp();
+    EXECUTE FUNCTION update_updated_at_column();
 
-COMMENT ON FUNCTION update_question_types_timestamp IS 'Automatically updates question_types_updated_at when selected_question_types changes';
-
--- Function: Validate 30-day restriction on question types updates
-CREATE OR REPLACE FUNCTION validate_question_types_update()
-RETURNS TRIGGER AS $$
-DECLARE
-    days_since_last_update INTEGER;
-BEGIN
-    -- Only validate if selected_question_types is being changed
-    IF OLD.selected_question_types IS DISTINCT FROM NEW.selected_question_types THEN
-        
-        -- If there's a previous update timestamp, check the 30-day restriction
-        IF OLD.question_types_updated_at IS NOT NULL THEN
-            -- Calculate days since last update
-            days_since_last_update := EXTRACT(DAY FROM (NOW() - OLD.question_types_updated_at));
-            
-            -- If less than 30 days, prevent the update
-            IF days_since_last_update < 30 THEN
-                RAISE EXCEPTION 'Você só pode alterar os tipos de questões uma vez a cada 30 dias. Última alteração: %. Próxima alteração disponível em: %',
-                    TO_CHAR(OLD.question_types_updated_at, 'DD/MM/YYYY'),
-                    TO_CHAR(OLD.question_types_updated_at + INTERVAL '30 days', 'DD/MM/YYYY');
-            END IF;
-        END IF;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create trigger to validate before update
-DROP TRIGGER IF EXISTS trigger_validate_question_types_update ON profiles;
-CREATE TRIGGER trigger_validate_question_types_update
-    BEFORE UPDATE ON profiles
+-- Trigger for assessments table
+CREATE TRIGGER assessments_updated_at
+    BEFORE UPDATE ON assessments
     FOR EACH ROW
-    EXECUTE FUNCTION validate_question_types_update();
+    EXECUTE FUNCTION update_updated_at_column();
 
-COMMENT ON FUNCTION validate_question_types_update IS 'Prevents users from updating selected_question_types more than once every 30 days';
+-- Trigger for questions table
+CREATE TRIGGER questions_updated_at
+    BEFORE UPDATE ON questions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
--- Update the existing can_update_question_types function to be more precise
-CREATE OR REPLACE FUNCTION can_update_question_types(user_id UUID)
-RETURNS BOOLEAN AS $$
-DECLARE
-    last_update TIMESTAMP WITH TIME ZONE;
-    days_since_update INTEGER;
-BEGIN
-    -- Get the last update timestamp
-    SELECT question_types_updated_at INTO last_update
-    FROM profiles
-    WHERE id = user_id;
-    
-    -- If never updated, allow update
-    IF last_update IS NULL THEN
-        RETURN TRUE;
-    END IF;
-    
-    -- Calculate days since last update
-    days_since_update := EXTRACT(DAY FROM (NOW() - last_update));
-    
-    -- Return true if 30 or more days have passed
-    RETURN days_since_update >= 30;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Trigger for plans table
+CREATE TRIGGER plans_updated_at
+    BEFORE UPDATE ON plans
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
-COMMENT ON FUNCTION can_update_question_types IS 'Check if user can update their selected question types (30 days minimum between updates)';
+-- Trigger for academic_levels table
+CREATE TRIGGER academic_levels_updated_at
+    BEFORE UPDATE ON academic_levels
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON FUNCTION update_updated_at_column IS 'Automatically updates the updated_at timestamp on row update';
 
 -- =====================================================
--- CACHE INVALIDATION TRIGGER FOR STRIPE SUBSCRIPTIONS
+-- 2. STRIPE SUBSCRIPTION CACHE INVALIDATION
 -- =====================================================
--- This trigger invalidates the Redis cache whenever stripe_customer_id
--- or stripe_subscription_id changes, ensuring fresh data on next request
 
--- Note: This trigger notifies the application layer to invalidate cache.
--- The actual cache invalidation is handled by the webhook handler.
--- We use PostgreSQL NOTIFY to send a message that can be picked up by listeners.
+-- =====================================================
+-- 2. STRIPE SUBSCRIPTION CACHE INVALIDATION
+-- =====================================================
+-- Notifies application to invalidate Redis cache when Stripe fields change
 
 CREATE OR REPLACE FUNCTION notify_subscription_cache_invalidation()
 RETURNS TRIGGER AS $$
@@ -238,20 +71,19 @@ BEGIN
     -- Check if Stripe fields changed
     IF (OLD.stripe_customer_id IS DISTINCT FROM NEW.stripe_customer_id) OR
        (OLD.stripe_subscription_id IS DISTINCT FROM NEW.stripe_subscription_id) THEN
-        
-        -- Notify with user_id as payload
+
+        -- Notify with profile_id as payload
         PERFORM pg_notify('subscription_cache_invalidate', NEW.id::text);
-        
+
         -- Log the change for debugging
-        RAISE NOTICE 'Subscription cache invalidation triggered for user_id: %', NEW.id;
+        RAISE NOTICE 'Subscription cache invalidation triggered for profile_id: %', NEW.id;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger on profiles table
-DROP TRIGGER IF EXISTS trigger_invalidate_subscription_cache ON profiles;
+-- Trigger on profiles table
 CREATE TRIGGER trigger_invalidate_subscription_cache
     AFTER UPDATE ON profiles
     FOR EACH ROW
@@ -261,8 +93,80 @@ CREATE TRIGGER trigger_invalidate_subscription_cache
     )
     EXECUTE FUNCTION notify_subscription_cache_invalidation();
 
-COMMENT ON FUNCTION notify_subscription_cache_invalidation IS 
+COMMENT ON FUNCTION notify_subscription_cache_invalidation IS
     'Notifies application to invalidate Redis subscription cache when Stripe fields change';
 
 COMMENT ON TRIGGER trigger_invalidate_subscription_cache ON profiles IS
     'Triggers cache invalidation notification when stripe_customer_id or stripe_subscription_id changes';
+
+-- =====================================================
+-- 3. LOG TRACKING FOR ACTIONS
+-- =====================================================
+-- Helper function for safe upsert/increment of log counters
+
+CREATE OR REPLACE FUNCTION increment_action_log(p_action action_type)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  LOOP
+    -- Try to update existing row
+    UPDATE logs
+    SET details = jsonb_set(
+        COALESCE(details, '{}'::jsonb),
+        '{count}',
+        to_jsonb(COALESCE((details->>'count')::integer, 0) + 1)
+    ),
+        created_at = CURRENT_TIMESTAMP
+    WHERE action = p_action;
+
+    IF FOUND THEN
+      RETURN;
+    END IF;
+
+    -- If no row was updated, try to insert one
+    BEGIN
+      INSERT INTO logs (action, details, created_at)
+      VALUES (p_action, '{"count": 1}'::jsonb, CURRENT_TIMESTAMP);
+      RETURN;
+    EXCEPTION WHEN unique_violation THEN
+      -- Concurrent insert happened, loop and try update again
+      CONTINUE;
+    END;
+  END LOOP;
+END;
+$$;
+
+-- Trigger: Increment log when assessments are created
+CREATE OR REPLACE FUNCTION trg_assessments_after_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  PERFORM increment_action_log('create_new_questions'::action_type);
+  PERFORM increment_action_log('unique_assessments'::action_type);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER assessments_after_insert_log
+    AFTER INSERT ON assessments
+    FOR EACH ROW
+    EXECUTE FUNCTION trg_assessments_after_insert();
+
+-- Trigger: Increment log when questions are created
+CREATE OR REPLACE FUNCTION trg_questions_after_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  PERFORM increment_action_log('new_questions'::action_type);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER questions_after_insert_log
+    AFTER INSERT ON questions
+    FOR EACH ROW
+    EXECUTE FUNCTION trg_questions_after_insert();
+
+COMMENT ON FUNCTION increment_action_log IS 'Safely increments action log counters with concurrency handling';
+COMMENT ON FUNCTION trg_assessments_after_insert IS 'Logs assessment creation events';
+COMMENT ON FUNCTION trg_questions_after_insert IS 'Logs question creation events';

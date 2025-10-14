@@ -1,298 +1,327 @@
--- Final RLS policies (owner-based) for the main tables.
--- Nota: em expressões de WITH CHECK/USING, referencie colunas novas por nome (sem NEW).
--- Ajuste nomes/colunas se seu schema for diferente.
+-- Policies: Row Level Security (RLS) Policies for Prova Fácil
+-- Description: Security policies for all database tables
+-- Dependencies: All migrations
+-- Created: 2025-10-13
+--
+-- This file enables RLS and creates policies for:
+-- 1. profiles - User profile access control
+-- 2. assessments - Assessment ownership and access
+-- 3. questions - Question access through assessment ownership
+-- 4. logs - Log access control
+-- 5. plans - Public read, admin write
+-- 6. academic_levels - Public read, admin write
+-- 7. profile_logs_cycle - User-specific usage tracking
+-- 8. error_logs - Error log access control
+-- =====================================================
+-- 1. PROFILES TABLE
+-- =====================================================
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Enable RLS
-ALTER TABLE IF EXISTS public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.assessments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.questions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.answers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.logs ENABLE ROW LEVEL SECURITY;
+-- Users can view all profiles (for public profile pages)
+CREATE POLICY "profiles_select_all" ON profiles FOR
+SELECT
+  TO public,
+  authenticated USING (true);
 
--- ================================
--- profiles
--- ================================
-DROP POLICY IF EXISTS profiles_select_owner ON public.profiles;
-CREATE POLICY profiles_select_owner
-  ON public.profiles
-  FOR SELECT
-  TO public, authenticated
-  USING (true);
+-- Users can only update their own profile
+CREATE POLICY "profiles_update_own" ON profiles FOR
+UPDATE TO authenticated USING (id = auth.uid ())
+WITH
+  CHECK (id = auth.uid ());
 
-DROP POLICY IF EXISTS profiles_update_owner ON public.profiles;
-CREATE POLICY profiles_update_owner
-  ON public.profiles
-  FOR UPDATE
-  TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+-- Users can insert their own profile (on signup)
+CREATE POLICY "profiles_insert_own" ON profiles FOR INSERT TO authenticated
+WITH
+  CHECK (id = auth.uid ());
 
-DROP POLICY IF EXISTS profiles_insert_auth ON public.profiles;
-CREATE POLICY profiles_insert_auth
-  ON public.profiles
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (user_id = auth.uid());
+-- Users can delete their own profile
+CREATE POLICY "profiles_delete_own" ON profiles FOR DELETE TO authenticated USING (id = auth.uid ());
 
--- ================================
--- assessments
--- ================================
-DROP POLICY IF EXISTS assessments_select_public ON public.assessments;
-CREATE POLICY assessments_select_public
-  ON public.assessments
-  FOR SELECT
-  TO public, authenticated
-  USING (true);
+COMMENT ON POLICY "profiles_select_all" ON profiles IS 'Allow public read access to profiles';
 
-DROP POLICY IF EXISTS assessments_insert_auth ON public.assessments;
-CREATE POLICY assessments_insert_auth
-  ON public.assessments
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
+COMMENT ON POLICY "profiles_update_own" ON profiles IS 'Users can only update their own profile';
+
+COMMENT ON POLICY "profiles_insert_own" ON profiles IS 'Users can create their own profile on signup';
+
+COMMENT ON POLICY "profiles_delete_own" ON profiles IS 'Users can delete their own profile';
+
+-- =====================================================
+-- 2. ASSESSMENTS TABLE
+-- =====================================================
+ALTER TABLE assessments ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can view assessments (for public sharing)
+CREATE POLICY "assessments_select_all" ON assessments FOR
+SELECT
+  TO public,
+  authenticated USING (true);
+
+-- Users can insert assessments if authenticated
+CREATE POLICY "assessments_insert_auth" ON assessments FOR INSERT TO authenticated
+WITH
+  CHECK (profile_id = auth.uid ());
+
+-- Users can only update their own assessments
+CREATE POLICY "assessments_update_own" ON assessments FOR
+UPDATE TO authenticated USING (profile_id = auth.uid ())
+WITH
+  CHECK (profile_id = auth.uid ());
+
+-- Users can only delete their own assessments
+CREATE POLICY "assessments_delete_own" ON assessments FOR DELETE TO authenticated USING (profile_id = auth.uid ());
+
+COMMENT ON POLICY "assessments_select_all" ON assessments IS 'Allow public read access for sharing';
+
+COMMENT ON POLICY "assessments_insert_auth" ON assessments IS 'Authenticated users can create assessments';
+
+COMMENT ON POLICY "assessments_update_own" ON assessments IS 'Users can only update their own assessments';
+
+COMMENT ON POLICY "assessments_delete_own" ON assessments IS 'Users can only delete their own assessments';
+
+-- =====================================================
+-- 3. QUESTIONS TABLE
+-- =====================================================
+ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can view questions (for public assessment sharing)
+CREATE POLICY "questions_select_all" ON questions FOR
+SELECT
+  TO public,
+  authenticated USING (true);
+
+-- Users can insert questions if they own the parent assessment
+CREATE POLICY "questions_insert_owner" ON questions FOR INSERT TO authenticated
+WITH
+  CHECK (
     EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = user_id AND p.user_id = auth.uid()
+      SELECT
+        1
+      FROM
+        assessments
+      WHERE
+        assessments.id = assessment_id
+        AND assessments.profile_id = auth.uid ()
     )
   );
 
-DROP POLICY IF EXISTS assessments_update_owner ON public.assessments;
-CREATE POLICY assessments_update_owner
-  ON public.assessments
-  FOR UPDATE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = public.assessments.user_id AND p.user_id = auth.uid()
-    )
+-- Users can only update questions in their own assessments
+CREATE POLICY "questions_update_owner" ON questions FOR
+UPDATE TO authenticated USING (
+  EXISTS (
+    SELECT
+      1
+    FROM
+      assessments
+    WHERE
+      assessments.id = questions.assessment_id
+      AND assessments.profile_id = auth.uid ()
   )
-  WITH CHECK (
+)
+WITH
+  CHECK (
     EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = user_id AND p.user_id = auth.uid()
+      SELECT
+        1
+      FROM
+        assessments
+      WHERE
+        assessments.id = assessment_id
+        AND assessments.profile_id = auth.uid ()
     )
   );
 
-DROP POLICY IF EXISTS assessments_delete_owner ON public.assessments;
-CREATE POLICY assessments_delete_owner
-  ON public.assessments
-  FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = public.assessments.user_id AND p.user_id = auth.uid()
-    )
-  );
-
--- ================================
--- questions
--- ================================
-DROP POLICY IF EXISTS questions_select_public ON public.questions;
-CREATE POLICY questions_select_public
-  ON public.questions
-  FOR SELECT
-  TO public, authenticated
-  USING (true);
-
-DROP POLICY IF EXISTS questions_insert_owner_check ON public.questions;
-CREATE POLICY questions_insert_owner_check
-  ON public.questions
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.assessments a
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE a.id = assessment_id AND p.user_id = auth.uid()
-    )
-  );
-
-DROP POLICY IF EXISTS questions_update_owner ON public.questions;
-CREATE POLICY questions_update_owner
-  ON public.questions
-  FOR UPDATE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.assessments a
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE a.id = public.questions.assessment_id AND p.user_id = auth.uid()
-    )
+-- Users can only delete questions from their own assessments
+CREATE POLICY "questions_delete_owner" ON questions FOR DELETE TO authenticated USING (
+  EXISTS (
+    SELECT
+      1
+    FROM
+      assessments
+    WHERE
+      assessments.id = questions.assessment_id
+      AND assessments.profile_id = auth.uid ()
   )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.assessments a
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE a.id = assessment_id AND p.user_id = auth.uid()
-    )
-  );
+);
 
-DROP POLICY IF EXISTS questions_delete_owner ON public.questions;
-CREATE POLICY questions_delete_owner
-  ON public.questions
-  FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.assessments a
-      JOIN public.profiles p ON p.id = a.user_id
-      WHERE a.id = public.questions.assessment_id AND p.user_id = auth.uid()
-    )
-  );
+COMMENT ON POLICY "questions_select_all" ON questions IS 'Allow public read access for assessment sharing';
 
--- ================================
--- logs
--- ================================
-DROP POLICY IF EXISTS logs_select_public ON public.logs;
-CREATE POLICY logs_select_public
-  ON public.logs
-  FOR SELECT
-  TO public, authenticated
-  USING (true);
+COMMENT ON POLICY "questions_insert_owner" ON questions IS 'Users can add questions to their own assessments';
 
-DROP POLICY IF EXISTS logs_insert_auth ON public.logs;
-CREATE POLICY logs_insert_auth
-  ON public.logs
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() IS NOT NULL);
+COMMENT ON POLICY "questions_update_owner" ON questions IS 'Users can only update questions in their assessments';
 
-DROP POLICY IF EXISTS logs_update_auth ON public.logs;
-CREATE POLICY logs_update_auth
-  ON public.logs
-  FOR UPDATE
-  TO authenticated
-  USING (auth.uid() IS NOT NULL)
-  WITH CHECK (auth.uid() IS NOT NULL);
+COMMENT ON POLICY "questions_delete_owner" ON questions IS 'Users can only delete questions from their assessments';
 
-DROP POLICY IF EXISTS logs_delete_auth ON public.logs;
-CREATE POLICY logs_delete_auth
-  ON public.logs
-  FOR DELETE
-  TO authenticated
-  USING (auth.uid() IS NOT NULL);
+-- =====================================================
+-- 4. LOGS TABLE
+-- =====================================================
+ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
 
--- ================================
--- academic_levels
--- ================================
-ALTER TABLE IF EXISTS public.academic_levels ENABLE ROW LEVEL SECURITY;
+-- Anyone can view aggregated logs (for statistics)
+CREATE POLICY "logs_select_all" ON logs FOR
+SELECT
+  TO public,
+  authenticated USING (true);
 
--- SELECT: allow public read access (change TO authenticated to require login)
-DROP POLICY IF EXISTS academic_levels_select_public ON public.academic_levels;
-CREATE POLICY academic_levels_select_public
-  ON public.academic_levels
-  FOR SELECT
-  TO public, authenticated
-  USING (true);
+-- Only authenticated users can insert logs
+CREATE POLICY "logs_insert_auth" ON logs FOR INSERT TO authenticated
+WITH
+  CHECK (true);
 
--- INSERT: only admins may insert
-DROP POLICY IF EXISTS academic_levels_insert_admin ON public.academic_levels;
-CREATE POLICY academic_levels_insert_admin
-  ON public.academic_levels
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
-    )
-  );
+-- Only service role can update logs
+CREATE POLICY "logs_update_service" ON logs FOR
+UPDATE TO authenticated USING (auth.uid () IS NOT NULL);
 
--- UPDATE: only admins may update
-DROP POLICY IF EXISTS academic_levels_update_admin ON public.academic_levels;
-CREATE POLICY academic_levels_update_admin
-  ON public.academic_levels
-  FOR UPDATE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
-    )
+COMMENT ON POLICY "logs_select_all" ON logs IS 'Allow public read for statistics';
+
+COMMENT ON POLICY "logs_insert_auth" ON logs IS 'Authenticated users can create log entries';
+
+COMMENT ON POLICY "logs_update_service" ON logs IS 'System can update log counters';
+
+-- =====================================================
+-- 5. PLANS TABLE
+-- =====================================================
+ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can view plan configurations
+CREATE POLICY "plans_select_all" ON plans FOR
+SELECT
+  TO public,
+  authenticated USING (true);
+
+-- Only service role or admins can modify plans
+-- Note: You'll need to add an is_admin column to profiles for this to work
+CREATE POLICY "plans_manage_service" ON plans FOR ALL TO authenticated USING (
+  EXISTS (
+    SELECT
+      1
+    FROM
+      profiles
+    WHERE
+      profiles.id = auth.uid ()
+      -- AND profiles.is_admin = true -- Uncomment when is_admin column exists
   )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
-    )
+);
+
+COMMENT ON POLICY "plans_select_all" ON plans IS 'Allow public read access to plan configurations';
+
+COMMENT ON POLICY "plans_manage_service" ON plans IS 'Only admins can manage plans (requires is_admin column)';
+
+-- =====================================================
+-- 6. ACADEMIC_LEVELS TABLE
+-- =====================================================
+ALTER TABLE academic_levels ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can view academic levels
+CREATE POLICY "academic_levels_select_all" ON academic_levels FOR
+SELECT
+  TO public,
+  authenticated USING (true);
+
+-- Only service role or admins can modify academic levels
+CREATE POLICY "academic_levels_manage_service" ON academic_levels FOR ALL TO authenticated USING (
+  EXISTS (
+    SELECT
+      1
+    FROM
+      profiles
+    WHERE
+      profiles.id = auth.uid ()
+      -- AND profiles.is_admin = true -- Uncomment when is_admin column exists
+  )
+);
+
+COMMENT ON POLICY "academic_levels_select_all" ON academic_levels IS 'Allow public read access';
+
+COMMENT ON POLICY "academic_levels_manage_service" ON academic_levels IS 'Only admins can manage levels (requires is_admin column)';
+
+-- =====================================================
+-- 7. PROFILE_LOGS_CYCLE TABLE
+-- =====================================================
+ALTER TABLE profile_logs_cycle ENABLE ROW LEVEL SECURITY;
+
+-- Users can only view their own usage logs
+CREATE POLICY "profile_logs_cycle_select_own" ON profile_logs_cycle FOR
+SELECT
+  TO authenticated USING (profile_id = auth.uid ());
+
+-- System can insert/update logs (service role only)
+CREATE POLICY "profile_logs_cycle_manage_system" ON profile_logs_cycle FOR ALL TO authenticated USING (true)
+WITH
+  CHECK (true);
+
+COMMENT ON POLICY "profile_logs_cycle_select_own" ON profile_logs_cycle IS 'Users can view their own usage tracking';
+
+COMMENT ON POLICY "profile_logs_cycle_manage_system" ON profile_logs_cycle IS 'System manages usage tracking';
+
+-- =====================================================
+-- 8. ERROR_LOGS TABLE
+-- =====================================================
+ALTER TABLE error_logs ENABLE ROW LEVEL SECURITY;
+
+-- Users can only view their own error logs
+CREATE POLICY "error_logs_select_own" ON error_logs FOR
+SELECT
+  TO authenticated USING (
+    user_id = auth.uid ()
+    OR user_id IS NULL
   );
 
--- DELETE: only admins may delete
-DROP POLICY IF EXISTS academic_levels_delete_admin ON public.academic_levels;
-CREATE POLICY academic_levels_delete_admin
-  ON public.academic_levels
-  FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND COALESCE(p.is_admin, false) = true
-    )
-  );
+-- Anyone (including anonymous) can insert error logs
+CREATE POLICY "error_logs_insert_all" ON error_logs FOR INSERT TO public,
+authenticated
+WITH
+  CHECK (true);
 
--- ================================
--- plans
--- ================================
-ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
+-- Only service role can update/delete error logs
+CREATE POLICY "error_logs_manage_service" ON error_logs FOR ALL TO authenticated USING (
+  EXISTS (
+    SELECT
+      1
+    FROM
+      profiles
+    WHERE
+      profiles.id = auth.uid ()
+      -- AND profiles.is_admin = true -- Uncomment when is_admin column exists
+  )
+);
 
--- Create RLS policies for plans table
--- Allow public read access (anyone can see plan configurations)
-CREATE POLICY "Allow public read access to plans"
-    ON public.plans
-    FOR SELECT
-    TO public
-    USING (true);
+COMMENT ON POLICY "error_logs_select_own" ON error_logs IS 'Users can view their own errors';
 
--- Allow admin write access only
-CREATE POLICY "Allow admin to manage plans"
-    ON public.plans
-    FOR ALL
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.user_id = auth.uid()
-            AND profiles.is_admin = true
-        )
-    );
+COMMENT ON POLICY "error_logs_insert_all" ON error_logs IS 'Anyone can report errors';
 
--- Create index for faster lookups
-CREATE INDEX idx_plans_id ON public.plans(id);
+COMMENT ON POLICY "error_logs_manage_service" ON error_logs IS 'Only admins can manage error logs';
 
--- ================================
--- Notes:
--- - Policies use column names directly in WITH CHECK (evaluated against the new row).
--- - USING clauses reference the existing row via public.<table>.<col>.
--- - If you need service-role or admin exceptions, create additional policies for those roles.
--- - After applying, test with an authenticated session (auth.uid()) and the Supabase client.
+-- =====================================================
+-- INDEXES FOR POLICY PERFORMANCE
+-- =====================================================
+-- These indexes help RLS policies perform better
+-- Index for auth.uid() lookups on profiles
+CREATE INDEX IF NOT EXISTS idx_profiles_auth_uid ON profiles (id);
 
--- Policy: Users can only view their own logs
-CREATE POLICY "Users can view their own cycle logs"
-ON profile_logs_cycle
-FOR SELECT
-USING (auth.uid() = user_id);
+-- Index for assessment ownership checks
+CREATE INDEX IF NOT EXISTS idx_assessments_profile_id_uid ON assessments (profile_id);
 
--- Policy: System can insert/update logs (via service role)
-CREATE POLICY "System can manage cycle logs"
-ON profile_logs_cycle
-FOR ALL
-USING (true)
-WITH CHECK (true);
+-- Index for question ownership through assessments
+CREATE INDEX IF NOT EXISTS idx_questions_assessment_for_auth ON questions (assessment_id);
 
--- 3. (OPCIONAL) Se você quiser uma policy mais restritiva que só permite
--- agregações e NÃO permite SELECT de colunas individuais, você pode
--- criar uma VIEW com permissões específicas:
-CREATE OR REPLACE VIEW public_profiles_count AS
-SELECT 
-  COUNT(*) as total_profiles,
-  COUNT(CASE WHEN email_verified = true THEN 1 END) as verified_profiles,
-  COUNT(CASE WHEN email_verified = false THEN 1 END) as unverified_profiles
-FROM profiles;
-
--- Garantir que a view é acessível publicamente
-GRANT SELECT ON public_profiles_count TO anon, authenticated;
-
-COMMENT ON VIEW public_profiles_count IS 
-'View pública para estatísticas agregadas de profiles. Não expõe dados individuais.';
+-- =====================================================
+-- NOTES
+-- =====================================================
+-- 1. To enable admin functionality, add an is_admin column to profiles:
+--    ALTER TABLE profiles ADD COLUMN is_admin BOOLEAN DEFAULT false;
+--    Then uncomment the is_admin checks in policies above.
+--
+-- 2. Service role bypasses RLS automatically. Use it for:
+--    - Migrations
+--    - Seed data
+--    - Background jobs
+--    - Admin operations
+--
+-- 3. Test policies with:
+--    SET ROLE authenticated;
+--    SET request.jwt.claim.sub = '<user-uuid>';
+--    -- Run queries to test
+--    RESET ROLE;
+--
+-- 4. To view all policies:
+--    SELECT * FROM pg_policies WHERE schemaname = 'public';

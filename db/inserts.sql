@@ -1,203 +1,413 @@
--- Insert default log entries
-INSERT INTO
-  public.logs (action, count, created_at, updated_at)
-VALUES
-  ('unique_assessments', 0, NOW (), NOW ()),
-  (
-    'mean_questions_per_assessment',
-    0,
-    NOW (),
-    NOW ()
-  );
+-- Inserts: Initial Data for Prova Fácil
+-- Description: Seed data for plans and academic levels
+-- Dependencies: 0007_create_plans, 0002_create_academic_levels
+-- Created: 2025-10-13
+-- Updated: 2025-10-13 (Added ON CONFLICT clauses for idempotency)
+--
+-- This file contains:
+-- 1. Plan configurations (5 plans: Starter, Basic, Essentials, Plus, Advanced)
+-- 2. Academic level configurations (13 levels with allowed question types/contexts)
+--
+-- IMPORTANT: This file can be run multiple times safely (idempotent)
+-- ON CONFLICT clauses will update existing records instead of failing
 
--- Insert all 5 plans with their configurations based on Pricing.tsx
+-- =====================================================
+-- 1. PLANS (5 subscription tiers)
+-- =====================================================
+-- Note: Price values match the Stripe configuration
+-- The 'name' column uses the 'plan' enum type (UNIQUE constraint)
 
--- Starter Plan (Free)
-INSERT INTO public.plans (
-    id, 
-    model, 
-    questions_month, 
-    doc_type, 
-    docs_size, 
-    max_question_types, 
-    support
+-- Starter Plan (FREE)
+INSERT INTO plans (
+    name,
+    price,
+    questions_limit,
+    assessments_limit,
+    daily_questions_limit,
+    copilot_questions_limit,
+    support_type,
+    features
 ) VALUES (
     'starter',
-    'gemini-2.5-flash-lite',
+    0.00,
     30,
-    ARRAY['txt', 'docx', 'text'],
+    5,
     10,
-    1,
-    ARRAY['email']::support_type_enum[]
-);
+    10,
+    'email',
+    '["Modelo: gemini-2.5-flash-lite", "Tipos de documento: txt, docx, text", "Tamanho máximo: 10MB", "1 tipo de questão"]'::jsonb
+)
+ON CONFLICT (name)
+DO UPDATE SET
+    price = EXCLUDED.price,
+    questions_limit = EXCLUDED.questions_limit,
+    assessments_limit = EXCLUDED.assessments_limit,
+    daily_questions_limit = EXCLUDED.daily_questions_limit,
+    copilot_questions_limit = EXCLUDED.copilot_questions_limit,
+    support_type = EXCLUDED.support_type,
+    features = EXCLUDED.features,
+    updated_at = CURRENT_TIMESTAMP;
 
 -- Basic Plan (R$ 29,90/mês)
-INSERT INTO public.plans (
-    id, 
-    model, 
-    questions_month, 
-    doc_type, 
-    docs_size, 
-    max_question_types, 
-    support
+INSERT INTO plans (
+    name,
+    price,
+    questions_limit,
+    assessments_limit,
+    daily_questions_limit,
+    copilot_questions_limit,
+    support_type,
+    features
 ) VALUES (
     'basic',
-    'gemini-2.5-flash-lite',
+    29.90,
     75,
-    ARRAY['txt', 'docx', 'text'],
-    20,
-    2,
-    ARRAY['email']::support_type_enum[]
-);
+    15,
+    25,
+    25,
+    'email',
+    '["Modelo: gemini-2.5-flash-lite", "Tipos de documento: txt, docx, text", "Tamanho máximo: 20MB", "2 tipos de questão"]'::jsonb
+)
+ON CONFLICT (name)
+DO UPDATE SET
+    price = EXCLUDED.price,
+    questions_limit = EXCLUDED.questions_limit,
+    assessments_limit = EXCLUDED.assessments_limit,
+    daily_questions_limit = EXCLUDED.daily_questions_limit,
+    copilot_questions_limit = EXCLUDED.copilot_questions_limit,
+    support_type = EXCLUDED.support_type,
+    features = EXCLUDED.features,
+    updated_at = CURRENT_TIMESTAMP;
 
 -- Essentials Plan (R$ 49,90/mês)
-INSERT INTO public.plans (
-    id, 
-    model, 
-    questions_month, 
-    doc_type, 
-    docs_size, 
-    max_question_types, 
-    support
+INSERT INTO plans (
+    name,
+    price,
+    questions_limit,
+    assessments_limit,
+    daily_questions_limit,
+    copilot_questions_limit,
+    support_type,
+    features
 ) VALUES (
     'essentials',
-    'gemini-2.5-flash',
+    49.90,
     150,
-    ARRAY['txt', 'docx', 'pdf', 'link', 'text'],
     30,
-    3,
-    ARRAY['email', 'whatsapp']::support_type_enum[]
-);
+    50,
+    50,
+    'whatsapp',
+    '["Modelo: gemini-2.5-flash", "Tipos de documento: txt, docx, pdf, link, text", "Tamanho máximo: 30MB", "3 tipos de questão", "Suporte WhatsApp"]'::jsonb
+)
+ON CONFLICT (name)
+DO UPDATE SET
+    price = EXCLUDED.price,
+    questions_limit = EXCLUDED.questions_limit,
+    assessments_limit = EXCLUDED.assessments_limit,
+    daily_questions_limit = EXCLUDED.daily_questions_limit,
+    copilot_questions_limit = EXCLUDED.copilot_questions_limit,
+    support_type = EXCLUDED.support_type,
+    features = EXCLUDED.features,
+    updated_at = CURRENT_TIMESTAMP;
 
 -- Plus Plan (R$ 79,90/mês)
-INSERT INTO public.plans (
-    id, 
-    model, 
-    questions_month, 
-    doc_type, 
-    docs_size, 
-    max_question_types, 
-    support
+INSERT INTO plans (
+    name,
+    price,
+    questions_limit,
+    assessments_limit,
+    daily_questions_limit,
+    copilot_questions_limit,
+    support_type,
+    features
 ) VALUES (
     'plus',
-    'gemini-2.5-flash',
+    79.90,
     250,
-    ARRAY['txt', 'docx', 'pdf', 'link', 'text'],
-    40,
-    4,
-    ARRAY['email', 'whatsapp', 'vip']::support_type_enum[]
-);
+    50,
+    100,
+    100,
+    'vip',
+    '["Modelo: gemini-2.5-flash", "Tipos de documento: txt, docx, pdf, link, text", "Tamanho máximo: 40MB", "4 tipos de questão", "Suporte VIP"]'::jsonb
+)
+ON CONFLICT (name)
+DO UPDATE SET
+    price = EXCLUDED.price,
+    questions_limit = EXCLUDED.questions_limit,
+    assessments_limit = EXCLUDED.assessments_limit,
+    daily_questions_limit = EXCLUDED.daily_questions_limit,
+    copilot_questions_limit = EXCLUDED.copilot_questions_limit,
+    support_type = EXCLUDED.support_type,
+    features = EXCLUDED.features,
+    updated_at = CURRENT_TIMESTAMP;
 
 -- Advanced Plan (R$ 129,90/mês)
-INSERT INTO public.plans (
-    id, 
-    model, 
-    questions_month, 
-    doc_type, 
-    docs_size, 
-    max_question_types, 
-    support
+INSERT INTO plans (
+    name,
+    price,
+    questions_limit,
+    assessments_limit,
+    daily_questions_limit,
+    copilot_questions_limit,
+    support_type,
+    features
 ) VALUES (
     'advanced',
-    'gemini-2.5-pro',
+    129.90,
     300,
-    ARRAY['txt', 'docx', 'pdf', 'pptx', 'link', 'text'],
     100,
-    6,
-    ARRAY['email', 'whatsapp', 'vip']::support_type_enum[]
-);
+    150,
+    150,
+    'vip',
+    '["Modelo: gemini-2.5-pro", "Tipos de documento: txt, docx, pdf, pptx, link, text", "Tamanho máximo: 100MB", "6 tipos de questão", "Suporte VIP prioritário"]'::jsonb
+)
+ON CONFLICT (name)
+DO UPDATE SET
+    price = EXCLUDED.price,
+    questions_limit = EXCLUDED.questions_limit,
+    assessments_limit = EXCLUDED.assessments_limit,
+    daily_questions_limit = EXCLUDED.daily_questions_limit,
+    copilot_questions_limit = EXCLUDED.copilot_questions_limit,
+    support_type = EXCLUDED.support_type,
+    features = EXCLUDED.features,
+    updated_at = CURRENT_TIMESTAMP;
 
--- Insert Academic Levels
--- Seguindo o enum academicLevelEnum e a estrutura da tabela academic_levels
-INSERT INTO public.academic_levels (name, allowed_question_types, allowed_question_context, description, created_at) VALUES
-  (
+-- =====================================================
+-- 2. ACADEMIC LEVELS (13 education levels)
+-- =====================================================
+-- Each level has specific allowed question types and contexts
+-- The 'level' column uses the 'academic_level' enum type (UNIQUE constraint)
+
+-- Elementary School (1º ao 5º ano)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'elementary_school',
-    ARRAY['multiple_choice', 'true_false']::question_type[],
-    ARRAY['fixacao', 'contextualizada']::question_context[],
-    'Ensino Fundamental I (1º ao 5º ano) - Questões simples e contextualizadas',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "true_false"]'::jsonb,
+    '["fixacao", "contextualizada"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Middle School (6º ao 9º ano)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'middle_school',
-    ARRAY['multiple_choice', 'true_false', 'fill_in_the_blank', 'matching_columns']::question_type[],
-    ARRAY['fixacao', 'contextualizada', 'teorica']::question_context[],
-    'Ensino Fundamental II (6º ao 9º ano) - Questões de fixação e teóricas',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "true_false", "fill_in_the_blank", "matching_columns"]'::jsonb,
+    '["fixacao", "contextualizada", "teorica"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- High School (1º ao 3º ano)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'high_school',
-    ARRAY['multiple_choice', 'true_false', 'open', 'sum', 'fill_in_the_blank', 'matching_columns', 'problem_solving']::question_type[],
-    ARRAY['fixacao', 'contextualizada', 'teorica', 'estudo_caso']::question_context[],
-    'Ensino Médio (1º ao 3º ano) - Questões aprofundadas e estudos de caso',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "true_false", "open", "sum", "fill_in_the_blank", "matching_columns", "problem_solving"]'::jsonb,
+    '["fixacao", "contextualizada", "teorica", "estudo_caso"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Technical Education
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'technical',
-    ARRAY['multiple_choice', 'true_false', 'open', 'problem_solving', 'project_based']::question_type[],
-    ARRAY['fixacao', 'contextualizada', 'teorica', 'estudo_caso', 'pesquisa']::question_context[],
-    'Ensino Técnico - Questões práticas e baseadas em projetos',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "true_false", "open", "problem_solving", "project_based"]'::jsonb,
+    '["fixacao", "contextualizada", "teorica", "estudo_caso", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Undergraduate (Graduação)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'undergraduate',
-    ARRAY['multiple_choice', 'true_false', 'open', 'sum', 'fill_in_the_blank', 'matching_columns', 'problem_solving', 'essay', 'summative']::question_type[],
-    ARRAY['fixacao', 'contextualizada', 'teorica', 'estudo_caso', 'discursiva_aberta', 'pesquisa']::question_context[],
-    'Graduação - Todos os tipos de questões exceto gamificadas',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "true_false", "open", "sum", "fill_in_the_blank", "matching_columns", "problem_solving", "essay", "summative"]'::jsonb,
+    '["fixacao", "contextualizada", "teorica", "estudo_caso", "discursiva_aberta", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Specialization (Especialização)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'specialization',
-    ARRAY['multiple_choice', 'true_false', 'open', 'problem_solving', 'essay', 'summative', 'project_based']::question_type[],
-    ARRAY['contextualizada', 'teorica', 'estudo_caso', 'discursiva_aberta', 'pesquisa']::question_context[],
-    'Especialização - Questões analíticas e dissertativas',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "true_false", "open", "problem_solving", "essay", "summative", "project_based"]'::jsonb,
+    '["contextualizada", "teorica", "estudo_caso", "discursiva_aberta", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- MBA
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'mba',
-    ARRAY['multiple_choice', 'open', 'problem_solving', 'essay', 'summative', 'project_based']::question_type[],
-    ARRAY['contextualizada', 'estudo_caso', 'discursiva_aberta', 'pesquisa']::question_context[],
-    'MBA - Foco em estudos de caso e projetos',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "open", "problem_solving", "essay", "summative", "project_based"]'::jsonb,
+    '["contextualizada", "estudo_caso", "discursiva_aberta", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Masters (Mestrado)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'masters',
-    ARRAY['open', 'problem_solving', 'essay', 'summative', 'project_based']::question_type[],
-    ARRAY['teorica', 'estudo_caso', 'discursiva_aberta', 'pesquisa']::question_context[],
-    'Mestrado - Questões avançadas e pesquisa acadêmica',
-    NOW()
-  ),
-  (
+    '["open", "problem_solving", "essay", "summative", "project_based"]'::jsonb,
+    '["teorica", "estudo_caso", "discursiva_aberta", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Doctorate (Doutorado)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'doctorate',
-    ARRAY['open', 'essay', 'summative', 'project_based']::question_type[],
-    ARRAY['teorica', 'estudo_caso', 'discursiva_aberta', 'pesquisa']::question_context[],
-    'Doutorado - Questões de pesquisa e dissertativas avançadas',
-    NOW()
-  ),
-  (
+    '["open", "essay", "summative", "project_based"]'::jsonb,
+    '["teorica", "estudo_caso", "discursiva_aberta", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Postdoctoral (Pós-Doutorado)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'postdoctoral',
-    ARRAY['open', 'essay', 'summative', 'project_based']::question_type[],
-    ARRAY['teorica', 'discursiva_aberta', 'pesquisa']::question_context[],
-    'Pós-Doutorado - Pesquisa avançada e produção científica',
-    NOW()
-  ),
-  (
+    '["open", "essay", "summative", "project_based"]'::jsonb,
+    '["teorica", "discursiva_aberta", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Extension Course (Curso de Extensão)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'extension',
-    ARRAY['multiple_choice', 'true_false', 'open', 'fill_in_the_blank', 'problem_solving']::question_type[],
-    ARRAY['fixacao', 'contextualizada', 'teorica', 'pesquisa']::question_context[],
-    'Curso de Extensão - Questões práticas e teóricas',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "true_false", "open", "fill_in_the_blank", "problem_solving"]'::jsonb,
+    '["fixacao", "contextualizada", "teorica", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Language Course (Curso de Idiomas)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'language_course',
-    ARRAY['multiple_choice', 'true_false', 'fill_in_the_blank', 'matching_columns', 'open']::question_type[],
-    ARRAY['fixacao', 'contextualizada']::question_context[],
-    'Curso de Idiomas - Questões de fixação e contextualizadas',
-    NOW()
-  ),
-  (
+    '["multiple_choice", "true_false", "fill_in_the_blank", "matching_columns", "open"]'::jsonb,
+    '["fixacao", "contextualizada"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- None (Sem nível específico - todos os tipos disponíveis)
+INSERT INTO academic_levels (
+    level,
+    allowed_question_types,
+    allowed_question_contexts
+) VALUES (
     'none',
-    ARRAY['multiple_choice', 'true_false', 'open', 'sum', 'fill_in_the_blank', 'matching_columns', 'problem_solving', 'essay', 'project_based', 'gamified', 'summative']::question_type[],
-    ARRAY['fixacao', 'contextualizada', 'teorica', 'estudo_caso', 'discursiva_aberta', 'letra_lei', 'pesquisa']::question_context[],
-    'Sem nível específico - Todos os tipos de questões e contextos disponíveis',
-    NOW()
-  );
+    '["multiple_choice", "true_false", "open", "sum", "fill_in_the_blank", "matching_columns", "problem_solving", "essay", "project_based", "gamified", "summative"]'::jsonb,
+    '["fixacao", "contextualizada", "teorica", "estudo_caso", "discursiva_aberta", "letra_lei", "pesquisa"]'::jsonb
+)
+ON CONFLICT (level)
+DO UPDATE SET
+    allowed_question_types = EXCLUDED.allowed_question_types,
+    allowed_question_contexts = EXCLUDED.allowed_question_contexts,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- =====================================================
+-- VERIFICATION QUERIES (OPTIONAL)
+-- =====================================================
+-- Run these to verify the inserts were successful
+
+-- Verify plans
+-- SELECT name, price, questions_limit FROM plans ORDER BY price;
+
+-- Verify academic levels
+-- SELECT level, jsonb_array_length(allowed_question_types) as type_count
+-- FROM academic_levels
+-- ORDER BY type_count DESC;
+
+-- =====================================================
+-- NOTES
+-- =====================================================
+-- 1. This file is IDEMPOTENT - can be run multiple times safely
+-- 2. ON CONFLICT clauses will UPDATE existing records instead of failing
+-- 3. Plan prices should match your Stripe product configuration
+-- 4. Features JSONB arrays are displayed in the UI as bullet points
+-- 5. Academic level configurations control which question types/contexts
+--    are available based on the user's selected education level
+-- 6. The 'none' level allows all question types and is the fallback
+-- 7. To manually update a plan, modify the INSERT statement and re-run this file
+-- 8. The updated_at timestamp is automatically updated on conflict
