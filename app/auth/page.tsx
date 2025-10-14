@@ -95,7 +95,6 @@ export default function AuthPage() {
         .eq('user_id', data.user.id)
         .single();
 
-      console.log(`Fetched profile for user_id ${data.user.id}:`, existingProfile);
       // Se não existir, criar automaticamente
       if (!existingProfile) {
         const { error: profileError } = await supabase.from('profiles').insert({

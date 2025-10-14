@@ -177,3 +177,6 @@ Dockerfile.prod
 # Misc
 *.tgz
 *.tar.gz
+
+# Ignore files related to specific tools or environments
+.genkit/

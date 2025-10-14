@@ -19,6 +19,7 @@ interface UseStripeReturn {
   // Actions
   createCheckout: (priceId: string) => Promise<void>;
   updateSubscription: (priceId: string, immediate: boolean) => Promise<{ success: boolean; message: string }>;
+  cancelSubscription: () => Promise<{ success: boolean; message: string }>;
   openBillingPortal: () => Promise<void>;
   fetchProducts: () => Promise<void>;
   clearError: () => void;
@@ -122,6 +123,43 @@ export function useStripe(): UseStripeReturn {
   }, []);
 
   /**
+   * Cancels the subscription by downgrading to free Starter plan at period end
+   *
+   * @returns Object with success status and message
+   */
+  const cancelSubscription = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to cancel subscription');
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Assinatura cancelada com sucesso',
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(message);
+      console.error('Cancel subscription error:', err);
+      throw err; // Re-throw so caller can handle
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
    * Opens the Stripe Billing Portal for subscription management
    */
   const openBillingPortal = useCallback(async () => {
@@ -195,6 +233,7 @@ export function useStripe(): UseStripeReturn {
     products,
     createCheckout,
     updateSubscription,
+    cancelSubscription,
     openBillingPortal,
     fetchProducts,
     clearError,
