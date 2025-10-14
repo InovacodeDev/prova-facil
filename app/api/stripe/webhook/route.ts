@@ -47,11 +47,40 @@ function verifyWebhookSignature(payload: string, signature: string): Stripe.Even
  *
  * Redis cache stores:
  * - Full subscription data: plan, status, renewStatus, prices, dates, etc.
+ *
+ * IMPORTANT: This function ensures only ONE active subscription per customer.
+ * If a new subscription is created, old subscriptions are canceled.
  */
 async function updateProfileSubscription(customerId: string, subscription: Stripe.Subscription) {
   const supabase = await createClient();
 
   console.log(`[Webhook] Updating profile for customer: ${customerId}, subscription: ${subscription.id}`);
+
+  // Get current profile to check for existing subscription
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('stripe_subscription_id')
+    .eq('stripe_customer_id', customerId)
+    .single();
+
+  // If there's a different active subscription, cancel it to prevent multiple subscriptions
+  if (
+    profile?.stripe_subscription_id &&
+    profile.stripe_subscription_id !== subscription.id &&
+    subscription.status === 'active'
+  ) {
+    try {
+      console.log(`[Webhook] Found old subscription ${profile.stripe_subscription_id}, canceling it...`);
+
+      // Cancel the old subscription immediately (not at period end)
+      await stripe.subscriptions.cancel(profile.stripe_subscription_id);
+
+      console.log(`[Webhook] Old subscription ${profile.stripe_subscription_id} canceled`);
+    } catch (error) {
+      console.error(`[Webhook] Error canceling old subscription:`, error);
+      // Continue anyway - the new subscription will be set
+    }
+  }
 
   // Update database with ONLY Stripe IDs (references)
   const { error } = await supabase

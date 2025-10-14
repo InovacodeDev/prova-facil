@@ -5,10 +5,10 @@
  * It requires authentication and returns a checkout URL for client-side redirect.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { createOrGetCustomer, createCheckoutSession } from '@/lib/stripe/server';
 import { getCheckoutUrls } from '@/lib/stripe/config';
+import { createCheckoutSession, createOrGetCustomer } from '@/lib/stripe/server';
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, email, full_name, stripe_customer_id')
+      .select('id, email, full_name, stripe_customer_id, stripe_subscription_id')
       .eq('user_id', user.id)
       .single();
 
@@ -56,6 +56,29 @@ export async function POST(request: NextRequest) {
     // Get base URL for redirect URLs
     const origin = request.headers.get('origin') || 'http://localhost:8800';
     const { success, cancel } = getCheckoutUrls(origin);
+
+    // Check if user already has an active subscription
+    if (profile.stripe_subscription_id) {
+      try {
+        const { stripe } = await import('@/lib/stripe/server');
+        const existingSubscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+
+        // If subscription is active or trialing, we should update it instead of creating a new one
+        if (existingSubscription.status === 'active' || existingSubscription.status === 'trialing') {
+          return NextResponse.json(
+            {
+              error: 'Active subscription exists',
+              message: 'Você já possui uma assinatura ativa. Use o portal de gerenciamento para alterar seu plano.',
+              shouldRedirectToPortal: true,
+            },
+            { status: 409 }
+          );
+        }
+      } catch (error) {
+        // If subscription doesn't exist or is invalid, continue with checkout
+        console.warn('Existing subscription check failed, continuing with checkout:', error);
+      }
+    }
 
     // Create checkout session
     const session = await createCheckoutSession(customerId, priceId, success, cancel);
