@@ -9,12 +9,14 @@ Implementado sistema robusto para garantir que cada usuário tenha **APENAS UMA*
 ## 🎯 Problema Resolvido
 
 **ANTES:**
+
 - ❌ Usuário podia criar múltiplas subscriptions através do checkout
 - ❌ Não havia validação de subscription existente
 - ❌ Webhooks não cancelavam subscriptions antigas
 - ❌ Potencial de cobranças duplicadas
 
 **AGORA:**
+
 - ✅ Checkout bloqueia se já existe subscription ativa
 - ✅ Novo endpoint `/api/stripe/update-subscription` para mudanças de plano
 - ✅ Webhook cancela automaticamente subscriptions antigas
@@ -31,9 +33,7 @@ Implementado sistema robusto para garantir que cada usuário tenha **APENAS UMA*
 ```typescript
 // Verifica se já existe subscription ativa
 if (profile.stripe_subscription_id) {
-  const existingSubscription = await stripe.subscriptions.retrieve(
-    profile.stripe_subscription_id
-  );
+  const existingSubscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
 
   // Se ativa ou em trial, bloqueia checkout
   if (existingSubscription.status === 'active' || existingSubscription.status === 'trialing') {
@@ -50,6 +50,7 @@ if (profile.stripe_subscription_id) {
 ```
 
 **Resultado:**
+
 - ✅ Usuário não pode criar nova subscription se já tem uma ativa
 - ✅ Frontend deve redirecionar para portal de gerenciamento
 - ✅ Status HTTP 409 (Conflict) indica duplicação
@@ -61,6 +62,7 @@ if (profile.stripe_subscription_id) {
 **Endpoint:** `POST /api/stripe/update-subscription`
 
 **Body:**
+
 ```typescript
 {
   priceId: string;       // ID do novo price do Stripe
@@ -91,6 +93,7 @@ await stripe.subscriptions.update(profile.stripe_subscription_id, {
 **Casos de Uso:**
 
 #### **Upgrade (Imediato):**
+
 ```bash
 POST /api/stripe/update-subscription
 {
@@ -98,11 +101,13 @@ POST /api/stripe/update-subscription
   "immediate": true
 }
 ```
+
 - ✅ Mudança imediata
 - ✅ Proration calculada (crédito + cobrança)
 - ✅ Usuário paga diferença proporcional agora
 
 #### **Downgrade (Final do Período):**
+
 ```bash
 POST /api/stripe/update-subscription
 {
@@ -110,11 +115,13 @@ POST /api/stripe/update-subscription
   "immediate": false
 }
 ```
+
 - ✅ Mudança agendada para fim do período
 - ✅ Sem cobrança imediata
 - ✅ Usuário continua com plano atual até renovação
 
 **Response:**
+
 ```typescript
 {
   success: true,
@@ -151,7 +158,7 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
     subscription.status === 'active'
   ) {
     console.log(`[Webhook] Cancelando subscription antiga: ${profile.stripe_subscription_id}`);
-    
+
     // Cancela IMEDIATAMENTE (não no final do período)
     await stripe.subscriptions.cancel(profile.stripe_subscription_id);
   }
@@ -171,11 +178,13 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
 ```
 
 **Gatilhos:**
+
 - `customer.subscription.created` - Nova subscription criada
 - `customer.subscription.updated` - Subscription modificada
 - `customer.subscription.deleted` - Subscription cancelada
 
 **Proteção:**
+
 - ✅ Cancela automaticamente subscription antiga
 - ✅ Garante apenas 1 subscription por customer
 - ✅ Logs detalhados de todas as operações
@@ -231,18 +240,21 @@ Frontend → POST /api/stripe/create-checkout
 ## 🎯 Validações Implementadas
 
 ### **Checkout Validation:**
+
 - ✅ Verifica `profile.stripe_subscription_id`
 - ✅ Consulta Stripe para confirmar status
 - ✅ Bloqueia se status = `active` ou `trialing`
 - ✅ Permite se subscription inexistente ou cancelada
 
 ### **Update Subscription Validation:**
+
 - ✅ Requer subscription ativa existente
 - ✅ Valida que price existe no Stripe
 - ✅ Impede mudança para mesmo price
 - ✅ Verifica status da subscription
 
 ### **Webhook Protection:**
+
 - ✅ Cancela subscription antiga se nova for criada
 - ✅ Apenas 1 subscription ativa por customer
 - ✅ Logs de todas operações de cancelamento
@@ -252,18 +264,21 @@ Frontend → POST /api/stripe/create-checkout
 ## 🔍 Logs e Debugging
 
 ### **Logs de Checkout:**
+
 ```
 [API] Checking for existing subscription...
 [API] Found active subscription: sub_xxx, blocking checkout
 ```
 
 ### **Logs de Update:**
+
 ```
 [API] Updating subscription: sub_xxx to price: price_yyy
 [API] Immediate: true, Effective at: 2025-01-13T10:00:00Z
 ```
 
 ### **Logs de Webhook:**
+
 ```
 [Webhook] Updating profile for customer: cus_xxx, subscription: sub_yyy
 [Webhook] Found old subscription sub_zzz, canceling it...
@@ -309,7 +324,7 @@ curl -X POST http://localhost:8800/api/stripe/create-checkout \
   -d '{"priceId": "price_basic_monthly"}' \
   -H "Cookie: supabase-auth-token=..."
 
-# Esperado: 
+# Esperado:
 # Status: 409 Conflict
 # { error: "Active subscription exists", shouldRedirectToPortal: true }
 ```
@@ -330,13 +345,13 @@ curl -X POST http://localhost:8800/api/stripe/create-checkout \
 
 ## 🚨 Casos de Erro Tratados
 
-| Erro | HTTP Status | Response |
-|------|-------------|----------|
-| Subscription já existe (checkout) | 409 | `{ error: "Active subscription exists", shouldRedirectToPortal: true }` |
-| Sem subscription ativa (update) | 400 | `{ error: "No active subscription found" }` |
-| Price inválido | 400 | `{ error: "Invalid price" }` |
-| Tentar mudar para mesmo price | 400 | `{ error: "Same price" }` |
-| Subscription não encontrada | 404 | `{ error: "Subscription not found" }` |
+| Erro                              | HTTP Status | Response                                                                |
+| --------------------------------- | ----------- | ----------------------------------------------------------------------- |
+| Subscription já existe (checkout) | 409         | `{ error: "Active subscription exists", shouldRedirectToPortal: true }` |
+| Sem subscription ativa (update)   | 400         | `{ error: "No active subscription found" }`                             |
+| Price inválido                    | 400         | `{ error: "Invalid price" }`                                            |
+| Tentar mudar para mesmo price     | 400         | `{ error: "Same price" }`                                               |
+| Subscription não encontrada       | 404         | `{ error: "Subscription not found" }`                                   |
 
 ---
 
@@ -345,6 +360,7 @@ curl -X POST http://localhost:8800/api/stripe/create-checkout \
 ### **Modificados:**
 
 1. ✅ `POST /api/stripe/create-checkout`
+
    - Adiciona validação de subscription existente
    - Retorna 409 se já existe ativa
 
@@ -361,6 +377,7 @@ curl -X POST http://localhost:8800/api/stripe/create-checkout \
 ### **Já Existentes (Sem Mudanças):**
 
 4. ✅ `POST /api/stripe/cancel-subscription`
+
    - Cancela subscription no final do período
    - Para downgrade para FREE
 
@@ -453,9 +470,11 @@ async function handlePlanChange(newPriceId: string, isUpgrade: boolean) {
 **Status:** ✅ **IMPLEMENTADO E PRONTO PARA TESTE**
 
 **Arquivos Modificados:**
+
 - `app/api/stripe/create-checkout/route.ts`
 - `app/api/stripe/webhook/route.ts`
 
 **Arquivos Criados:**
+
 - `app/api/stripe/update-subscription/route.ts`
 - `docs/SUBSCRIPTION_MANAGEMENT.md`
