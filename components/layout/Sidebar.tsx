@@ -81,6 +81,69 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
 
   useEffect(() => {
     fetchPlan();
+
+    // Subscribe to profile changes for real-time updates
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const setupRealtimeSubscription = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) return;
+
+        // Get user's profile ID
+        const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
+
+        if (!profile) return;
+
+        console.log('[Sidebar] Setting up real-time subscription for profile:', profile.id);
+
+        // Create a channel for profile updates
+        channel = supabase
+          .channel(`profile-changes-${profile.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'profiles',
+              filter: `id=eq.${profile.id}`,
+            },
+            (payload) => {
+              console.log('[Sidebar] Profile updated, refreshing plan...', payload);
+              // Refetch plan when profile changes
+              fetchPlan();
+            }
+          )
+          .subscribe((status) => {
+            console.log('[Sidebar] Realtime subscription status:', status);
+          });
+      } catch (error) {
+        console.error('[Sidebar] Error setting up realtime subscription:', error);
+      }
+    };
+
+    setupRealtimeSubscription();
+
+    // Also listen to custom subscription update events
+    const handleSubscriptionUpdate = () => {
+      console.log('[Sidebar] Subscription cache invalidated, refreshing plan...');
+      fetchPlan();
+    };
+
+    // Listen for custom events from other components (e.g., plan page)
+    window.addEventListener('subscription-updated', handleSubscriptionUpdate);
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (channel) {
+        console.log('[Sidebar] Cleaning up realtime subscription');
+        supabase.removeChannel(channel);
+      }
+      window.removeEventListener('subscription-updated', handleSubscriptionUpdate);
+    };
   }, []);
 
   const fetchPlan = async () => {
@@ -251,7 +314,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
       <nav className="flex-1 space-y-1 p-3 overflow-y-auto">{navigationItems.map(renderNavItem)}</nav>
 
       {/* Footer with plan card */}
-      <div className="p-3 space-y-3 border-t">
+      <div className="p-3 space-y-3">
         <Separator className="mb-3" />
         {renderPlanCard()}
       </div>

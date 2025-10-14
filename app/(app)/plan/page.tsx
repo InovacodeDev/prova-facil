@@ -51,6 +51,13 @@ export default function PlanPage() {
     }
   };
 
+  // Helper function to notify other components about subscription updates
+  const notifySubscriptionUpdate = () => {
+    console.log('[Plan] Notifying subscription update to other components...');
+    // Dispatch custom event for real-time UI updates (e.g., Sidebar)
+    window.dispatchEvent(new CustomEvent('subscription-updated'));
+  };
+
   const handleStripeReturn = async () => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
@@ -88,6 +95,9 @@ export default function PlanPage() {
             console.log('[Plan] Refetching plan data...');
             refetchPlan();
             refetchProducts();
+
+            // Notify other components (e.g., Sidebar)
+            notifySubscriptionUpdate();
           } else {
             console.warn('[Plan] Subscription sync failed, will wait for webhook:', data);
 
@@ -101,6 +111,7 @@ export default function PlanPage() {
             setTimeout(() => {
               refetchPlan();
               refetchProducts();
+              notifySubscriptionUpdate();
             }, 2000);
           }
         } catch (error) {
@@ -116,6 +127,7 @@ export default function PlanPage() {
           setTimeout(() => {
             refetchPlan();
             refetchProducts();
+            notifySubscriptionUpdate();
           }, 2000);
         }
 
@@ -138,6 +150,7 @@ export default function PlanPage() {
           console.log('[Plan] Refetching plan data...');
           refetchPlan();
           refetchProducts();
+          notifySubscriptionUpdate();
         }, 2000);
 
         window.history.replaceState({}, '', '/plan');
@@ -205,6 +218,7 @@ export default function PlanPage() {
           setTimeout(() => {
             refetchPlan();
             refetchProducts();
+            notifySubscriptionUpdate();
           }, 500);
 
           setCheckoutLoading(false);
@@ -240,6 +254,7 @@ export default function PlanPage() {
         setTimeout(() => {
           refetchPlan();
           refetchProducts();
+          notifySubscriptionUpdate();
         }, 500);
 
         setCheckoutLoading(false);
@@ -265,6 +280,7 @@ export default function PlanPage() {
         setTimeout(() => {
           refetchPlan();
           refetchProducts();
+          notifySubscriptionUpdate();
         }, 500);
 
         setCheckoutLoading(false);
