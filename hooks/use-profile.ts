@@ -9,6 +9,12 @@
  * - React Query caching (1 hour staleTime)
  * - Optimistic updates support
  * - Type-safe profile data
+ * - Automatic subscription cache invalidation on Stripe field changes
+ *
+ * Synchronization:
+ * When Stripe-related fields (stripe_customer_id, stripe_subscription_id) change
+ * in the profile, this hook automatically invalidates the subscription cache to
+ * ensure that subscription data stays in sync with the profile.
  *
  * @example
  * ```tsx
@@ -121,11 +127,29 @@ export function useProfile() {
           console.log('[useProfile] Realtime update received:', payload);
 
           if (payload.eventType === 'UPDATE' && payload.new) {
-            // Update the cache with new data
-            queryClient.setQueryData(['profile', user.id], payload.new as Profile);
+            const oldProfile = payload.old as Profile;
+            const newProfile = payload.new as Profile;
+
+            // Update the profile cache with new data
+            queryClient.setQueryData(['profile', user.id], newProfile);
+
+            // Check if Stripe-related fields changed
+            const stripeFieldsChanged =
+              oldProfile.stripe_customer_id !== newProfile.stripe_customer_id ||
+              oldProfile.stripe_subscription_id !== newProfile.stripe_subscription_id;
+
+            if (stripeFieldsChanged) {
+              console.log('[useProfile] Stripe fields changed, invalidating subscription cache');
+              // Invalidate subscription cache to force refetch
+              queryClient.invalidateQueries({ queryKey: ['subscription'] });
+              // Also invalidate plan cache since it depends on subscription
+              queryClient.invalidateQueries({ queryKey: ['plan-id'] });
+            }
           } else if (payload.eventType === 'DELETE') {
             // Invalidate cache if profile is deleted
             queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+            queryClient.invalidateQueries({ queryKey: ['subscription'] });
+            queryClient.invalidateQueries({ queryKey: ['plan-id'] });
           }
         }
       )
