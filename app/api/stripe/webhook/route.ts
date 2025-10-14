@@ -5,9 +5,9 @@
  * with subscription status changes.
  *
  * Architecture:
- * - Only updates stripe_customer_id and stripe_subscription_id in database
+ * - Updates only stripe_customer_id and stripe_subscription_id in database
  * - Invalidates Redis cache on subscription changes
- * - Plan information is fetched on-demand from Stripe API with caching
+ * - All plan data is fetched from Stripe API and cached in Redis
  *
  * Events handled:
  * - customer.subscription.created
@@ -16,12 +16,12 @@
  * - customer.subscription.trial_will_end
  */
 
+import { invalidateSubscriptionCacheByCustomerId } from '@/lib/cache/subscription-cache';
+import { stripeConfig } from '@/lib/stripe/config';
+import { stripe } from '@/lib/stripe/server';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { stripe } from '@/lib/stripe/server';
-import { stripeConfig } from '@/lib/stripe/config';
-import { createClient } from '@/lib/supabase/server';
-import { invalidateSubscriptionCacheByCustomerId } from '@/lib/cache/subscription-cache';
 
 /**
  * Verifies the Stripe webhook signature
@@ -38,15 +38,22 @@ function verifyWebhookSignature(payload: string, signature: string): Stripe.Even
 /**
  * Updates user profile with Stripe IDs and invalidates cache
  *
- * This function NO LONGER stores plan data in the database.
- * Plan information is fetched from Stripe API with Redis caching.
+ * This function updates ONLY the Stripe reference IDs in the database.
+ * All subscription/plan data is fetched from Stripe API and cached in Redis.
+ *
+ * Database stores:
+ * - stripe_customer_id: For linking with Stripe
+ * - stripe_subscription_id: Active subscription reference
+ *
+ * Redis cache stores:
+ * - Full subscription data: plan, status, renewStatus, prices, dates, etc.
  */
 async function updateProfileSubscription(customerId: string, subscription: Stripe.Subscription) {
   const supabase = await createClient();
 
   console.log(`[Webhook] Updating profile for customer: ${customerId}, subscription: ${subscription.id}`);
 
-  // Update only Stripe IDs in database
+  // Update database with ONLY Stripe IDs (references)
   const { error } = await supabase
     .from('profiles')
     .update({
@@ -61,6 +68,8 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
     throw new Error('Failed to update profile');
   }
 
+  console.log(`[Webhook] Profile updated with subscription ID: ${subscription.id}`);
+
   // Invalidate Redis cache so next request fetches fresh data from Stripe
   await invalidateSubscriptionCacheByCustomerId(customerId);
   console.log(`[Webhook] Cache invalidated for customer: ${customerId}`);
@@ -68,6 +77,8 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
 
 /**
  * Handles subscription deletion/cancellation
+ *
+ * Sets subscription ID to null (user reverts to free plan).
  */
 async function handleSubscriptionDeleted(customerId: string) {
   const supabase = await createClient();
@@ -87,6 +98,8 @@ async function handleSubscriptionDeleted(customerId: string) {
     console.error('[Webhook] Error handling subscription deletion:', error);
     throw new Error('Failed to handle subscription deletion');
   }
+
+  console.log(`[Webhook] Subscription removed for customer: ${customerId}`);
 
   // Invalidate cache so next request reflects free plan
   await invalidateSubscriptionCacheByCustomerId(customerId);

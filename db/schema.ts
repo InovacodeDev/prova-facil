@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, varchar, text, timestamp, boolean, uuid, pgEnum, integer, jsonb } from 'drizzle-orm/pg-core';
+import { boolean, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 
 // Note: Plan information for profiles is now fetched from Stripe API with Redis caching
 // The planEnum is kept only for the plans configuration table
@@ -136,7 +136,7 @@ export const profiles = pgTable('profiles', {
   email: varchar('email', { length: 320 }).notNull().unique(),
   email_verified: boolean('email_verified').default(false).notNull(),
   email_verified_at: timestamp('email_verified_at'),
-  // Plan information is now fetched from Stripe API with Redis caching
+  // Stripe Integration: Only IDs stored in DB (subscription data cached in Redis)
   stripe_customer_id: varchar('stripe_customer_id', { length: 255 }).unique(), // Stripe Customer ID
   stripe_subscription_id: varchar('stripe_subscription_id', { length: 255 }), // Active Stripe Subscription ID
   academic_level_id: integer('academic_level_id').references(() => academicLevels.id),

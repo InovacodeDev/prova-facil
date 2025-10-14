@@ -1,199 +1,186 @@
 /**
- * Plan Helper Functions
+ * Stripe Plan Helper Functions
  *
- * Provides utility functions to work with plan data fetched from Stripe.
- * All functions use the cache-first strategy via getSubscriptionData().
- *
- * Usage:
- * ```typescript
- * const planData = await getUserPlanData(userId, customerId, subscriptionId);
- * const canAccess = await userHasPlanFeature(userId, customerId, subscriptionId, 'pdf_upload');
- * ```
- *
- * @module lib/stripe/plan-helpers
+ * Utilities for comparing plans, determining upgrades/downgrades,
+ * and formatting subscription data.
  */
 
-import { getSubscriptionData } from './server';
-import type { CachedSubscriptionData } from '@/lib/cache/subscription-cache';
+import type Stripe from 'stripe';
+import { PRODUCT_ID_TO_PLAN } from './config';
 
 /**
- * Plan configuration from database plans table
+ * Plan hierarchy for comparison
+ * Higher number = higher tier plan
  */
-export interface PlanConfig {
-  id: 'starter' | 'basic' | 'essentials' | 'plus' | 'advanced';
-  model: string;
-  questions_month: number;
-  doc_type: string[];
-  docs_size: number;
-  max_question_types: number;
-  support: ('email' | 'whatsapp' | 'vip')[];
+const PLAN_HIERARCHY = {
+  starter: 0,
+  basic: 1,
+  essentials: 2,
+  plus: 3,
+  advanced: 4,
+} as const;
+
+type PlanId = keyof typeof PLAN_HIERARCHY;
+
+/**
+ * Plan information extracted from Stripe Subscription
+ */
+export interface ExtractedPlanData {
+  plan: 'starter' | 'basic' | 'essentials' | 'plus' | 'advanced';
+  planExpireAt: Date | null;
+  productId: string | null;
+  priceId: string | null;
+  renewStatus: 'monthly' | 'yearly' | 'trial' | 'canceled' | 'none';
 }
 
 /**
- * Complete user plan data combining Stripe subscription and plan configuration
- */
-export interface UserPlanData extends CachedSubscriptionData {
-  config: PlanConfig | null;
-}
-
-/**
- * Get complete plan data for a user (subscription + configuration)
- * Uses cache-first strategy via Redis
+ * Extracts plan information from a Stripe Subscription
  *
- * @param userId - User ID (for cache key)
- * @param stripeCustomerId - Stripe Customer ID
- * @param stripeSubscriptionId - Stripe Subscription ID (null for free plan)
- * @returns Complete plan data with configuration
+ * This is the canonical function to convert Stripe subscription data
+ * into our internal plan representation.
+ *
+ * @param subscription - Stripe Subscription object
+ * @returns Extracted plan data
  */
-export async function getUserPlanData(
-  userId: string,
-  stripeCustomerId: string | null,
-  stripeSubscriptionId: string | null
-): Promise<UserPlanData> {
-  // Get subscription data (cached)
-  const subscriptionData = await getSubscriptionData(userId, stripeCustomerId, stripeSubscriptionId);
+export function extractPlanFromSubscription(subscription: Stripe.Subscription | null): ExtractedPlanData {
+  // Handle null subscription (free plan)
+  if (!subscription) {
+    return {
+      plan: 'starter',
+      planExpireAt: null,
+      productId: null,
+      priceId: null,
+      renewStatus: 'none',
+    };
+  }
 
-  // Note: Plan configuration should be fetched from database plans table
-  // For now, returning null for config - implement database query as needed
+  // Extract subscription item (first item in the subscription)
+  const subscriptionItem = subscription.items.data[0];
+  if (!subscriptionItem) {
+    return {
+      plan: 'starter',
+      planExpireAt: null,
+      productId: null,
+      priceId: null,
+      renewStatus: 'none',
+    };
+  }
+
+  // Extract product ID
+  const productId =
+    typeof subscriptionItem.price.product === 'string'
+      ? subscriptionItem.price.product
+      : subscriptionItem.price.product.id;
+
+  // Map product ID to internal plan name
+  const planName = (PRODUCT_ID_TO_PLAN[productId] || 'starter') as
+    | 'starter'
+    | 'basic'
+    | 'essentials'
+    | 'plus'
+    | 'advanced';
+
+  // Extract period end (convert Unix timestamp to Date)
+  const periodEnd = (subscription as any).current_period_end as number;
+  const planExpireAt = periodEnd ? new Date(periodEnd * 1000) : null;
+
+  // Determine renew status
+  let renewStatus: 'monthly' | 'yearly' | 'trial' | 'canceled' | 'none' = 'none';
+  if (subscription.cancel_at_period_end) {
+    renewStatus = 'canceled';
+  } else if (subscription.status === 'trialing') {
+    renewStatus = 'trial';
+  } else if (subscriptionItem.price.recurring?.interval === 'month') {
+    renewStatus = 'monthly';
+  } else if (subscriptionItem.price.recurring?.interval === 'year') {
+    renewStatus = 'yearly';
+  }
+
   return {
-    ...subscriptionData,
-    config: null, // TODO: Fetch from database plans table
+    plan: planName,
+    planExpireAt,
+    productId,
+    priceId: subscriptionItem.price.id,
+    renewStatus,
   };
 }
 
 /**
- * Check if user's current plan allows a specific feature
+ * Determines if changing from current plan to target plan is a downgrade
  *
- * @param userId - User ID
- * @param stripeCustomerId - Stripe Customer ID
- * @param stripeSubscriptionId - Stripe Subscription ID
- * @param feature - Feature to check (e.g., 'pdf_upload', 'vip_support')
- * @returns Boolean indicating if feature is available
+ * @param currentPlan - Current plan ID
+ * @param targetPlan - Target plan ID
+ * @returns True if target plan is lower tier than current plan
  */
-export async function userHasPlanFeature(
-  userId: string,
-  stripeCustomerId: string | null,
-  stripeSubscriptionId: string | null,
-  feature: string
-): Promise<boolean> {
-  const planData = await getUserPlanData(userId, stripeCustomerId, stripeSubscriptionId);
-
-  // Feature checking logic based on plan
-  // This should be expanded based on your specific feature requirements
-  const featureMap: Record<string, string[]> = {
-    pdf_upload: ['essentials', 'plus', 'advanced'],
-    vip_support: ['plus', 'advanced'],
-    advanced_ai: ['advanced'],
-    // Add more features as needed
-  };
-
-  const allowedPlans = featureMap[feature] || [];
-  return allowedPlans.includes(planData.plan);
+export function isDowngrade(currentPlan: string, targetPlan: string): boolean {
+  const currentTier = PLAN_HIERARCHY[currentPlan as PlanId] ?? 0;
+  const targetTier = PLAN_HIERARCHY[targetPlan as PlanId] ?? 0;
+  return targetTier < currentTier;
 }
 
 /**
- * Check if user has an active (paid) subscription
+ * Determines if changing from current plan to target plan is an upgrade
  *
- * @param userId - User ID
- * @param stripeCustomerId - Stripe Customer ID
- * @param stripeSubscriptionId - Stripe Subscription ID
- * @returns Boolean indicating if user has active subscription
+ * @param currentPlan - Current plan ID
+ * @param targetPlan - Target plan ID
+ * @returns True if target plan is higher tier than current plan
  */
-export async function userHasActiveSubscription(
-  userId: string,
-  stripeCustomerId: string | null,
-  stripeSubscriptionId: string | null
-): Promise<boolean> {
-  const planData = await getUserPlanData(userId, stripeCustomerId, stripeSubscriptionId);
-
-  return (planData.status === 'active' || planData.status === 'trialing') && planData.plan !== 'starter';
+export function isUpgrade(currentPlan: string, targetPlan: string): boolean {
+  const currentTier = PLAN_HIERARCHY[currentPlan as PlanId] ?? 0;
+  const targetTier = PLAN_HIERARCHY[targetPlan as PlanId] ?? 0;
+  return targetTier > currentTier;
 }
 
 /**
- * Check if user's subscription is expiring soon (within 7 days)
+ * Formats an ISO date string to Brazilian format (DD/MM/YYYY)
  *
- * @param userId - User ID
- * @param stripeCustomerId - Stripe Customer ID
- * @param stripeSubscriptionId - Stripe Subscription ID
- * @returns Boolean indicating if subscription expires soon
+ * @param dateString - ISO date string or timestamp
+ * @returns Formatted date string
  */
-export async function isSubscriptionExpiringSoon(
-  userId: string,
-  stripeCustomerId: string | null,
-  stripeSubscriptionId: string | null
-): Promise<boolean> {
-  const planData = await getUserPlanData(userId, stripeCustomerId, stripeSubscriptionId);
-
-  if (!planData.currentPeriodEnd) {
-    return false;
+export function formatPeriodEnd(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
   }
-
-  const now = Date.now() / 1000; // Unix timestamp in seconds
-  const daysUntilExpiry = (planData.currentPeriodEnd - now) / (60 * 60 * 24);
-
-  return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
 }
 
 /**
- * Get user-friendly plan status label
+ * Formats a price from Stripe (in cents) to Brazilian currency
  *
- * @param userId - User ID
- * @param stripeCustomerId - Stripe Customer ID
- * @param stripeSubscriptionId - Stripe Subscription ID
- * @returns Localized status string
+ * @param cents - Price in cents
+ * @returns Formatted price string (e.g., "R$ 49,90")
  */
-export async function getPlanStatusLabel(
-  userId: string,
-  stripeCustomerId: string | null,
-  stripeSubscriptionId: string | null
-): Promise<string> {
-  const planData = await getUserPlanData(userId, stripeCustomerId, stripeSubscriptionId);
-
-  const statusLabels: Record<typeof planData.status, string> = {
-    active: 'Ativo',
-    trialing: 'Em período de teste',
-    past_due: 'Pagamento pendente',
-    canceled: 'Cancelado',
-    unpaid: 'Não pago',
-    incomplete: 'Incompleto',
-    incomplete_expired: 'Expirado',
-    paused: 'Pausado',
-    none: 'Plano gratuito',
-  };
-
-  return statusLabels[planData.status] || 'Desconhecido';
-}
-
-/**
- * Get plan display name (localized)
- */
-export function getPlanDisplayName(plan: string): string {
-  const displayNames: Record<string, string> = {
-    starter: 'Starter',
-    basic: 'Básico',
-    essentials: 'Essencial',
-    plus: 'Plus',
-    advanced: 'Avançado',
-  };
-
-  return displayNames[plan] || plan;
-}
-
-/**
- * Format plan expiration date for display
- *
- * @param planExpireAt - ISO date string
- * @returns Formatted date string (Brazilian format)
- */
-export function formatPlanExpiry(planExpireAt: string | null): string {
-  if (!planExpireAt) {
-    return 'Sem expiração';
-  }
-
-  const date = new Date(planExpireAt);
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
+export function formatPrice(cents: number): string {
+  const reais = cents / 100;
+  return reais.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
   });
+}
+
+/**
+ * Gets the display name for a billing interval
+ *
+ * @param interval - Billing interval ('month' or 'year')
+ * @returns Display name in Portuguese
+ */
+export function getBillingIntervalDisplay(interval: 'month' | 'year'): string {
+  return interval === 'month' ? 'mensal' : 'anual';
+}
+
+/**
+ * Determines if a plan is free (Starter)
+ *
+ * @param planId - Plan identifier
+ * @returns True if plan is the free Starter plan
+ */
+export function isFreePlan(planId: string): boolean {
+  return planId === 'starter';
 }

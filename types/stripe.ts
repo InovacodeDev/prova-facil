@@ -6,8 +6,8 @@
  * It is fetched from Stripe API with Redis caching.
  */
 
-import type Stripe from 'stripe';
 import type { CachedSubscriptionData } from '@/lib/cache/subscription-cache';
+import type Stripe from 'stripe';
 
 /**
  * Internal plan identifiers matching our database enum
@@ -122,4 +122,40 @@ export interface ProductsResponse {
 export interface ApiError {
   error: string;
   details?: any;
+}
+
+/**
+ * Schedule Downgrade Request
+ */
+export interface ScheduleDowngradeRequest {
+  priceId: string;
+}
+
+/**
+ * Schedule Downgrade Response
+ */
+export interface ScheduleDowngradeResponse {
+  success: boolean;
+  effectiveAt: string;
+  message: string;
+}
+
+/**
+ * Cancel Subscription Response
+ */
+export interface CancelSubscriptionResponse {
+  success: boolean;
+  cancelAt: string;
+  message: string;
+}
+
+/**
+ * Subscription Period Response
+ */
+export interface SubscriptionPeriodResponse {
+  currentPlan: string;
+  currentPeriodEnd: string | null;
+  hasActiveSubscription: boolean;
+  renewStatus?: string;
+  cancelAtPeriodEnd?: boolean;
 }
