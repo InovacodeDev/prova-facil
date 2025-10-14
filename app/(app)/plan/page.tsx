@@ -51,27 +51,99 @@ export default function PlanPage() {
     }
   };
 
-  const handleStripeReturn = () => {
+  const handleStripeReturn = async () => {
     const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
 
-    if (params.get('success') === 'true') {
-      toast({
-        title: 'Pagamento confirmado!',
-        description: 'Seu plano foi atualizado com sucesso.',
-      });
+    // Handle successful payment with session_id
+    if (params.get('success') === 'true' || sessionId) {
+      // If we have a session_id, sync the subscription immediately
+      if (sessionId) {
+        console.log('[Plan] Session ID detected, syncing subscription...', sessionId);
 
-      // Invalidate all Stripe data to force refetch
-      console.log('[Plan] Payment success - invalidating Stripe cache...');
-      invalidateStripeData();
+        try {
+          const response = await fetch('/api/stripe/sync-subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sessionId }),
+          });
 
-      // Force refetch after a small delay to allow webhook to process
-      setTimeout(() => {
-        console.log('[Plan] Refetching plan data...');
-        refetchPlan();
-        refetchProducts();
-      }, 2000); // 2 second delay for webhook processing
+          const data = await response.json();
 
-      window.history.replaceState({}, '', '/plan');
+          if (response.ok && data.success) {
+            console.log('[Plan] Subscription synced successfully:', data);
+
+            toast({
+              title: 'Pagamento confirmado!',
+              description: 'Seu plano foi atualizado com sucesso.',
+            });
+
+            // Invalidate all Stripe data to force refetch
+            console.log('[Plan] Invalidating Stripe cache...');
+            invalidateStripeData();
+
+            // Force refetch immediately since we already have the subscription
+            console.log('[Plan] Refetching plan data...');
+            refetchPlan();
+            refetchProducts();
+          } else {
+            console.warn('[Plan] Subscription sync failed, will wait for webhook:', data);
+
+            toast({
+              title: 'Pagamento confirmado!',
+              description: 'Seu plano será atualizado em alguns instantes.',
+            });
+
+            // Still invalidate and refetch, webhook will update
+            invalidateStripeData();
+            setTimeout(() => {
+              refetchPlan();
+              refetchProducts();
+            }, 2000);
+          }
+        } catch (error) {
+          console.error('[Plan] Error syncing subscription:', error);
+
+          toast({
+            title: 'Pagamento confirmado!',
+            description: 'Seu plano será atualizado em alguns instantes.',
+          });
+
+          // Fallback to webhook sync
+          invalidateStripeData();
+          setTimeout(() => {
+            refetchPlan();
+            refetchProducts();
+          }, 2000);
+        }
+
+        // Remove session_id from URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('session_id');
+        newUrl.searchParams.delete('success');
+        window.history.replaceState({}, '', newUrl.pathname);
+      } else if (params.get('success') === 'true') {
+        // Legacy success parameter (no session_id)
+        toast({
+          title: 'Pagamento confirmado!',
+          description: 'Seu plano foi atualizado com sucesso.',
+        });
+
+        console.log('[Plan] Payment success - invalidating Stripe cache...');
+        invalidateStripeData();
+
+        setTimeout(() => {
+          console.log('[Plan] Refetching plan data...');
+          refetchPlan();
+          refetchProducts();
+        }, 2000);
+
+        window.history.replaceState({}, '', '/plan');
+      }
+
+      return;
     }
 
     if (params.get('canceled') === 'true') {

@@ -11,7 +11,6 @@ import { STRIPE_PRODUCTS } from '@/lib/stripe/config';
 import { stripe } from '@/lib/stripe/server';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 
 export async function POST(request: NextRequest) {
   try {
@@ -151,14 +150,14 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('[API] Error downgrading to Starter:', error);
-    
+
     // Log detailed error information
     if (error instanceof Error) {
       console.error('[API] Error name:', error.name);
       console.error('[API] Error message:', error.message);
       console.error('[API] Error stack:', error.stack);
     }
-    
+
     return NextResponse.json(
       {
         error: 'Failed to downgrade subscription',
