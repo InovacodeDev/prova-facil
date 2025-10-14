@@ -178,6 +178,7 @@ export const logs = pgTable('logs', {
 
 export const plans = pgTable('plans', {
   id: planEnum('id').notNull().primaryKey(),
+  stripe_product_id: varchar('stripe_product_id', { length: 255 }).notNull().unique(), // Stripe Product ID (e.g., prod_XXX)
   model: varchar('model', { length: 255 }).notNull(),
   questions_month: integer('questions_month').notNull().default(30),
   doc_type: text('doc_type').array().notNull(),

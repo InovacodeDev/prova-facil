@@ -3,8 +3,8 @@
  * Validates question types against user's plan
  */
 
-import { createClient } from '@/lib/supabase/server';
 import { logError } from '../error-logs-service';
+import { getPlanByUserId } from '../plans/helpers';
 
 export interface ValidationResult {
   valid: boolean;
@@ -19,37 +19,17 @@ export interface ValidationResult {
  */
 export async function validateQuestionType(userId: string, questionType: string): Promise<ValidationResult> {
   try {
-    const supabase = await createClient();
+    // Get plan configuration for user
+    const planConfig = await getPlanByUserId(userId);
 
-    // Get user's profile and plan
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('plan')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !userProfile) {
+    if (!planConfig) {
       return {
         valid: false,
-        error: 'Perfil de usuário não encontrado',
+        error: 'Configuração de plano não encontrada',
       };
     }
 
-    // Get plan details
-    const { data: planData, error: planError } = await supabase
-      .from('plans')
-      .select('allowed_questions')
-      .eq('id', userProfile.plan)
-      .single();
-
-    if (planError || !planData) {
-      return {
-        valid: false,
-        error: 'Configuração de plano inválida',
-      };
-    }
-
-    const allowedQuestions = planData.allowed_questions;
+    const allowedQuestions = planConfig.allowed_questions;
 
     if (!allowedQuestions || !Array.isArray(allowedQuestions)) {
       return {
@@ -62,10 +42,9 @@ export async function validateQuestionType(userId: string, questionType: string)
     const isAllowed = allowedQuestions.some((type: string) => type === questionType);
 
     if (!isAllowed) {
-      const planName = userProfile.plan;
       return {
         valid: false,
-        error: `O tipo de questão "${questionType}" não está disponível no plano ${planName}. Faça upgrade para acessar mais tipos de questões.`,
+        error: `O tipo de questão "${questionType}" não está disponível no plano ${planConfig.id}. Faça upgrade para acessar mais tipos de questões.`,
       };
     }
 
@@ -98,31 +77,14 @@ export async function validateQuestionType(userId: string, questionType: string)
  */
 export async function getAllowedQuestionTypes(userId: string): Promise<string[]> {
   try {
-    const supabase = await createClient();
+    // Get plan configuration for user
+    const planConfig = await getPlanByUserId(userId);
 
-    // Get user's profile
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('plan')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !userProfile) {
+    if (!planConfig) {
       return [];
     }
 
-    // Get plan details
-    const { data: planData, error: planError } = await supabase
-      .from('plans')
-      .select('allowed_questions')
-      .eq('id', userProfile.plan)
-      .single();
-
-    if (planError || !planData) {
-      return [];
-    }
-
-    return (planData.allowed_questions as string[]) || [];
+    return (planConfig.allowed_questions as string[]) || [];
   } catch (error) {
     console.error('Error getting allowed question types:', error);
 

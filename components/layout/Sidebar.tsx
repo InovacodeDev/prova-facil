@@ -1,14 +1,14 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { LayoutDashboard, FileEdit, ClipboardList, Crown, Sparkles, Zap } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { ClipboardList, Crown, FileEdit, LayoutDashboard, Sparkles, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -80,14 +80,31 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
 
       if (!user) return;
 
-      const { data: profile } = await supabase.from('profiles').select('plan').eq('user_id', user.id).single();
+      // Get subscription data from API (uses cache)
+      const subscriptionResponse = await fetch('/api/stripe/subscription');
 
-      if (profile?.plan) {
-        const { data: planData } = await supabase.from('plans').select('name, type').eq('id', profile.plan).single();
+      if (!subscriptionResponse.ok) {
+        setLoading(false);
+        return;
+      }
 
-        if (planData) {
-          setPlan(planData as PlanData);
-        }
+      const { subscription } = await subscriptionResponse.json();
+      const stripeProductId = subscription.productId;
+
+      if (!stripeProductId) {
+        setLoading(false);
+        return;
+      }
+
+      // Get plan configuration based on stripe_product_id
+      const { data: planData } = await supabase
+        .from('plans')
+        .select('id, name, type')
+        .eq('stripe_product_id', stripeProductId)
+        .single();
+
+      if (planData) {
+        setPlan(planData as PlanData);
       }
     } catch (error) {
       console.error('Erro ao carregar plano:', error);

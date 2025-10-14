@@ -1,23 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import {
-  generateMcqQuestions,
-  generateTfQuestions,
-  generateDissertativeQuestions,
-  generateSumQuestions,
-  generateFillInTheBlankQuestions,
-  generateMatchingColumnsQuestions,
-  generateProblemSolvingQuestions,
-  generateEssayQuestions,
-  generateProjectBasedQuestions,
-  generateGamifiedQuestions,
-  generateSummativeQuestions,
-  GenerateQuestionsInput,
-  GenerateQuestionsOutput,
-} from '@/lib/genkit/prompts';
 import { QuestionType } from '@/db/schema';
-import { checkUserQuota, updateProfileLogsCycle } from '@/lib/usage-tracking';
 import { logError } from '@/lib/error-logs-service';
+import {
+  generateDissertativeQuestions,
+  generateEssayQuestions,
+  generateFillInTheBlankQuestions,
+  generateGamifiedQuestions,
+  generateMatchingColumnsQuestions,
+  generateMcqQuestions,
+  generateProblemSolvingQuestions,
+  generateProjectBasedQuestions,
+  GenerateQuestionsInput,
+  generateSummativeQuestions,
+  generateSumQuestions,
+  generateTfQuestions,
+} from '@/lib/genkit/prompts';
+import { getPlanIdByUserId } from '@/lib/plans/helpers';
+import { createClient } from '@/lib/supabase/server';
+import { checkUserQuota, updateProfileLogsCycle } from '@/lib/usage-tracking';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 60-second timeout for AI calls
@@ -45,17 +45,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase.from('profiles').select('id, plan').eq('user_id', user.id).single();
+    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
+    // Get plan ID based on user's Stripe subscription
+    const planId = await getPlanIdByUserId(profile.id);
+
+    if (!planId) {
+      return NextResponse.json({ error: 'No active plan found' }, { status: 400 });
+    }
+
     // 2. Get AI model for user's plan
-    const { data: planModelData } = await supabase
-      .from('plan_models')
-      .select('model')
-      .eq('plan', profile.plan)
-      .single();
+    const { data: planModelData } = await supabase.from('plan_models').select('model').eq('plan', planId).single();
     const aiModel = planModelData?.model || 'gemini-2.5-flash-lite';
 
     // 3. Parse and validate request body

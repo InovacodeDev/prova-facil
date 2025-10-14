@@ -1,24 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Checkbox } from '@/components/ui/checkbox';
+import { PageHeader } from '@/components/layout';
+import { SecurityTab } from '@/components/profile/SecurityTab';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Camera, Loader2, Trash2, AlertCircle, CheckCircle2, Info } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { createClient } from '@/lib/supabase/client';
-import { useProfile, invalidateProfileCache } from '@/hooks/use-cache';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { QUESTION_TYPES } from '@/lib/question-types';
-import { logClientError } from '@/lib/client-error-logger';
-import { getQuestionTypeHint } from '@/lib/question-type-hints';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,8 +14,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { PageHeader } from '@/components/layout';
-import { SecurityTab } from '@/components/profile/SecurityTab';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { invalidateProfileCache, useProfile } from '@/hooks/use-cache';
+import { useToast } from '@/hooks/use-toast';
+import { logClientError } from '@/lib/client-error-logger';
+import { getQuestionTypeHint } from '@/lib/question-type-hints';
+import { QUESTION_TYPES } from '@/lib/question-types';
+import { createClient } from '@/lib/supabase/client';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { AlertCircle, Camera, CheckCircle2, Info, Loader2, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface Profile {
   id: string;

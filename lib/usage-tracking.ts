@@ -3,7 +3,7 @@
  * Tracks user question generation usage and quota
  */
 
-import { createClient } from './supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { logError } from './error-logs-service';
 
 export interface SubjectUsage {
@@ -33,18 +33,33 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
 
     const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('plan')
+      .select('stripe_subscription_id')
       .eq('id', userId)
       .single();
 
-    if (profileError || !userProfile) {
+    if (profileError || !userProfile || !userProfile.stripe_subscription_id) {
       return null;
     }
 
+    // Get subscription data to find product_id
+    const subscriptionResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/subscription`);
+
+    if (!subscriptionResponse.ok) {
+      return null;
+    }
+
+    const { subscription } = await subscriptionResponse.json();
+    const stripeProductId = subscription.productId;
+
+    if (!stripeProductId) {
+      return null;
+    }
+
+    // Get plan configuration based on stripe_product_id
     const { data: planData, error: planError } = await supabase
       .from('plans')
       .select('questions_month')
-      .eq('id', userProfile.plan)
+      .eq('stripe_product_id', stripeProductId)
       .single();
 
     if (planError || !planData) {

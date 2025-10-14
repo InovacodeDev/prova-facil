@@ -99,6 +99,10 @@ export function usePlan() {
     };
   }, [subscription]);
 
+  console.log({
+    subscription,
+    plan,
+  });
   return {
     plan,
     isLoading,
