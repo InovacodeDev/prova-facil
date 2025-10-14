@@ -89,7 +89,16 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
       {!isLoading && products && products.length > 0 && (
         <div className="overflow-x-auto py-8">
           <div className="flex gap-6 min-w-max px-4 mx-auto no-scrollbar" style={{ justifyContent: 'center' }}>
-            {products.map((product) => {
+            {/* Sort products by price (ascending - lowest to highest) */}
+            {[...products]
+              .sort((a, b) => {
+                const priceA =
+                  billingPeriod === 'monthly' ? a.prices.monthly?.unit_amount : a.prices.yearly?.unit_amount;
+                const priceB =
+                  billingPeriod === 'monthly' ? b.prices.monthly?.unit_amount : b.prices.yearly?.unit_amount;
+                return (priceA || 0) - (priceB || 0);
+              })
+              .map((product) => {
               // Get static plan config from frontend
               const planConfig = getPlanConfig(product.internalPlanId);
               const priceId = getPriceId(product);
@@ -148,7 +157,7 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
                   <CardFooter className="pt-4">
                     <Button
                       className="w-full"
-                      variant={isCurrentPlan ? 'secondary' : planConfig.highlighted ? 'default' : 'outline'}
+                      variant={isCurrentPlan ? 'secondary' : 'default'}
                       onClick={() => onPlanClick(product.internalPlanId, priceId, billingPeriod)}
                       disabled={isCurrentPlan || isLoading}
                     >

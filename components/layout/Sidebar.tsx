@@ -339,7 +339,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
         </div>
 
         {cta && (
-          <Button asChild size="sm" className="w-full" variant={plan.id === 'starter' ? 'default' : 'outline'}>
+          <Button asChild size="sm" className="w-full" variant="default">
             <Link href={cta.href}>{cta.text}</Link>
           </Button>
         )}
