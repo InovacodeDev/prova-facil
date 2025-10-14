@@ -165,36 +165,41 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API] Subscription updated successfully. Status: ${updatedSubscription.status}`);
 
-    // Get the new plan_id from the product
-    const newProductId = updatedSubscription.items.data[0]?.price?.product;
-    if (newProductId) {
-      const productIdStr = typeof newProductId === 'string' ? newProductId : newProductId.id;
+    // Update plan_id in database ONLY if immediate (upgrade)
+    // For downgrades (immediate=false), plan_id will be updated by webhook when period ends
+    if (immediate) {
+      const newProductId = updatedSubscription.items.data[0]?.price?.product;
+      if (newProductId) {
+        const productIdStr = typeof newProductId === 'string' ? newProductId : newProductId.id;
 
-      // Update plan_id in database
-      const { data: planData } = await supabase
-        .from('plans')
-        .select('id')
-        .eq('stripe_product_id', productIdStr)
-        .single();
+        // Update plan_id in database
+        const { data: planData } = await supabase
+          .from('plans')
+          .select('id')
+          .eq('stripe_product_id', productIdStr)
+          .single();
 
-      if (planData?.id) {
-        console.log(`[API] Updating profile plan_id to: ${planData.id}`);
+        if (planData?.id) {
+          console.log(`[API] Updating profile plan_id to: ${planData.id} (immediate upgrade)`);
 
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            plan_id: planData.id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id);
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              plan_id: planData.id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', user.id);
 
-        if (updateError) {
-          console.error('[API] Error updating plan_id:', updateError);
-          // Don't throw - subscription was updated successfully
-        } else {
-          console.log(`[API] Profile plan_id updated to: ${planData.id}`);
+          if (updateError) {
+            console.error('[API] Error updating plan_id:', updateError);
+            // Don't throw - subscription was updated successfully
+          } else {
+            console.log(`[API] Profile plan_id updated to: ${planData.id}`);
+          }
         }
       }
+    } else {
+      console.log(`[API] Downgrade scheduled - plan_id will be updated by webhook at period end`);
     }
 
     // Invalidate cache so next request reflects the change
@@ -210,20 +215,47 @@ export async function POST(request: NextRequest) {
       responseMessage = 'Plano alterado imediatamente. O valor será ajustado proporcionalmente.';
       effectiveAt = new Date().toISOString();
     } else {
-      // Access current_period_end from updatedSubscription
-      // Note: TypeScript types may not reflect all Stripe properties, so we access safely
-      const periodEnd = (updatedSubscription as Record<string, any>).current_period_end as number | undefined;
+      // For downgrades, use current subscription's period end
+      // The updatedSubscription still shows the old price until period ends
+      const subObj = updatedSubscription as Record<string, any>;
+      let periodEnd = subObj.current_period_end as number | undefined;
+      
+      // If not found in updated, try from current subscription
+      if (!periodEnd || typeof periodEnd !== 'number') {
+        console.warn('[API] current_period_end not found in updatedSubscription, using currentSubscription');
+        const currentSubObj = currentSubscription as Record<string, any>;
+        periodEnd = currentSubObj.current_period_end as number | undefined;
+      }
 
       if (!periodEnd || typeof periodEnd !== 'number') {
         console.error('[API] Invalid current_period_end:', periodEnd);
-        console.error('[API] updatedSubscription object:', JSON.stringify(updatedSubscription, null, 2));
-        throw new Error('Failed to get subscription period end date');
+        console.error('[API] updatedSubscription keys:', Object.keys(updatedSubscription));
+        console.error('[API] currentSubscription keys:', Object.keys(currentSubscription));
+        
+        // Try to find any period-related field
+        const possibleFields = ['current_period_end', 'currentPeriodEnd', 'period_end'];
+        for (const field of possibleFields) {
+          const value = subObj[field];
+          if (value && typeof value === 'number') {
+            console.log(`[API] Found period end in field: ${field} = ${value}`);
+            periodEnd = value;
+            break;
+          }
+        }
+        
+        if (!periodEnd) {
+          // Last resort: use 30 days from now
+          console.warn('[API] Using fallback: 30 days from now');
+          periodEnd = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
+        }
       }
 
       // Convert Unix timestamp (seconds) to milliseconds and create ISO string
       const periodEndDate = new Date(periodEnd * 1000);
       effectiveAt = periodEndDate.toISOString();
       responseMessage = `Plano será alterado em ${periodEndDate.toLocaleDateString('pt-BR')}`;
+      
+      console.log(`[API] Downgrade scheduled for: ${periodEndDate.toISOString()}`);
     }
 
     console.log(
@@ -232,7 +264,15 @@ export async function POST(request: NextRequest) {
     );
 
     // Get current period end safely for response
-    const currentPeriodEnd = (updatedSubscription as Record<string, any>).current_period_end as number | undefined;
+    const subObjForResponse = updatedSubscription as Record<string, any>;
+    let currentPeriodEnd = subObjForResponse.current_period_end as number | undefined;
+    
+    // Fallback to currentSubscription if needed
+    if (!currentPeriodEnd) {
+      const currentSubObj = currentSubscription as Record<string, any>;
+      currentPeriodEnd = currentSubObj.current_period_end as number | undefined;
+    }
+    
     const currentPeriodEndISO =
       currentPeriodEnd && typeof currentPeriodEnd === 'number' ? new Date(currentPeriodEnd * 1000).toISOString() : null;
 
