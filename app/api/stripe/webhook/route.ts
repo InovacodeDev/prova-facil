@@ -90,13 +90,83 @@ async function getPlanIdFromStripeProduct(subscription: Stripe.Subscription): Pr
  * IMPORTANT: This function ensures only ONE active subscription per customer.
  * If a new subscription is created, old subscriptions are canceled.
  */
+/**
+ * Updates profile with subscription data and handles plan changes
+ *
+ * Detects if the subscription has metadata indicating a scheduled downgrade.
+ * If the previous plan has expired, clears the metadata.
+ */
 async function updateProfileSubscription(customerId: string, subscription: Stripe.Subscription) {
   const supabase = await createServiceRoleClient();
 
-  console.log(`[Webhook] Updating profile for customer: ${customerId}, subscription: ${subscription.id}`);
+  console.log(`[Webhook] Processing subscription ${subscription.id} for customer ${customerId}`);
+  console.log(`[Webhook] Subscription status: ${subscription.status}`);
 
-  const planId = await getPlanIdFromStripeProduct(subscription);
+  // Check metadata for downgrade tracking
+  const metadata = subscription.metadata || {};
+  const previousPlanProductId = metadata.previous_plan_product_id;
+  const previousPlanExpiresAt = metadata.previous_plan_expires_at;
 
+  const now = Math.floor(Date.now() / 1000);
+  const expiryTimestamp = previousPlanExpiresAt ? parseInt(previousPlanExpiresAt, 10) : 0;
+
+  // Check if we need to clear metadata (downgrade has completed)
+  let shouldClearMetadata = false;
+  let effectiveProductId: string;
+
+  if (previousPlanProductId && expiryTimestamp > 0 && expiryTimestamp <= now) {
+    // Previous plan has expired, downgrade is now complete
+    console.log(
+      `[Webhook] Previous plan expired at ${new Date(expiryTimestamp * 1000).toISOString()}, completing downgrade`
+    );
+    shouldClearMetadata = true;
+
+    // Use the current subscription product (the downgrade target)
+    effectiveProductId =
+      typeof subscription.items.data[0].price.product === 'string'
+        ? subscription.items.data[0].price.product
+        : subscription.items.data[0].price.product.id;
+  } else if (previousPlanProductId && expiryTimestamp > now) {
+    // Previous plan still active, use it
+    console.log(`[Webhook] Previous plan still active until ${new Date(expiryTimestamp * 1000).toISOString()}`);
+    effectiveProductId = previousPlanProductId;
+  } else {
+    // No metadata or no previous plan, use current subscription product
+    effectiveProductId =
+      typeof subscription.items.data[0].price.product === 'string'
+        ? subscription.items.data[0].price.product
+        : subscription.items.data[0].price.product.id;
+  }
+
+  // Clear metadata if downgrade completed
+  if (shouldClearMetadata) {
+    try {
+      console.log(`[Webhook] Clearing downgrade metadata from subscription ${subscription.id}`);
+      await stripe.subscriptions.update(subscription.id, {
+        metadata: {
+          previous_plan_product_id: '',
+          previous_plan_expires_at: '',
+          downgrade_scheduled_to: '',
+        },
+      });
+      console.log(`[Webhook] Metadata cleared`);
+    } catch (error) {
+      console.error(`[Webhook] Error clearing metadata:`, error);
+      // Continue processing even if metadata clearing fails
+    }
+  }
+
+  // Get plan_id from database (maps stripe_product_id to plan_id)
+  const { data: planData } = await supabase
+    .from('plans')
+    .select('id')
+    .eq('stripe_product_id', effectiveProductId)
+    .single();
+
+  const planId = planData?.id || 'starter';
+  console.log(`[Webhook] Mapped product ${effectiveProductId} to plan: ${planId}`);
+
+  // Cancel old subscriptions if this is a new active subscription
   const { data: profile } = await supabase
     .from('profiles')
     .select('stripe_subscription_id')

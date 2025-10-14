@@ -12,6 +12,7 @@ import { invalidateSubscriptionCacheByCustomerId } from '@/lib/cache/subscriptio
 import { stripe } from '@/lib/stripe/server';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import type Stripe from 'stripe';
 
 interface UpdateSubscriptionRequest {
   priceId: string;
@@ -150,18 +151,64 @@ export async function POST(request: NextRequest) {
         `to price ${priceId}, proration: ${prorationBehavior}, immediate: ${immediate}`
     );
 
+    // Prepare metadata for downgrade tracking
+    const currentProductId =
+      typeof currentSubscription.items.data[0].price.product === 'string'
+        ? currentSubscription.items.data[0].price.product
+        : currentSubscription.items.data[0].price.product.id;
+
+    const newProductId =
+      typeof newPriceDetails.product === 'string' ? newPriceDetails.product : newPriceDetails.product.id;
+
+    // Get current_period_end safely for metadata
+    const subObj = currentSubscription as Record<string, any>;
+    const metadataPeriodEnd =
+      (subObj.current_period_end as number) || Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+
     // Update subscription
-    const updatedSubscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
-      items: [
-        {
-          id: subscriptionItemId,
-          price: priceId,
+    let updatedSubscription: Stripe.Subscription;
+
+    if (immediate) {
+      // UPGRADE: Apply immediately with proration
+      updatedSubscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
+        items: [
+          {
+            id: subscriptionItemId,
+            price: priceId,
+          },
+        ],
+        proration_behavior: 'always_invoice',
+        // Clear any previous downgrade metadata
+        metadata: {
+          previous_plan_product_id: '',
+          previous_plan_expires_at: '',
+          downgrade_scheduled_to: '',
         },
-      ],
-      proration_behavior: prorationBehavior,
-      // If not immediate, ensure cancel_at_period_end is false (in case it was previously set)
-      ...(immediate ? {} : { cancel_at_period_end: false }),
-    });
+      });
+    } else {
+      // DOWNGRADE: Keep current plan until period end, save metadata
+      updatedSubscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
+        items: [
+          {
+            id: subscriptionItemId,
+            price: priceId,
+          },
+        ],
+        proration_behavior: 'none',
+        cancel_at_period_end: false,
+        // Store metadata to track the downgrade
+        metadata: {
+          previous_plan_product_id: currentProductId,
+          previous_plan_expires_at: metadataPeriodEnd.toString(),
+          downgrade_scheduled_to: newProductId,
+        },
+      });
+
+      console.log(
+        `[API] Downgrade metadata saved: ` +
+          `previous=${currentProductId}, expires=${metadataPeriodEnd}, scheduled_to=${newProductId}`
+      );
+    }
 
     console.log(`[API] Subscription updated successfully. Status: ${updatedSubscription.status}`);
 

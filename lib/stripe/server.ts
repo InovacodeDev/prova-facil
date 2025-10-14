@@ -17,8 +17,7 @@ import {
 } from '@/lib/cache/subscription-cache';
 import type { PlanId } from '@/lib/plans/config';
 import Stripe from 'stripe';
-import { PRODUCT_ID_TO_PLAN, stripeConfig, validateStripeConfig } from './config';
-import { extractPlanFromSubscription } from './plan-helpers';
+import { PRODUCT_ID_TO_PLAN, STRIPE_PRODUCTS, stripeConfig, validateStripeConfig } from './config';
 
 // Validate configuration on module load (only on server)
 if (typeof window === 'undefined') {
@@ -56,11 +55,17 @@ export interface StripeProductWithPrices {
 
 /**
  * Fetches all active products with their prices from Stripe
+ * ONLY returns products configured in .env (STRIPE_PRODUCT_STARTER, BASIC, ESSENTIALS, PLUS, ADVANCED)
  *
  * @returns Array of products with monthly and yearly prices
  */
 export async function getStripeProducts(): Promise<StripeProductWithPrices[]> {
   try {
+    // Get list of configured product IDs from .env
+    const configuredProductIds = Object.values(STRIPE_PRODUCTS);
+
+    console.log(`[Stripe] Configured product IDs: ${configuredProductIds.join(', ')}`);
+
     // Fetch all active products
     const products = await stripe.products.list({
       active: true,
@@ -85,6 +90,8 @@ export async function getStripeProducts(): Promise<StripeProductWithPrices[]> {
 
     // Map products to our custom structure
     const productsWithPrices: StripeProductWithPrices[] = products.data
+      // FILTER: Only include products configured in .env
+      .filter((product) => configuredProductIds.includes(product.id))
       .map((product) => {
         const productPrices = pricesByProduct[product.id] || [];
 
@@ -117,6 +124,8 @@ export async function getStripeProducts(): Promise<StripeProductWithPrices[]> {
         };
       })
       .filter((p) => p.active); // Only return active products
+
+    console.log(`[Stripe] Returning ${productsWithPrices.length} configured products`);
 
     return productsWithPrices;
   } catch (error) {
@@ -323,8 +332,44 @@ export async function getSubscriptionData(
     // Fetch subscription from Stripe
     const subscription = await getSubscription(stripeSubscriptionId);
 
-    // Extract plan data using the canonical helper
-    const planData = extractPlanFromSubscription(subscription);
+    // Check metadata for scheduled downgrade
+    // If user has a previous plan that hasn't expired yet, use that instead
+    const metadata = subscription.metadata || {};
+    const previousPlanProductId = metadata.previous_plan_product_id;
+    const previousPlanExpiresAt = metadata.previous_plan_expires_at;
+    const scheduledDowngradeTo = metadata.downgrade_scheduled_to;
+
+    const now = Math.floor(Date.now() / 1000);
+    const expiryTimestamp = previousPlanExpiresAt ? parseInt(previousPlanExpiresAt, 10) : 0;
+
+    let effectiveProductId: string;
+    let isPreviousPlanActive = false;
+
+    // Determine which product to use
+    if (previousPlanProductId && expiryTimestamp > now) {
+      // Previous plan is still active, use it
+      effectiveProductId = previousPlanProductId;
+      isPreviousPlanActive = true;
+
+      console.log(
+        `[Stripe] Using previous plan ${previousPlanProductId} until ${new Date(expiryTimestamp * 1000).toISOString()}`
+      );
+    } else {
+      // Previous plan expired or doesn't exist, use current subscription plan
+      const currentProductId =
+        typeof subscription.items.data[0].price.product === 'string'
+          ? subscription.items.data[0].price.product
+          : subscription.items.data[0].price.product.id;
+
+      effectiveProductId = currentProductId;
+
+      if (previousPlanProductId) {
+        console.log(`[Stripe] Previous plan ${previousPlanProductId} expired, now using ${currentProductId}`);
+      }
+    }
+
+    // Map product ID to internal plan ID
+    const effectivePlan = (PRODUCT_ID_TO_PLAN[effectiveProductId] || 'starter') as PlanId;
 
     // Extract period info (Stripe uses snake_case but TS types might differ)
     const periodEnd = (subscription as any).current_period_end as number;
@@ -335,12 +380,16 @@ export async function getSubscriptionData(
       subscriptionId: subscription.id,
       customerId: stripeCustomerId,
       status: subscription.status,
-      plan: planData.plan,
-      planExpireAt: planData.planExpireAt ? planData.planExpireAt.toISOString() : null,
-      renewStatus: planData.renewStatus,
-      productId: planData.productId,
-      priceId: planData.priceId,
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      plan: effectivePlan, // Use effective plan (previous or current)
+      planExpireAt: isPreviousPlanActive ? new Date(expiryTimestamp * 1000).toISOString() : null,
+      renewStatus: isPreviousPlanActive
+        ? 'canceled'
+        : subscription.items.data[0].price.recurring?.interval === 'year'
+        ? 'yearly'
+        : 'monthly',
+      productId: effectiveProductId,
+      priceId: subscription.items.data[0].price.id,
+      cancelAtPeriodEnd: isPreviousPlanActive || subscription.cancel_at_period_end, // Show as "ending" if previous plan active
       currentPeriodEnd: periodEnd,
       currentPeriodStart: periodStart,
       cachedAt: new Date().toISOString(),
