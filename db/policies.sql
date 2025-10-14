@@ -59,16 +59,16 @@ SELECT
 -- Users can insert assessments if authenticated
 CREATE POLICY "assessments_insert_auth" ON assessments FOR INSERT TO authenticated
 WITH
-  CHECK (profile_id = auth.uid ());
+  CHECK (user_id = auth.uid ());
 
 -- Users can only update their own assessments
 CREATE POLICY "assessments_update_own" ON assessments FOR
-UPDATE TO authenticated USING (profile_id = auth.uid ())
+UPDATE TO authenticated USING (user_id = auth.uid ())
 WITH
-  CHECK (profile_id = auth.uid ());
+  CHECK (user_id = auth.uid ());
 
 -- Users can only delete their own assessments
-CREATE POLICY "assessments_delete_own" ON assessments FOR DELETE TO authenticated USING (profile_id = auth.uid ());
+CREATE POLICY "assessments_delete_own" ON assessments FOR DELETE TO authenticated USING (user_id = auth.uid ());
 
 COMMENT ON POLICY "assessments_select_all" ON assessments IS 'Allow public read access for sharing';
 
@@ -100,7 +100,7 @@ WITH
         assessments
       WHERE
         assessments.id = assessment_id
-        AND assessments.profile_id = auth.uid ()
+        AND assessments.user_id = auth.uid ()
     )
   );
 
@@ -114,7 +114,7 @@ UPDATE TO authenticated USING (
       assessments
     WHERE
       assessments.id = questions.assessment_id
-      AND assessments.profile_id = auth.uid ()
+      AND assessments.user_id = auth.uid ()
   )
 )
 WITH
@@ -126,7 +126,7 @@ WITH
         assessments
       WHERE
         assessments.id = assessment_id
-        AND assessments.profile_id = auth.uid ()
+        AND assessments.user_id = auth.uid ()
     )
   );
 
@@ -139,7 +139,7 @@ CREATE POLICY "questions_delete_owner" ON questions FOR DELETE TO authenticated 
       assessments
     WHERE
       assessments.id = questions.assessment_id
-      AND assessments.profile_id = auth.uid ()
+      AND assessments.user_id = auth.uid ()
   )
 );
 
@@ -242,7 +242,7 @@ ALTER TABLE profile_logs_cycle ENABLE ROW LEVEL SECURITY;
 -- Users can only view their own usage logs
 CREATE POLICY "profile_logs_cycle_select_own" ON profile_logs_cycle FOR
 SELECT
-  TO authenticated USING (profile_id = auth.uid ());
+  TO authenticated USING (user_id = auth.uid ());
 
 -- System can insert/update logs (service role only)
 CREATE POLICY "profile_logs_cycle_manage_system" ON profile_logs_cycle FOR ALL TO authenticated USING (true)
@@ -299,7 +299,7 @@ COMMENT ON POLICY "error_logs_manage_service" ON error_logs IS 'Only admins can 
 CREATE INDEX IF NOT EXISTS idx_profiles_auth_uid ON profiles (id);
 
 -- Index for assessment ownership checks
-CREATE INDEX IF NOT EXISTS idx_assessments_profile_id_uid ON assessments (profile_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_user_id ON assessments (user_id);
 
 -- Index for question ownership through assessments
 CREATE INDEX IF NOT EXISTS idx_questions_assessment_for_auth ON questions (assessment_id);

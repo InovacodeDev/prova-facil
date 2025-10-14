@@ -1,44 +1,29 @@
 -- Migration: 0003_create_profiles
 -- Description: Create profiles table (user profiles with subscription and limits)
--- Dependencies: 0001_create_enums (plan, academic_level), 0002_create_academic_levels
+-- Dependencies: 0001_create_enums (question_type), 0002_create_academic_levels
 -- Created: 2025-10-13
 CREATE TABLE
   IF NOT EXISTS profiles (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid () NOT NULL,
     -- User identification
-    email TEXT NOT NULL UNIQUE,
-    full_name TEXT,
-    -- Subscription plan
-    plan plan NOT NULL DEFAULT 'starter',
-    plan_created_at TIMESTAMP
+    user_id UUID NOT NULL UNIQUE,
+    is_admin BOOLEAN NOT NULL DEFAULT false,
+    full_name VARCHAR(255),
+    email VARCHAR(320) NOT NULL UNIQUE,
+    email_verified BOOLEAN NOT NULL DEFAULT false,
+    email_verified_at TIMESTAMP
     WITH
       TIME ZONE,
-      plan_ends_at TIMESTAMP
-    WITH
-      TIME ZONE,
-      plan_stripe_price_id TEXT,
-      plan_period TEXT,
-      -- Stripe integration
-      stripe_customer_id TEXT UNIQUE,
-      stripe_subscription_id TEXT UNIQUE,
-      -- Usage limits and counters
-      questions_limit INTEGER NOT NULL DEFAULT 100,
-      assessments_limit INTEGER NOT NULL DEFAULT 100,
-      daily_questions_limit INTEGER NOT NULL DEFAULT 10,
-      copilot_questions_limit INTEGER NOT NULL DEFAULT 10,
-      questions_count INTEGER NOT NULL DEFAULT 0,
-      assessments_count INTEGER NOT NULL DEFAULT 0,
-      daily_questions_count INTEGER NOT NULL DEFAULT 0,
-      copilot_questions_count INTEGER NOT NULL DEFAULT 0,
-      -- Last reset timestamps
-      last_daily_reset TIMESTAMP
-    WITH
-      TIME ZONE,
-      last_copilot_reset TIMESTAMP
-    WITH
-      TIME ZONE,
+      -- Stripe integration (only IDs stored, subscription data cached in Redis)
+      stripe_customer_id VARCHAR(255) UNIQUE,
+      stripe_subscription_id VARCHAR(255),
       -- User preferences
-      academic_level_id UUID REFERENCES academic_levels (id) ON DELETE SET NULL,
+      academic_level_id INTEGER REFERENCES academic_levels (id) ON DELETE SET NULL,
+      allowed_cookies TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+      selected_question_types question_type[] NOT NULL DEFAULT ARRAY[]::question_type[],
+      question_types_updated_at TIMESTAMP
+    WITH
+      TIME ZONE,
       -- Timestamps
       created_at TIMESTAMP
     WITH
@@ -49,54 +34,46 @@ CREATE TABLE
   );
 
 -- Indexes
+CREATE INDEX idx_profiles_user_id ON profiles (user_id);
+
 CREATE INDEX idx_profiles_email ON profiles (email);
 
-CREATE INDEX idx_profiles_plan ON profiles (plan);
-
 CREATE INDEX idx_profiles_stripe_customer_id ON profiles (stripe_customer_id);
-
-CREATE INDEX idx_profiles_stripe_subscription_id ON profiles (stripe_subscription_id);
 
 CREATE INDEX idx_profiles_academic_level_id ON profiles (academic_level_id);
 
 -- Comments
-COMMENT ON TABLE profiles IS 'User profiles with subscription plans and usage limits';
+COMMENT ON TABLE profiles IS 'User profiles with Stripe integration and preferences';
 
-COMMENT ON COLUMN profiles.id IS 'Primary key (UUID, matches Supabase auth.users.id)';
+COMMENT ON COLUMN profiles.id IS 'Primary key (UUID)';
+
+COMMENT ON COLUMN profiles.user_id IS 'Supabase auth user ID (unique)';
+
+COMMENT ON COLUMN profiles.is_admin IS 'Admin flag for elevated permissions';
+
+COMMENT ON COLUMN profiles.full_name IS 'User full name (optional)';
 
 COMMENT ON COLUMN profiles.email IS 'User email address (unique)';
 
-COMMENT ON COLUMN profiles.full_name IS 'User full name';
+COMMENT ON COLUMN profiles.email_verified IS 'Email verification status';
 
-COMMENT ON COLUMN profiles.plan IS 'Current subscription plan';
-
-COMMENT ON COLUMN profiles.plan_created_at IS 'When the current plan was activated';
-
-COMMENT ON COLUMN profiles.plan_ends_at IS 'When the current plan expires';
-
-COMMENT ON COLUMN profiles.plan_stripe_price_id IS 'Stripe price ID for current plan';
-
-COMMENT ON COLUMN profiles.plan_period IS 'Billing period (monthly/yearly)';
+COMMENT ON COLUMN profiles.email_verified_at IS 'Email verification timestamp';
 
 COMMENT ON COLUMN profiles.stripe_customer_id IS 'Stripe customer ID (unique)';
 
-COMMENT ON COLUMN profiles.stripe_subscription_id IS 'Stripe subscription ID (unique)';
+COMMENT ON COLUMN profiles.stripe_subscription_id IS 'Active Stripe subscription ID';
 
-COMMENT ON COLUMN profiles.questions_limit IS 'Total questions allowed in current period';
+COMMENT ON COLUMN profiles.academic_level_id IS 'Foreign key to academic_levels table';
 
-COMMENT ON COLUMN profiles.assessments_limit IS 'Total assessments allowed in current period';
+COMMENT ON COLUMN profiles.allowed_cookies IS 'Array of allowed cookie types';
 
-COMMENT ON COLUMN profiles.daily_questions_limit IS 'Daily questions generation limit';
+COMMENT ON COLUMN profiles.selected_question_types IS 'User-selected question types (limited by plan)';
 
-COMMENT ON COLUMN profiles.copilot_questions_limit IS 'AI copilot questions limit';
+COMMENT ON COLUMN profiles.question_types_updated_at IS 'Last time question types were updated';
 
-COMMENT ON COLUMN profiles.questions_count IS 'Current questions used count';
+COMMENT ON COLUMN profiles.created_at IS 'Record creation timestamp';
 
-COMMENT ON COLUMN profiles.assessments_count IS 'Current assessments used count';
-
-COMMENT ON COLUMN profiles.daily_questions_count IS 'Current daily questions count';
-
-COMMENT ON COLUMN profiles.copilot_questions_count IS 'Current copilot questions count';
+COMMENT ON COLUMN profiles.updated_at IS 'Record last update timestamp';
 
 COMMENT ON COLUMN profiles.last_daily_reset IS 'Last time daily counter was reset';
 

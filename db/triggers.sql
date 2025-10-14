@@ -48,12 +48,6 @@ CREATE TRIGGER plans_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Trigger for academic_levels table
-CREATE TRIGGER academic_levels_updated_at
-    BEFORE UPDATE ON academic_levels
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
 COMMENT ON FUNCTION update_updated_at_column IS 'Automatically updates the updated_at timestamp on row update';
 
 -- =====================================================

@@ -1,21 +1,17 @@
 -- Migration: 0007_create_plans
--- Description: Create plans table (plan configurations and pricing)
+-- Description: Create plans table (plan configurations)
 -- Dependencies: 0001_create_enums (plan, support_type_enum)
 -- Created: 2025-10-13
 CREATE TABLE
   IF NOT EXISTS plans (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    -- Plan identification
-    name plan NOT NULL UNIQUE,
+    id plan PRIMARY KEY NOT NULL,
     -- Plan features
-    price NUMERIC(10, 2) NOT NULL,
-    questions_limit INTEGER NOT NULL,
-    assessments_limit INTEGER NOT NULL,
-    daily_questions_limit INTEGER NOT NULL,
-    copilot_questions_limit INTEGER NOT NULL,
-    support_type support_type_enum NOT NULL,
-    -- Additional features (stored as JSONB array)
-    features JSONB NOT NULL DEFAULT '[]',
+    model VARCHAR(255) NOT NULL,
+    questions_month INTEGER NOT NULL DEFAULT 30,
+    doc_type TEXT[] NOT NULL,
+    docs_size INTEGER NOT NULL DEFAULT 10,
+    max_question_types INTEGER NOT NULL DEFAULT 1,
+    support support_type_enum[] NOT NULL,
     -- Timestamps
     created_at TIMESTAMP
     WITH
@@ -26,28 +22,28 @@ CREATE TABLE
   );
 
 -- Indexes
-CREATE INDEX idx_plans_name ON plans (name);
+CREATE INDEX idx_plans_id ON plans (id);
 
 -- Comments
-COMMENT ON TABLE plans IS 'Plan configurations, features, and pricing';
+COMMENT ON TABLE plans IS 'Plan configurations and features';
 
-COMMENT ON COLUMN plans.id IS 'Primary key (UUID)';
+COMMENT ON COLUMN plans.id IS 'Primary key (plan enum)';
 
-COMMENT ON COLUMN plans.name IS 'Plan identifier (unique)';
+COMMENT ON COLUMN plans.model IS 'AI model name for this plan';
 
-COMMENT ON COLUMN plans.price IS 'Plan price (monthly)';
+COMMENT ON COLUMN plans.questions_month IS 'Monthly questions limit';
 
-COMMENT ON COLUMN plans.questions_limit IS 'Total questions allowed per billing period';
+COMMENT ON COLUMN plans.doc_type IS 'Array of supported document types';
 
-COMMENT ON COLUMN plans.assessments_limit IS 'Total assessments allowed per billing period';
+COMMENT ON COLUMN plans.docs_size IS 'Maximum document size in MB';
 
-COMMENT ON COLUMN plans.daily_questions_limit IS 'Daily questions generation limit';
+COMMENT ON COLUMN plans.max_question_types IS 'Maximum number of question types allowed';
 
-COMMENT ON COLUMN plans.copilot_questions_limit IS 'AI copilot questions limit';
+COMMENT ON COLUMN plans.support IS 'Array of support types included';
 
-COMMENT ON COLUMN plans.support_type IS 'Type of customer support included';
+COMMENT ON COLUMN plans.created_at IS 'Record creation timestamp';
 
-COMMENT ON COLUMN plans.features IS 'Array of additional features as JSONB';
+COMMENT ON COLUMN plans.updated_at IS 'Record last update timestamp';
 
 COMMENT ON COLUMN plans.created_at IS 'Plan configuration creation timestamp';
 
