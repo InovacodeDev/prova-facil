@@ -36,6 +36,38 @@ function verifyWebhookSignature(payload: string, signature: string): Stripe.Even
 }
 
 /**
+ * Gets the plan_id from Stripe subscription's product ID
+ *
+ * Queries the plans table to find the matching plan_id for the given
+ * Stripe product ID. Returns 'starter' as fallback if not found.
+ */
+async function getPlanIdFromStripeProduct(subscription: Stripe.Subscription): Promise<string> {
+  const supabase = await createClient();
+
+  // Extract product ID from subscription
+  const item = subscription.items.data[0];
+  if (!item?.price?.product) {
+    console.warn('[Webhook] No product found in subscription, using starter plan');
+    return 'starter';
+  }
+
+  const productId = typeof item.price.product === 'string' ? item.price.product : item.price.product.id;
+
+  console.log(`[Webhook] Looking up plan for Stripe product: ${productId}`);
+
+  // Query plans table to find matching plan_id
+  const { data, error } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).single();
+
+  if (error || !data) {
+    console.warn(`[Webhook] Plan not found for product ${productId}, using starter plan. Error:`, error);
+    return 'starter';
+  }
+
+  console.log(`[Webhook] Found plan: ${data.id} for product: ${productId}`);
+  return data.id;
+}
+
+/**
  * Updates user profile with Stripe IDs and invalidates cache
  *
  * This function updates ONLY the Stripe reference IDs in the database.
@@ -55,6 +87,9 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
   const supabase = await createClient();
 
   console.log(`[Webhook] Updating profile for customer: ${customerId}, subscription: ${subscription.id}`);
+
+  // Get the plan_id from the subscription's product
+  const planId = await getPlanIdFromStripeProduct(subscription);
 
   // Get current profile to check for existing subscription
   const { data: profile } = await supabase
@@ -82,12 +117,13 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
     }
   }
 
-  // Update database with ONLY Stripe IDs (references)
+  // Update database with Stripe IDs AND plan_id (for fast access)
   const { error } = await supabase
     .from('profiles')
     .update({
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
+      plan_id: planId, // NEW: Set plan_id for direct access
       updated_at: new Date().toISOString(),
     })
     .eq('stripe_customer_id', customerId);
@@ -97,7 +133,7 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
     throw new Error('Failed to update profile');
   }
 
-  console.log(`[Webhook] Profile updated with subscription ID: ${subscription.id}`);
+  console.log(`[Webhook] Profile updated with subscription ID: ${subscription.id} and plan: ${planId}`);
 
   // Invalidate Redis cache so next request fetches fresh data from Stripe
   await invalidateSubscriptionCacheByCustomerId(customerId);
@@ -107,18 +143,19 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
 /**
  * Handles subscription deletion/cancellation
  *
- * Sets subscription ID to null (user reverts to free plan).
+ * Sets subscription ID to null and plan_id to 'starter' (user reverts to free plan).
  */
 async function handleSubscriptionDeleted(customerId: string) {
   const supabase = await createClient();
 
   console.log(`[Webhook] Handling subscription deletion for customer: ${customerId}`);
 
-  // Set subscription ID to null (user reverts to free plan)
+  // Set subscription ID to null and reset to starter plan
   const { error } = await supabase
     .from('profiles')
     .update({
       stripe_subscription_id: null,
+      plan_id: 'starter', // Reset to starter plan
       updated_at: new Date().toISOString(),
     })
     .eq('stripe_customer_id', customerId);
@@ -128,7 +165,7 @@ async function handleSubscriptionDeleted(customerId: string) {
     throw new Error('Failed to handle subscription deletion');
   }
 
-  console.log(`[Webhook] Subscription removed for customer: ${customerId}`);
+  console.log(`[Webhook] Subscription removed and plan reset to starter for customer: ${customerId}`);
 
   // Invalidate cache so next request reflects free plan
   await invalidateSubscriptionCacheByCustomerId(customerId);

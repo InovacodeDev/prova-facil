@@ -44,6 +44,7 @@ export interface Profile {
   email_verified_at: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  plan_id: string; // Direct FK to plans.id - always present, defaults to 'starter'
   academic_level_id: number | null;
   allowed_cookies: string[];
   selected_question_types: string[];
@@ -133,16 +134,24 @@ export function useProfile() {
             // Update the profile cache with new data
             queryClient.setQueryData(['profile', user.id], newProfile);
 
-            // Check if Stripe-related fields changed
+            // Check if Stripe-related fields or plan_id changed
             const stripeFieldsChanged =
               oldProfile.stripe_customer_id !== newProfile.stripe_customer_id ||
               oldProfile.stripe_subscription_id !== newProfile.stripe_subscription_id;
+
+            const planChanged = oldProfile.plan_id !== newProfile.plan_id;
 
             if (stripeFieldsChanged) {
               console.log('[useProfile] Stripe fields changed, invalidating subscription cache');
               // Invalidate subscription cache to force refetch
               queryClient.invalidateQueries({ queryKey: ['subscription'] });
               // Also invalidate plan cache since it depends on subscription
+              queryClient.invalidateQueries({ queryKey: ['plan-id'] });
+            }
+
+            if (planChanged) {
+              console.log('[useProfile] Plan changed from', oldProfile.plan_id, 'to', newProfile.plan_id);
+              // Invalidate plan cache to reflect new plan
               queryClient.invalidateQueries({ queryKey: ['plan-id'] });
             }
           } else if (payload.eventType === 'DELETE') {

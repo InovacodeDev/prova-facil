@@ -139,6 +139,11 @@ export const profiles = pgTable('profiles', {
   // Stripe Integration: Only IDs stored in DB (subscription data cached in Redis)
   stripe_customer_id: varchar('stripe_customer_id', { length: 255 }).unique(), // Stripe Customer ID
   stripe_subscription_id: varchar('stripe_subscription_id', { length: 255 }), // Active Stripe Subscription ID
+  // Plan relationship: Direct FK to plans table for fast access
+  plan_id: planEnum('plan_id')
+    .notNull()
+    .default('starter')
+    .references(() => plans.id), // Current active plan
   academic_level_id: integer('academic_level_id').references(() => academicLevels.id),
   allowed_cookies: text('allowed_cookies').array().notNull().default([]), // jsonb stored as text
   selected_question_types: questionTypeEnum('selected_question_types').array().notNull().default([]),
