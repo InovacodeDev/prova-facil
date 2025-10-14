@@ -3,18 +3,18 @@
 -- Run this manually or via a migration script after updating the product IDs
 
 -- STEP 1: Update these variables with your actual Stripe Product IDs
-\set starter_id 'prod_YOUR_STARTER_ID_HERE'
-\set basic_id 'prod_YOUR_BASIC_ID_HERE'
-\set essentials_id 'prod_YOUR_ESSENTIALS_ID_HERE'
-\set plus_id 'prod_YOUR_PLUS_ID_HERE'
-\set advanced_id 'prod_YOUR_ADVANCED_ID_HERE'
+-- \set starter_id 'prod_TEN621F9c7mmmf'
+-- \set basic_id 'prod_TEN7yqB6u8yLoN'
+-- \set essentials_id 'prod_TEN7czfNuZR8az'
+-- \set plus_id 'prod_TEN7Dg4bHd46Lw'
+-- \set advanced_id 'prod_TEN7ZiR3FQfyK6'
 
 -- STEP 2: Populate stripe_product_id for each plan
-UPDATE plans SET stripe_product_id = :'starter_id' WHERE id = 'starter';
-UPDATE plans SET stripe_product_id = :'basic_id' WHERE id = 'basic';
-UPDATE plans SET stripe_product_id = :'essentials_id' WHERE id = 'essentials';
-UPDATE plans SET stripe_product_id = :'plus_id' WHERE id = 'plus';
-UPDATE plans SET stripe_product_id = :'advanced_id' WHERE id = 'advanced';
+UPDATE plans SET stripe_product_id = 'prod_TEN621F9c7mmmf' WHERE id = 'starter';
+UPDATE plans SET stripe_product_id = 'prod_TEN7yqB6u8yLoN' WHERE id = 'basic';
+UPDATE plans SET stripe_product_id = 'prod_TEN7czfNuZR8az' WHERE id = 'essentials';
+UPDATE plans SET stripe_product_id = 'prod_TEN7Dg4bHd46Lw' WHERE id = 'plus';
+UPDATE plans SET stripe_product_id = 'prod_TEN7ZiR3FQfyK6' WHERE id = 'advanced';
 
 -- STEP 3: Apply constraints after data is populated
 ALTER TABLE plans

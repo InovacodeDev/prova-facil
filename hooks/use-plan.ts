@@ -1,12 +1,13 @@
 /**
  * usePlan Hook
  *
- * Simplified hook that extracts just the plan information from subscription data.
- * Uses useSubscription internally but provides a cleaner API for components
- * that only need plan details.
+ * Simplified hook that extracts plan information from subscription data.
+ * Uses useSubscription internally to get productId, then fetches plan config
+ * from the database based on stripe_product_id.
  *
  * Cache Strategy:
  * - Inherits from useSubscription (4 hours staleTime)
+ * - Plan config cached separately with React Query
  * - Automatically invalidated when subscription changes
  *
  * @example
@@ -24,6 +25,7 @@
 'use client';
 
 import type { PlanId } from '@/lib/plans/config';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useSubscription } from './use-subscription';
 
@@ -68,23 +70,56 @@ const PLAN_NAMES: Record<PlanId, string> = {
 };
 
 /**
+ * Fetches plan ID from database based on stripe_product_id
+ */
+async function fetchPlanIdByProductId(productId: string): Promise<string> {
+  const response = await fetch(`/api/plans/by-product-id?productId=${productId}`);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch plan ID');
+  }
+
+  const data = await response.json();
+  return data.planId;
+}
+
+/**
  * Hook para buscar apenas os dados do plano do usuário
- * Mais simples que useSubscription, focado apenas no plano
+ * Busca o plan_id da tabela plans baseado no stripe_product_id da subscription
  *
  * @returns Plan data com estados derivados
  */
 export function usePlan() {
-  const { data: subscription, isLoading, error, refetch } = useSubscription();
+  const {
+    data: subscription,
+    isLoading: subscriptionLoading,
+    error: subscriptionError,
+    refetch: refetchSubscription,
+  } = useSubscription();
 
-  // Derive plan data from subscription
+  // Fetch plan ID from database based on productId
+  const {
+    data: planId,
+    isLoading: planIdLoading,
+    error: planIdError,
+  } = useQuery({
+    queryKey: ['plan-id', subscription?.productId],
+    queryFn: () => fetchPlanIdByProductId(subscription!.productId!),
+    enabled: !!subscription?.productId, // Only fetch if we have a productId
+    staleTime: 4 * 60 * 60 * 1000, // 4 hours (same as subscription)
+    gcTime: 6 * 60 * 60 * 1000, // 6 hours
+  });
+
+  const isLoading = subscriptionLoading || planIdLoading;
+  const error = subscriptionError || planIdError;
+
+  // Derive plan data from subscription + planId
   const plan = useMemo<PlanData | null>(() => {
-    if (!subscription) return null;
-
-    const planId = subscription.plan as PlanId;
+    if (!subscription || !planId) return null;
 
     return {
-      id: planId,
-      name: PLAN_NAMES[planId] || planId,
+      id: planId as PlanId,
+      name: PLAN_NAMES[planId as PlanId] || planId,
       status: subscription.status,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       currentPeriodEnd: subscription.currentPeriodEnd,
@@ -97,12 +132,12 @@ export function usePlan() {
       productId: subscription.productId,
       priceId: subscription.priceId,
     };
-  }, [subscription]);
+  }, [subscription, planId]);
 
-  console.log({
-    subscription,
-    plan,
-  });
+  const refetch = () => {
+    refetchSubscription();
+  };
+
   return {
     plan,
     isLoading,

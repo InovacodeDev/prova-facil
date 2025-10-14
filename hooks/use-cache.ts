@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { cacheService } from '@/lib/cache-service';
+import { createClient } from '@/lib/supabase/client';
+import { useEffect, useMemo, useState } from 'react';
 
 interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
   email: string;
-  plan: string;
   email_verified: boolean;
   email_verified_at: string | null;
   selected_question_types: string[];
@@ -66,7 +65,7 @@ export function useProfile() {
         const { data, error: fetchError } = await supabase
           .from('profiles')
           .select(
-            'id, user_id, full_name, email, plan, email_verified, email_verified_at, selected_question_types, question_types_updated_at'
+            'id, user_id, full_name, email, email_verified, email_verified_at, selected_question_types, question_types_updated_at'
           )
           .eq('user_id', user.id)
           .single();

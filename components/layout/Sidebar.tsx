@@ -16,11 +16,10 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
-type PlanType = 'starter' | 'basic' | 'advanced';
+type PlanType = 'starter' | 'basic' | 'essentials' | 'plus' | 'advanced';
 
 interface PlanData {
-  name: string;
-  type: PlanType;
+  id: PlanType; // ID do plano (vem da coluna 'id' da tabela plans)
 }
 
 const navigationItems = [
@@ -54,13 +53,25 @@ const planConfig = {
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-200',
   },
+  essentials: {
+    icon: Zap,
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-50',
+    borderColor: 'border-cyan-200',
+  },
+  plus: {
+    icon: Crown,
+    color: 'text-indigo-500',
+    bgColor: 'bg-indigo-50',
+    borderColor: 'border-indigo-200',
+  },
   advanced: {
     icon: Crown,
     color: 'text-purple-500',
     bgColor: 'bg-purple-50',
     borderColor: 'border-purple-200',
   },
-};
+} as const;
 
 export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
   const pathname = usePathname();
@@ -99,7 +110,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
       // Get plan configuration based on stripe_product_id
       const { data: planData } = await supabase
         .from('plans')
-        .select('id, name, type')
+        .select('id')
         .eq('stripe_product_id', stripeProductId)
         .single();
 
@@ -120,14 +131,14 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
   };
 
   const getPlanCTA = () => {
-    if (!plan || plan.type === 'starter') {
+    if (!plan || plan.id === 'starter') {
       return {
         text: 'Selecionar Plano',
         href: '/plan',
       };
     }
 
-    if (plan.type !== 'advanced') {
+    if (plan.id !== 'advanced') {
       return {
         text: 'Fazer Upgrade',
         href: '/plan',
@@ -180,7 +191,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
 
     if (!plan) return null;
 
-    const config = planConfig[plan.type];
+    const config = planConfig[plan.id];
     const PlanIcon = config.icon;
     const cta = getPlanCTA();
 
@@ -199,7 +210,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
             </div>
           </TooltipTrigger>
           <TooltipContent side="right">
-            <p className="font-medium">Plano {plan.name}</p>
+            <p className="font-medium">Plano {plan.id}</p>
             {cta && <p className="text-xs text-muted-foreground">{cta.text}</p>}
           </TooltipContent>
         </Tooltip>
@@ -212,12 +223,12 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
           <PlanIcon className={cn('h-5 w-5', config.color)} />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">Plano Ativo</p>
-            <p className="text-xs text-muted-foreground truncate">{plan.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{plan.id}</p>
           </div>
         </div>
 
         {cta && (
-          <Button asChild size="sm" className="w-full" variant={plan.type === 'starter' ? 'default' : 'outline'}>
+          <Button asChild size="sm" className="w-full" variant={plan.id === 'starter' ? 'default' : 'outline'}>
             <Link href={cta.href}>{cta.text}</Link>
           </Button>
         )}
