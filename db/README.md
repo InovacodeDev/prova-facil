@@ -73,6 +73,7 @@ export DATABASE_URL='postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres'
 **Propósito:** Executa todas as migrations em ordem correta.
 
 **Uso:**
+
 ```bash
 ./db/apply-migrations.sh           # Local (padrão)
 ./db/apply-migrations.sh --local   # Local (explícito)
@@ -80,12 +81,14 @@ export DATABASE_URL='postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres'
 ```
 
 **Fases de Execução:**
+
 1. **Migrations** (0001 → 0009): Cria tabelas, enums, constraints
 2. **Triggers**: Automações (updated_at, cache, logs)
 3. **Policies**: Segurança (RLS para todas tabelas)
 4. **Inserts**: Dados iniciais (5 plans + 13 academic levels)
 
 **Características:**
+
 - ✅ Idempotente: seguro executar múltiplas vezes
 - ✅ Error handling: para no primeiro erro
 - ✅ Output colorido: progresso visual
@@ -100,6 +103,7 @@ export DATABASE_URL='postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres'
 **⚠️ PERIGO:** Esta operação é IRREVERSÍVEL!
 
 **Uso:**
+
 ```bash
 ./db/reset-database.sh           # Local (padrão)
 ./db/reset-database.sh --local   # Local (explícito)
@@ -107,11 +111,13 @@ export DATABASE_URL='postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres'
 ```
 
 **O que faz:**
+
 1. Executa `supabase db reset --local`
 2. Chama `apply-migrations.sh` automaticamente
 3. Resultado: banco limpo com estrutura e seed data
 
 **Segurança:**
+
 - Requer confirmação: digite `RESET`
 - Apenas local (remote deve ser feito via Dashboard)
 
@@ -147,6 +153,7 @@ export DATABASE_URL='postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres'
 ## 🔐 Variáveis de Ambiente
 
 ### Local Development
+
 ```bash
 # Supabase CLI cuida automaticamente
 # Database: http://localhost:54322
@@ -154,6 +161,7 @@ export DATABASE_URL='postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres'
 ```
 
 ### Remote/Production
+
 ```bash
 # Obrigatório para deploy remoto
 export DATABASE_URL='postgresql://postgres:[PASSWORD]@db.[PROJECT_ID].supabase.co:5432/postgres'
@@ -168,16 +176,16 @@ export DATABASE_URL='postgresql://postgres:[PASSWORD]@db.[PROJECT_ID].supabase.c
 
 ### Tabelas Principais
 
-| Tabela | PK Type | Principais Colunas | Relacionamentos |
-|--------|---------|-------------------|-----------------|
-| `profiles` | UUID | user_id, is_admin, plan, stripe_* | → auth.users |
-| `assessments` | UUID | user_id, title, subject, academic_level | → profiles |
-| `questions` | UUID | assessment_id, question, type, correct_answer | → assessments |
-| `academic_levels` | INTEGER | name (enum), allowed_question_types[] | Nenhum |
-| `plans` | plan (enum) | model, questions_month, doc_type[] | Nenhum |
-| `logs` | SERIAL | action, count, updated_at | Nenhum |
-| `profile_logs_cycle` | UUID | user_id, cycle, questions_created | → profiles |
-| `error_logs` | UUID | component, message, severity, context | Nenhum |
+| Tabela               | PK Type     | Principais Colunas                            | Relacionamentos |
+| -------------------- | ----------- | --------------------------------------------- | --------------- |
+| `profiles`           | UUID        | user*id, is_admin, plan, stripe*\*            | → auth.users    |
+| `assessments`        | UUID        | user_id, title, subject, academic_level       | → profiles      |
+| `questions`          | UUID        | assessment_id, question, type, correct_answer | → assessments   |
+| `academic_levels`    | INTEGER     | name (enum), allowed_question_types[]         | Nenhum          |
+| `plans`              | plan (enum) | model, questions_month, doc_type[]            | Nenhum          |
+| `logs`               | SERIAL      | action, count, updated_at                     | Nenhum          |
+| `profile_logs_cycle` | UUID        | user_id, cycle, questions_created             | → profiles      |
+| `error_logs`         | UUID        | component, message, severity, context         | Nenhum          |
 
 ### Enums Definidos
 
@@ -219,7 +227,7 @@ open http://localhost:54323
 
 ```sql
 -- Listar todas as tabelas
-SELECT table_name FROM information_schema.tables 
+SELECT table_name FROM information_schema.tables
 WHERE table_schema = 'public';
 
 -- Verificar enums
@@ -231,8 +239,8 @@ UNION ALL
 SELECT 'academic_levels', COUNT(*) FROM academic_levels;
 
 -- Verificar triggers
-SELECT trigger_name, event_object_table 
-FROM information_schema.triggers 
+SELECT trigger_name, event_object_table
+FROM information_schema.triggers
 WHERE trigger_schema = 'public';
 
 -- Verificar policies
@@ -244,6 +252,7 @@ SELECT tablename, policyname FROM pg_policies;
 ## 🚨 Troubleshooting
 
 ### Erro: "relation already exists"
+
 ```bash
 # Causa: Tentou criar tabela que já existe
 # Solução: Reset completo
@@ -251,6 +260,7 @@ SELECT tablename, policyname FROM pg_policies;
 ```
 
 ### Erro: "foreign key constraint"
+
 ```bash
 # Causa: Ordem errada de migrations
 # Solução: Use o script (ordem correta garantida)
@@ -258,6 +268,7 @@ SELECT tablename, policyname FROM pg_policies;
 ```
 
 ### Erro: "permission denied"
+
 ```bash
 # Causa: Scripts não executáveis
 # Solução:
@@ -265,6 +276,7 @@ chmod +x db/apply-migrations.sh db/reset-database.sh
 ```
 
 ### Erro: "DATABASE_URL not set" (remote)
+
 ```bash
 # Causa: Variável não configurada
 # Solução:
@@ -273,6 +285,7 @@ export DATABASE_URL='postgresql://...'
 ```
 
 ### Erro: "column does not exist"
+
 ```bash
 # Causa: Schema desatualizado ou ordem errada
 # Solução 1: Reset local
@@ -307,6 +320,7 @@ export DATABASE_URL='postgresql://...'
 ## 🔄 Workflow de Mudanças no Schema
 
 ### 1. Editar Schema
+
 ```typescript
 // db/schema.ts
 export const myNewTable = pgTable('my_new_table', {
@@ -316,17 +330,20 @@ export const myNewTable = pgTable('my_new_table', {
 ```
 
 ### 2. Criar Migration
+
 ```bash
 # Crie arquivo: db/migrations/0010_create_my_new_table.sql
 # Replique a estrutura do schema.ts em SQL
 ```
 
 ### 3. Aplicar Localmente
+
 ```bash
 ./db/apply-migrations.sh
 ```
 
 ### 4. Testar
+
 ```bash
 # Via Supabase Studio ou psql
 psql postgresql://postgres:postgres@localhost:54322/postgres \
@@ -334,12 +351,14 @@ psql postgresql://postgres:postgres@localhost:54322/postgres \
 ```
 
 ### 5. Commit
+
 ```bash
 git add db/schema.ts db/migrations/0010_*
 git commit -m "feat(db): adicionar tabela my_new_table"
 ```
 
 ### 6. Deploy
+
 ```bash
 export DATABASE_URL='...'
 ./db/apply-migrations.sh --remote
@@ -359,6 +378,7 @@ export DATABASE_URL='...'
 ## 🤝 Suporte
 
 Problemas? Verifique:
+
 1. `supabase status` (local deve estar running)
 2. Logs do script (output colorido indica problemas)
 3. `git log db/` (histórico de mudanças)
@@ -366,5 +386,5 @@ Problemas? Verifique:
 
 ---
 
-**Última Atualização:** Janeiro 2025  
+**Última Atualização:** Janeiro 2025
 **Versão das Migrations:** 0001-0009 (9 migrations)
