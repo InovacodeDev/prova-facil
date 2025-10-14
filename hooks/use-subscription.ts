@@ -73,7 +73,7 @@ export function useSubscription() {
     staleTime: FOUR_HOURS_IN_MS, // Dados considerados "fresh" por 4 horas
     gcTime: SIX_HOURS_IN_MS, // Mantém em cache por 6 horas
     refetchOnWindowFocus: true, // Revalida ao voltar para a aba (se stale)
-    refetchOnMount: false, // Não refetch se já tem dados fresh
+    refetchOnMount: 'always', // CHANGED: Always refetch on mount to ensure fresh data after navigation
     retry: 1, // Tenta 1 vez em caso de erro (auth error não deve retry muito)
   });
 }
@@ -98,8 +98,10 @@ export function useInvalidateSubscription() {
   const queryClient = useQueryClient();
 
   return () => {
+    console.log('[useInvalidateSubscription] Invalidating subscription cache...');
     queryClient.invalidateQueries({
       queryKey: ['stripe', 'subscription'],
+      refetchType: 'active', // Force refetch active queries
     });
   };
 }
@@ -124,9 +126,11 @@ export function useInvalidateAllStripeData() {
   const queryClient = useQueryClient();
 
   return () => {
+    console.log('[useInvalidateAllStripeData] Invalidating ALL Stripe cache...');
     // Invalida todas as queries do Stripe de uma vez
     queryClient.invalidateQueries({
       queryKey: ['stripe'],
+      refetchType: 'active', // Force refetch active queries immediately
     });
   };
 }

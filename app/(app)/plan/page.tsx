@@ -59,8 +59,18 @@ export default function PlanPage() {
         title: 'Pagamento confirmado!',
         description: 'Seu plano foi atualizado com sucesso.',
       });
+
       // Invalidate all Stripe data to force refetch
+      console.log('[Plan] Payment success - invalidating Stripe cache...');
       invalidateStripeData();
+
+      // Force refetch after a small delay to allow webhook to process
+      setTimeout(() => {
+        console.log('[Plan] Refetching plan data...');
+        refetchPlan();
+        refetchProducts();
+      }, 2000); // 2 second delay for webhook processing
+
       window.history.replaceState({}, '', '/plan');
     }
 
@@ -143,7 +153,17 @@ export default function PlanPage() {
         });
 
         setModalOpen(false);
+
+        // Invalidate cache and force refetch
+        console.log('[Plan] Subscription canceled - invalidating cache and refetching...');
         invalidateStripeData();
+
+        // Force refetch to show updated status
+        setTimeout(() => {
+          refetchPlan();
+          refetchProducts();
+        }, 500);
+
         return;
       }
 
@@ -157,7 +177,17 @@ export default function PlanPage() {
         });
 
         setModalOpen(false);
+
+        // Invalidate cache and force refetch
+        console.log('[Plan] Subscription updated - invalidating cache and refetching...');
         invalidateStripeData();
+
+        // Force refetch to show updated plan
+        setTimeout(() => {
+          refetchPlan();
+          refetchProducts();
+        }, 500);
+
         return;
       }
 
