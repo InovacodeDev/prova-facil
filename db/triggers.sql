@@ -226,3 +226,55 @@ COMMENT ON FUNCTION update_plan_id_from_subscription() IS
 
 -- Test the trigger (optional - remove in production)
 -- UPDATE profiles SET stripe_subscription_id = NULL WHERE id = 'some-id';
+
+-- =====================================================
+-- 4. AUTO-SYNC STRIPE SUBSCRIPTION ON PROFILE CHANGES
+-- =====================================================
+-- Automatically sync the most recent active subscription from Stripe
+-- whenever profile changes and has a stripe_customer_id
+
+CREATE OR REPLACE FUNCTION notify_sync_stripe_subscription()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only trigger if profile has a stripe_customer_id
+    IF NEW.stripe_customer_id IS NOT NULL THEN
+        -- Check if this is a significant change that might require sync
+        -- (any update to the profile, except updated_at changes)
+        IF TG_OP = 'INSERT' OR (
+            TG_OP = 'UPDATE' AND (
+                OLD.stripe_customer_id IS DISTINCT FROM NEW.stripe_customer_id OR
+                OLD.stripe_subscription_id IS DISTINCT FROM NEW.stripe_subscription_id OR
+                OLD.plan_id IS DISTINCT FROM NEW.plan_id
+            )
+        ) THEN
+            -- Notify with profile_id and customer_id as payload
+            PERFORM pg_notify(
+                'sync_stripe_subscription',
+                json_build_object(
+                    'profile_id', NEW.id,
+                    'customer_id', NEW.stripe_customer_id
+                )::text
+            );
+
+            RAISE NOTICE 'Stripe subscription sync notification triggered for profile_id: %, customer_id: %',
+                NEW.id, NEW.stripe_customer_id;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger on profiles table
+CREATE TRIGGER trigger_sync_stripe_subscription
+    AFTER INSERT OR UPDATE ON profiles
+    FOR EACH ROW
+    WHEN (NEW.stripe_customer_id IS NOT NULL)
+    EXECUTE FUNCTION notify_sync_stripe_subscription();
+
+COMMENT ON FUNCTION notify_sync_stripe_subscription IS
+    'Notifies application to sync the most recent active Stripe subscription when profile changes.
+     This ensures stripe_subscription_id always reflects the current active subscription from Stripe.';
+
+COMMENT ON TRIGGER trigger_sync_stripe_subscription ON profiles IS
+    'Triggers subscription sync notification when profile is created or Stripe fields change';
