@@ -17,31 +17,31 @@
 -- =====================================================
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Users can view all profiles (for public profile pages)
-CREATE POLICY "profiles_select_all" ON profiles FOR
+-- Users can only view their own profile
+CREATE POLICY "profiles_select_own" ON profiles FOR
 SELECT
-  TO public,
-  authenticated USING (true);
+  TO authenticated USING (user_id = auth.uid ());
 
 -- Users can only update their own profile
 CREATE POLICY "profiles_update_own" ON profiles FOR
-UPDATE TO authenticated USING (id = auth.uid ())
+UPDATE TO authenticated USING (user_id = auth.uid ())
 WITH
-  CHECK (id = auth.uid ());
+  CHECK (user_id = auth.uid ());
 
--- Users can insert their own profile (on signup)
-CREATE POLICY "profiles_insert_own" ON profiles FOR INSERT TO authenticated
+-- Anyone can insert a profile (for signup flow)
+CREATE POLICY "profiles_insert_public" ON profiles FOR INSERT TO public,
+authenticated
 WITH
-  CHECK (id = auth.uid ());
+  CHECK (true);
 
 -- Users can delete their own profile
-CREATE POLICY "profiles_delete_own" ON profiles FOR DELETE TO authenticated USING (id = auth.uid ());
+CREATE POLICY "profiles_delete_own" ON profiles FOR DELETE TO authenticated USING (user_id = auth.uid ());
 
-COMMENT ON POLICY "profiles_select_all" ON profiles IS 'Allow public read access to profiles';
+COMMENT ON POLICY "profiles_select_own" ON profiles IS 'Users can only view their own profile';
 
 COMMENT ON POLICY "profiles_update_own" ON profiles IS 'Users can only update their own profile';
 
-COMMENT ON POLICY "profiles_insert_own" ON profiles IS 'Users can create their own profile on signup';
+COMMENT ON POLICY "profiles_insert_public" ON profiles IS 'Anyone can create a profile (public signup)';
 
 COMMENT ON POLICY "profiles_delete_own" ON profiles IS 'Users can delete their own profile';
 
