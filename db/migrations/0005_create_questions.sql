@@ -50,5 +50,3 @@ COMMENT ON COLUMN questions.copy_last_at IS 'Last time this question was copied'
 COMMENT ON COLUMN questions.created_at IS 'Question creation timestamp';
 
 COMMENT ON COLUMN questions.created_at IS 'Question creation timestamp';
-
-COMMENT ON COLUMN questions.updated_at IS 'Question last update timestamp';
