@@ -145,6 +145,11 @@ export async function POST(request: NextRequest) {
     // Determine proration behavior based on immediate flag
     const prorationBehavior = immediate ? 'always_invoice' : 'none';
 
+    console.log(
+      `[API] Updating subscription ${profile.stripe_subscription_id} ` +
+        `to price ${priceId}, proration: ${prorationBehavior}, immediate: ${immediate}`
+    );
+
     // Update subscription
     const updatedSubscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
       items: [
@@ -157,6 +162,40 @@ export async function POST(request: NextRequest) {
       // If not immediate, ensure cancel_at_period_end is false (in case it was previously set)
       ...(immediate ? {} : { cancel_at_period_end: false }),
     });
+
+    console.log(`[API] Subscription updated successfully. Status: ${updatedSubscription.status}`);
+
+    // Get the new plan_id from the product
+    const newProductId = updatedSubscription.items.data[0]?.price?.product;
+    if (newProductId) {
+      const productIdStr = typeof newProductId === 'string' ? newProductId : newProductId.id;
+
+      // Update plan_id in database
+      const { data: planData } = await supabase
+        .from('plans')
+        .select('id')
+        .eq('stripe_product_id', productIdStr)
+        .single();
+
+      if (planData?.id) {
+        console.log(`[API] Updating profile plan_id to: ${planData.id}`);
+
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            plan_id: planData.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error('[API] Error updating plan_id:', updateError);
+          // Don't throw - subscription was updated successfully
+        } else {
+          console.log(`[API] Profile plan_id updated to: ${planData.id}`);
+        }
+      }
+    }
 
     // Invalidate cache so next request reflects the change
     if (profile.stripe_customer_id) {
@@ -171,15 +210,31 @@ export async function POST(request: NextRequest) {
       responseMessage = 'Plano alterado imediatamente. O valor será ajustado proporcionalmente.';
       effectiveAt = new Date().toISOString();
     } else {
-      const periodEnd = (updatedSubscription as any).current_period_end as number;
-      effectiveAt = new Date(periodEnd * 1000).toISOString();
-      responseMessage = `Plano será alterado em ${new Date(effectiveAt).toLocaleDateString('pt-BR')}`;
+      // Access current_period_end from updatedSubscription
+      // Note: TypeScript types may not reflect all Stripe properties, so we access safely
+      const periodEnd = (updatedSubscription as Record<string, any>).current_period_end as number | undefined;
+
+      if (!periodEnd || typeof periodEnd !== 'number') {
+        console.error('[API] Invalid current_period_end:', periodEnd);
+        console.error('[API] updatedSubscription object:', JSON.stringify(updatedSubscription, null, 2));
+        throw new Error('Failed to get subscription period end date');
+      }
+
+      // Convert Unix timestamp (seconds) to milliseconds and create ISO string
+      const periodEndDate = new Date(periodEnd * 1000);
+      effectiveAt = periodEndDate.toISOString();
+      responseMessage = `Plano será alterado em ${periodEndDate.toLocaleDateString('pt-BR')}`;
     }
 
     console.log(
       `[API] Subscription ${updatedSubscription.id} updated to price ${priceId}. ` +
         `Immediate: ${immediate}, Effective at: ${effectiveAt}`
     );
+
+    // Get current period end safely for response
+    const currentPeriodEnd = (updatedSubscription as Record<string, any>).current_period_end as number | undefined;
+    const currentPeriodEndISO =
+      currentPeriodEnd && typeof currentPeriodEnd === 'number' ? new Date(currentPeriodEnd * 1000).toISOString() : null;
 
     return NextResponse.json(
       {
@@ -190,13 +245,20 @@ export async function POST(request: NextRequest) {
         subscription: {
           id: updatedSubscription.id,
           status: updatedSubscription.status,
-          currentPeriodEnd: new Date((updatedSubscription as any).current_period_end * 1000).toISOString(),
+          currentPeriodEnd: currentPeriodEndISO,
         },
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error updating subscription:', error);
+    console.error('[API] Error updating subscription:', error);
+
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error message:', error.message);
+      console.error('[API] Error stack:', error.stack);
+    }
 
     // Handle specific Stripe errors
     if (error instanceof Error) {
@@ -219,11 +281,22 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      if (error.message.includes('period end')) {
+        return NextResponse.json(
+          {
+            error: 'Invalid subscription data',
+            message: 'Não foi possível obter os dados da assinatura. Tente novamente.',
+          },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json(
       {
         error: 'Failed to update subscription',
+        message: 'Não foi possível atualizar a assinatura. Tente novamente.',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
