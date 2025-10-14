@@ -37,7 +37,7 @@ Webhooks são notificações em tempo real que o Stripe envia para sua aplicaç�
 
    ```bash
    # Forward webhooks para localhost
-   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   stripe listen --forward-to localhost:8800/api/stripe/webhook
    ```
 
 4. **Copiar o Webhook Secret**:
@@ -253,7 +253,7 @@ SUPABASE_SERVICE_ROLE_KEY=xxxxx
 
 ```bash
 # 1. Iniciar forward de webhooks
-stripe listen --forward-to localhost:3000/api/stripe/webhook
+stripe listen --forward-to localhost:8800/api/stripe/webhook
 
 # 2. Em outro terminal, disparar eventos de teste
 stripe trigger customer.subscription.created

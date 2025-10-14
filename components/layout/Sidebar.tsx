@@ -1,5 +1,6 @@
 'use client';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -20,6 +21,8 @@ type PlanType = 'starter' | 'basic' | 'essentials' | 'plus' | 'advanced';
 
 interface PlanData {
   id: PlanType; // ID do plano (vem da coluna 'id' da tabela plans)
+  cancelAtPeriodEnd?: boolean; // Se o plano será cancelado/downgrade ao final do período
+  currentPeriodEnd?: number; // Unix timestamp do fim do período atual
 }
 
 const navigationItems = [
@@ -178,7 +181,11 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
         .single();
 
       if (planData) {
-        setPlan(planData as PlanData);
+        setPlan({
+          id: planData.id as PlanType,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+        });
       }
     } catch (error) {
       console.error('Erro ao carregar plano:', error);
@@ -209,6 +216,25 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
     }
 
     return null;
+  };
+
+  // Format date for badge display (compact format)
+  const formatDateCompact = (timestamp: number): string => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+    });
+  };
+
+  // Format date for tooltip (full format)
+  const formatDateFull = (timestamp: number): string => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString('pt-BR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
   };
 
   const renderNavItem = (item: (typeof navigationItems)[number]) => {
@@ -285,7 +311,29 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
         <div className="flex items-center gap-2">
           <PlanIcon className={cn('h-5 w-5', config.color)} />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Plano Ativo</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium truncate">Plano Ativo</p>
+              {/* Show badge if downgrade/cancellation is scheduled */}
+              {plan.cancelAtPeriodEnd && plan.currentPeriodEnd && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs font-normal cursor-help">
+                      Até {formatDateCompact(plan.currentPeriodEnd)}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="font-medium mb-1">Mudança de plano agendada</p>
+                    <p className="text-xs text-muted-foreground">
+                      Seu plano atual <span className="font-medium">{plan.id}</span> continua ativo até{' '}
+                      <span className="font-medium">{formatDateFull(plan.currentPeriodEnd)}</span>.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Após essa data, a mudança será aplicada automaticamente.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground truncate">{plan.id}</p>
           </div>
         </div>

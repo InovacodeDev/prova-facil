@@ -227,7 +227,7 @@ REDIS_URL=redis://localhost:6379
 npm run dev
 
 # Terminal 2
-stripe listen --forward-to localhost:3000/api/stripe/webhook
+stripe listen --forward-to localhost:8800/api/stripe/webhook
 
 # Terminal 3
 stripe trigger customer.subscription.created
