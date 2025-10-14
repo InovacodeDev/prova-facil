@@ -1,13 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { ProvaFacilText } from '@/assets/logo';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,26 +12,30 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Menu, User, Lock, LogOut, CreditCard, BarChart3, Crown } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { ProvaFacilText } from '@/assets/logo';
+import { BarChart3, CreditCard, Crown, Lock, LogOut, Menu, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface AppHeaderProps {
   onMenuClick: () => void;
 }
 
-interface Profile {
-  full_name: string | null;
-}
-
 export function AppHeader({ onMenuClick }: AppHeaderProps) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { profile } = useProfile();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -57,12 +54,7 @@ export function AppHeader({ onMenuClick }: AppHeaderProps) {
       if (!user) return;
 
       setUser(user);
-
-      const { data: profileData } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).single();
-
-      if (profileData) {
-        setProfile(profileData);
-      }
+      // Profile data is now fetched via useProfile hook with realtime updates
     } catch (error) {
       console.error('Erro ao carregar dados do usuário:', error);
     }

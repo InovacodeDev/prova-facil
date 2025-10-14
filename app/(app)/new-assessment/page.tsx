@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { invalidateUsageCache, useMonthlyUsage, usePlan, useProfile } from '@/hooks/use-cache';
+import { invalidateUsageCache, useMonthlyUsage, usePlan } from '@/hooks/use-cache';
+import { useProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import { invalidateDashboardCache } from '@/lib/cache';
 import { logClientError } from '@/lib/client-error-logger';
@@ -141,12 +142,12 @@ export default function NewAssessmentPage() {
   const [academicLevelName, setAcademicLevelName] = useState<string>('');
 
   // Use cache hooks for profile, plan, and usage data
-  const { profile, loading: profileLoading } = useProfile();
-  const { plan, loading: planLoading } = usePlan(profile?.plan);
+  const { profile, isLoading: profileLoading } = useProfile();
+  const { plan, loading: planLoading } = usePlan(profile?.id);
   const { usage, loading: usageLoading } = useMonthlyUsage(profile?.id);
 
   // Derived values from cache
-  const userPlan = profile?.plan || 'starter';
+  const userPlan = plan?.id || 'starter';
   const allowedQuestionTypes = profile?.selected_question_types || [];
   const planConfig: PlanConfig = useMemo(
     () =>

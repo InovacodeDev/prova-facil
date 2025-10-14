@@ -3,7 +3,8 @@
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMonthlyUsage, usePlan, useProfile } from '@/hooks/use-cache';
+import { useMonthlyUsage, usePlan } from '@/hooks/use-cache';
+import { useProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import { logClientError } from '@/lib/client-error-logger';
 import { createClient } from '@/lib/supabase/client';
@@ -40,8 +41,8 @@ export default function DashboardPage() {
   const supabase = createClient();
 
   // Use cache hooks for profile, plan, and usage
-  const { profile, loading: profileLoading } = useProfile();
-  const { plan, loading: planLoading } = usePlan(profile?.plan);
+  const { profile, isLoading: profileLoading } = useProfile();
+  const { plan, loading: planLoading } = usePlan(profile?.id);
   const { usage, loading: usageLoading } = useMonthlyUsage(profile?.id);
 
   // Combined loading state

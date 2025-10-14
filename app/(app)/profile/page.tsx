@@ -22,7 +22,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { invalidateProfileCache, useProfile } from '@/hooks/use-cache';
+import { usePlan } from '@/hooks/use-cache';
+import { invalidateProfileCache, useProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import { logClientError } from '@/lib/client-error-logger';
 import { getQuestionTypeHint } from '@/lib/question-type-hints';
@@ -32,17 +33,6 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { AlertCircle, Camera, CheckCircle2, Info, Loader2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
-interface Profile {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  plan: string;
-  email_verified: boolean;
-  email_verified_at: string | null;
-  selected_question_types: string[];
-  question_types_updated_at: string | null;
-}
 
 const PLAN_LIMITS: Record<string, { max_question_types: number }> = {
   starter: { max_question_types: 1 },
@@ -54,7 +44,8 @@ const PLAN_LIMITS: Record<string, { max_question_types: number }> = {
 
 export default function ProfilePage() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const { profile: cachedProfile, loading: profileLoading } = useProfile();
+  const { profile: cachedProfile, isLoading: profileLoading } = useProfile();
+  const { plan: userPlan } = usePlan(cachedProfile?.id);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [emailVerified, setEmailVerified] = useState(false);
@@ -162,7 +153,7 @@ export default function ProfilePage() {
           return;
         }
 
-        const maxTypes = PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1;
+        const maxTypes = PLAN_LIMITS[userPlan?.id || 'starter']?.max_question_types || 1;
         if (selectedQuestionTypes.length > maxTypes) {
           toast({
             title: 'Limite excedido',
@@ -211,7 +202,7 @@ export default function ProfilePage() {
   const handleToggleQuestionType = (typeId: string) => {
     if (!cachedProfile) return;
 
-    const maxTypes = PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1;
+    const maxTypes = PLAN_LIMITS[userPlan?.id || 'starter']?.max_question_types || 1;
 
     if (selectedQuestionTypes.includes(typeId)) {
       // Remove type
@@ -221,9 +212,10 @@ export default function ProfilePage() {
       if (selectedQuestionTypes.length < maxTypes) {
         setSelectedQuestionTypes([...selectedQuestionTypes, typeId]);
       } else {
+        const planName = userPlan?.id?.charAt(0).toUpperCase() + userPlan?.id?.slice(1) || 'Starter';
         toast({
           title: 'Limite atingido',
-          description: `Seu plano ${cachedProfile.plan} permite no máximo ${maxTypes} tipos de questões. Desmarque outro tipo primeiro.`,
+          description: `Seu plano ${planName} permite no máximo ${maxTypes} tipos de questões. Desmarque outro tipo primeiro.`,
           variant: 'destructive',
         });
       }
@@ -499,11 +491,10 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle>Preferências de Questões</CardTitle>
                   <CardDescription>
-                    {cachedProfile ? (
+                    {cachedProfile && userPlan ? (
                       <>
-                        Selecione até {PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1} tipos de questões para
-                        usar ({selectedQuestionTypes.length}/{PLAN_LIMITS[cachedProfile.plan]?.max_question_types || 1}{' '}
-                        selecionados)
+                        Selecione até {PLAN_LIMITS[userPlan.id]?.max_question_types || 1} tipos de questões para usar (
+                        {selectedQuestionTypes.length}/{PLAN_LIMITS[userPlan.id]?.max_question_types || 1} selecionados)
                       </>
                     ) : (
                       'Carregando informações do plano...'

@@ -1,20 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/layout';
+import { Question, QuestionCard } from '@/components/QuestionCard';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Loader2, Filter } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
-import { createClient } from '@/lib/supabase/client';
-import { useProfile } from '@/hooks/use-cache';
-import { Question, QuestionCard } from '@/components/QuestionCard';
-import { QUESTION_TYPES } from '@/lib/question-types';
 import { logClientError } from '@/lib/client-error-logger';
-import { PageHeader } from '@/components/layout';
+import { QUESTION_TYPES } from '@/lib/question-types';
+import { createClient } from '@/lib/supabase/client';
+import { Filter, Loader2, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface Subject {
   id: string;

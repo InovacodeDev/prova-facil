@@ -129,8 +129,14 @@ export default function PlanPage() {
           });
           setModalOpen(false);
           invalidateStripeData();
+
+          setTimeout(() => {
+            refetchPlan();
+            refetchProducts();
+          }, 500);
+
+          setCheckoutLoading(false);
         }
-        // If redirecting to checkout, modal will close automatically on redirect
         return;
       }
 
@@ -164,6 +170,7 @@ export default function PlanPage() {
           refetchProducts();
         }, 500);
 
+        setCheckoutLoading(false);
         return;
       }
 
@@ -188,6 +195,7 @@ export default function PlanPage() {
           refetchProducts();
         }, 500);
 
+        setCheckoutLoading(false);
         return;
       }
 
