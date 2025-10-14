@@ -39,6 +39,7 @@ export interface CachedSubscriptionData {
   cancelAtPeriodEnd: boolean;
   currentPeriodEnd: number | null; // Unix timestamp
   currentPeriodStart: number | null; // Unix timestamp
+  scheduledNextPlan: string | null; // Next plan ID when downgrade is scheduled (from metadata.downgrade_scheduled_to)
   cachedAt: string; // ISO date string
 }
 

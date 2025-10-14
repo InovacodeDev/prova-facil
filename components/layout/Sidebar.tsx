@@ -23,6 +23,7 @@ interface PlanData {
   id: PlanType; // ID do plano (vem da coluna 'id' da tabela plans)
   cancelAtPeriodEnd?: boolean; // Se o plano será cancelado/downgrade ao final do período
   currentPeriodEnd?: number; // Unix timestamp do fim do período atual
+  scheduledNextPlan?: PlanType | null; // Próximo plano agendado (quando há downgrade)
 }
 
 const navigationItems = [
@@ -167,6 +168,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
 
       const { subscription } = await subscriptionResponse.json();
       const stripeProductId = subscription.productId;
+      const scheduledNextProductId = subscription.scheduledNextPlan; // This is already the plan ID from backend
 
       if (!stripeProductId) {
         setLoading(false);
@@ -185,6 +187,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
           id: planData.id as PlanType,
           cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
           currentPeriodEnd: subscription.currentPeriodEnd,
+          scheduledNextPlan: scheduledNextProductId as PlanType | null, // Already mapped from backend
         });
       }
     } catch (error) {
@@ -334,7 +337,26 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
                 </Tooltip>
               )}
             </div>
-            <p className="text-xs text-muted-foreground truncate">{plan.id}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground truncate">{plan.id}</p>
+              {/* Show next plan badge when there's a scheduled change */}
+              {plan.scheduledNextPlan && plan.currentPeriodEnd && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="text-xs font-normal cursor-help">
+                      → {plan.scheduledNextPlan}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p className="font-medium mb-1">Próximo plano</p>
+                    <p className="text-xs text-muted-foreground">
+                      Após <span className="font-medium">{formatDateFull(plan.currentPeriodEnd)}</span>, você será
+                      migrado para o plano <span className="font-medium">{plan.scheduledNextPlan}</span>.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
         </div>
 

@@ -320,6 +320,7 @@ export async function getSubscriptionData(
       cancelAtPeriodEnd: false,
       currentPeriodEnd: null,
       currentPeriodStart: null,
+      scheduledNextPlan: null,
       cachedAt: new Date().toISOString(),
     };
 
@@ -370,6 +371,11 @@ export async function getSubscriptionData(
 
     // Map product ID to internal plan ID
     const effectivePlan = (PRODUCT_ID_TO_PLAN[effectiveProductId] || 'starter') as PlanId;
+    
+    // Map scheduled downgrade product ID to plan ID (if exists)
+    const scheduledNextPlan = scheduledDowngradeTo 
+      ? (PRODUCT_ID_TO_PLAN[scheduledDowngradeTo] || null)
+      : null;
 
     // Extract period info (Stripe uses snake_case but TS types might differ)
     const periodEnd = (subscription as any).current_period_end as number;
@@ -392,6 +398,7 @@ export async function getSubscriptionData(
       cancelAtPeriodEnd: isPreviousPlanActive || subscription.cancel_at_period_end, // Show as "ending" if previous plan active
       currentPeriodEnd: periodEnd,
       currentPeriodStart: periodStart,
+      scheduledNextPlan: scheduledNextPlan, // Add scheduled next plan
       cachedAt: new Date().toISOString(),
     };
 
@@ -415,6 +422,7 @@ export async function getSubscriptionData(
       cancelAtPeriodEnd: false,
       currentPeriodEnd: null,
       currentPeriodStart: null,
+      scheduledNextPlan: null,
       cachedAt: new Date().toISOString(),
     };
   }
