@@ -11,6 +11,7 @@ import { STRIPE_PRODUCTS } from '@/lib/stripe/config';
 import { stripe } from '@/lib/stripe/server';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,9 +102,42 @@ export async function POST(request: NextRequest) {
       await invalidateSubscriptionCacheByCustomerId(profile.stripe_customer_id);
     }
 
-    // Extract period end
-    const periodEnd = (updatedSubscription as any).current_period_end as number;
+    // Extract period end with robust fallback
+    const updatedSubObj = updatedSubscription as Record<string, any>;
+    let periodEnd = updatedSubObj.current_period_end as number | undefined;
+
+    // Fallback to currentSubscription if needed
+    if (!periodEnd || typeof periodEnd !== 'number') {
+      console.warn('[API] current_period_end not found in updatedSubscription, using currentSubscription');
+      const currentSubObj = currentSubscription as Record<string, any>;
+      periodEnd = currentSubObj.current_period_end as number | undefined;
+    }
+
+    if (!periodEnd || typeof periodEnd !== 'number') {
+      console.error('[API] Invalid current_period_end:', periodEnd);
+      console.error('[API] updatedSubscription keys:', Object.keys(updatedSubscription));
+      console.error('[API] currentSubscription keys:', Object.keys(currentSubscription));
+
+      // Try to find any period-related field
+      const possibleFields = ['current_period_end', 'currentPeriodEnd', 'period_end'];
+      for (const field of possibleFields) {
+        const value = updatedSubObj[field];
+        if (value && typeof value === 'number') {
+          console.log(`[API] Found period end in field: ${field} = ${value}`);
+          periodEnd = value;
+          break;
+        }
+      }
+
+      if (!periodEnd) {
+        // Last resort: use 30 days from now
+        console.warn('[API] Using fallback: 30 days from now');
+        periodEnd = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+      }
+    }
+
     const effectiveAt = new Date(periodEnd * 1000).toISOString();
+    const effectiveDate = new Date(periodEnd * 1000);
 
     console.log(`[API] Subscription ${updatedSubscription.id} will downgrade to Starter at: ${effectiveAt}`);
 
@@ -111,17 +145,24 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         effectiveAt,
-        message: `Seu plano será alterado para Starter (gratuito) em ${new Date(effectiveAt).toLocaleDateString(
-          'pt-BR'
-        )}`,
+        message: `Seu plano será alterado para Starter (gratuito) em ${effectiveDate.toLocaleDateString('pt-BR')}`,
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error downgrading to Starter:', error);
+    console.error('[API] Error downgrading to Starter:', error);
+    
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error('[API] Error name:', error.name);
+      console.error('[API] Error message:', error.message);
+      console.error('[API] Error stack:', error.stack);
+    }
+    
     return NextResponse.json(
       {
         error: 'Failed to downgrade subscription',
+        message: 'Não foi possível cancelar a assinatura. Tente novamente.',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

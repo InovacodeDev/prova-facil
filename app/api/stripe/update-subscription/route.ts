@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
       // The updatedSubscription still shows the old price until period ends
       const subObj = updatedSubscription as Record<string, any>;
       let periodEnd = subObj.current_period_end as number | undefined;
-      
+
       // If not found in updated, try from current subscription
       if (!periodEnd || typeof periodEnd !== 'number') {
         console.warn('[API] current_period_end not found in updatedSubscription, using currentSubscription');
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
         console.error('[API] Invalid current_period_end:', periodEnd);
         console.error('[API] updatedSubscription keys:', Object.keys(updatedSubscription));
         console.error('[API] currentSubscription keys:', Object.keys(currentSubscription));
-        
+
         // Try to find any period-related field
         const possibleFields = ['current_period_end', 'currentPeriodEnd', 'period_end'];
         for (const field of possibleFields) {
@@ -242,11 +242,11 @@ export async function POST(request: NextRequest) {
             break;
           }
         }
-        
+
         if (!periodEnd) {
           // Last resort: use 30 days from now
           console.warn('[API] Using fallback: 30 days from now');
-          periodEnd = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
+          periodEnd = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
         }
       }
 
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
       const periodEndDate = new Date(periodEnd * 1000);
       effectiveAt = periodEndDate.toISOString();
       responseMessage = `Plano será alterado em ${periodEndDate.toLocaleDateString('pt-BR')}`;
-      
+
       console.log(`[API] Downgrade scheduled for: ${periodEndDate.toISOString()}`);
     }
 
@@ -266,13 +266,13 @@ export async function POST(request: NextRequest) {
     // Get current period end safely for response
     const subObjForResponse = updatedSubscription as Record<string, any>;
     let currentPeriodEnd = subObjForResponse.current_period_end as number | undefined;
-    
+
     // Fallback to currentSubscription if needed
     if (!currentPeriodEnd) {
       const currentSubObj = currentSubscription as Record<string, any>;
       currentPeriodEnd = currentSubObj.current_period_end as number | undefined;
     }
-    
+
     const currentPeriodEndISO =
       currentPeriodEnd && typeof currentPeriodEnd === 'number' ? new Date(currentPeriodEnd * 1000).toISOString() : null;
 
