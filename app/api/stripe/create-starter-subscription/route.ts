@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       .from('profiles')
       .select('stripe_customer_id, stripe_subscription_id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);

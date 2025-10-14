@@ -175,8 +175,6 @@ export default function AuthPage() {
       user_id: signUpData.user.id,
       full_name: fullName,
       email: email,
-      plan: 'starter',
-      renew_status: 'none',
       academic_level_id: parseInt(selectedAcademicLevel),
       email_verified: false, // Será atualizado após confirmação
     });
