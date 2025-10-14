@@ -1,36 +1,36 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/layout';
+import { Autocomplete } from '@/components/ui/autocomplete';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Upload, FileText, Loader2, X, Check, Lock, AlertCircle, Link, Type } from 'lucide-react';
+import { invalidateUsageCache, useMonthlyUsage, usePlan, useProfile } from '@/hooks/use-cache';
 import { useToast } from '@/hooks/use-toast';
-import { createClient } from '@/lib/supabase/client';
-import { useProfile, usePlan, useMonthlyUsage, invalidateUsageCache } from '@/hooks/use-cache';
-import { cn } from '@/lib/utils';
 import { invalidateDashboardCache } from '@/lib/cache';
-import { track } from '@vercel/analytics';
-import { Autocomplete } from '@/components/ui/autocomplete';
 import { logClientError } from '@/lib/client-error-logger';
+import {
+  ACCEPTED_FILE_EXTENSIONS,
+  extractTextFromFiles,
+  formatExtractedTextForAPI,
+  validateFiles,
+  type ExtractedText,
+} from '@/lib/document-extractor';
 import {
   QUESTION_TYPES,
   getContextRecommendationsForType,
   getContextSuggestionsForAcademicLevel,
 } from '@/lib/question-types';
-import {
-  extractTextFromFiles,
-  formatExtractedTextForAPI,
-  validateFiles,
-  ACCEPTED_FILE_EXTENSIONS,
-  type ExtractedText,
-} from '@/lib/document-extractor';
-import { PageHeader } from '@/components/layout';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { track } from '@vercel/analytics';
+import { AlertCircle, Check, Link, Loader2, Lock, Type, Upload, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 const SUBJECTS = [
   'Matemática',

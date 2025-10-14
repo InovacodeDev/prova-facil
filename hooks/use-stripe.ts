@@ -7,13 +7,8 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
-import type {
-  CreateCheckoutResponse,
-  CreatePortalResponse,
-  ProductsResponse,
-  StripeProductWithPrices,
-} from '@/types/stripe';
+import type { CreatePortalResponse, ProductsResponse, StripeProductWithPrices } from '@/types/stripe';
+import { useCallback, useState } from 'react';
 
 interface UseStripeReturn {
   // State
@@ -23,6 +18,7 @@ interface UseStripeReturn {
 
   // Actions
   createCheckout: (priceId: string) => Promise<void>;
+  updateSubscription: (priceId: string, immediate: boolean) => Promise<{ success: boolean; message: string }>;
   openBillingPortal: () => Promise<void>;
   fetchProducts: () => Promise<void>;
   clearError: () => void;
@@ -58,12 +54,16 @@ export function useStripe(): UseStripeReturn {
         body: JSON.stringify({ priceId }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
+      const data = await response.json();
+
+      // Handle case where user already has active subscription
+      if (response.status === 409 && data.shouldRedirectToPortal) {
+        throw new Error('Você já possui uma assinatura ativa. Use o gerenciamento de planos para alterá-la.');
       }
 
-      const data: CreateCheckoutResponse = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
 
       // Redirect to Stripe Checkout
       if (data.url) {
@@ -75,6 +75,47 @@ export function useStripe(): UseStripeReturn {
       const message = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(message);
       console.error('Checkout error:', err);
+      throw err; // Re-throw so caller can handle
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Updates an existing subscription to a new price/plan
+   *
+   * @param priceId - New Stripe Price ID
+   * @param immediate - true for immediate upgrade (with proration), false for scheduled downgrade (at period end)
+   * @returns Object with success status and message
+   */
+  const updateSubscription = useCallback(async (priceId: string, immediate: boolean) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/stripe/update-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ priceId, immediate }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to update subscription');
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Plano atualizado com sucesso',
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(message);
+      console.error('Update subscription error:', err);
+      throw err; // Re-throw so caller can handle
     } finally {
       setLoading(false);
     }
@@ -153,6 +194,7 @@ export function useStripe(): UseStripeReturn {
     error,
     products,
     createCheckout,
+    updateSubscription,
     openBillingPortal,
     fetchProducts,
     clearError,

@@ -25,7 +25,7 @@ export default function PlanPage() {
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
-  const { createCheckout } = useStripe();
+  const { createCheckout, updateSubscription } = useStripe();
 
   // Use hooks for data fetching with automatic caching (4h)
   const { data: products, isLoading: productsLoading, refetch: refetchProducts } = useProducts();
@@ -101,15 +101,26 @@ export default function PlanPage() {
     setCheckoutLoading(true);
 
     try {
-      // Case 1: Downgrade to Starter (free plan) - Cancel subscription
-      if (isFreePlan(selectedPlan.internalPlanId)) {
+      const isCurrentlyOnFreePlan = isFreePlan(currentPlan);
+      const isChangingToFreePlan = isFreePlan(selectedPlan.internalPlanId);
+      const isUpgrade = modalVariant === 'upgrade';
+
+      // Case 1: User on FREE, going to PAID - Use checkout (create first subscription)
+      if (isCurrentlyOnFreePlan && !isChangingToFreePlan) {
+        await createCheckout(selectedPriceId);
+        // Checkout redirects, no further action needed
+        return;
+      }
+
+      // Case 2: User on PAID, going to FREE - Cancel subscription
+      if (!isCurrentlyOnFreePlan && isChangingToFreePlan) {
         const response = await fetch('/api/stripe/cancel-subscription', {
           method: 'POST',
         });
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error || 'Failed to cancel subscription');
+          throw new Error(error.message || error.error || 'Failed to cancel subscription');
         }
 
         const data = await response.json();
@@ -120,36 +131,26 @@ export default function PlanPage() {
         });
 
         setModalOpen(false);
-        invalidateStripeData(); // Refetch data
+        invalidateStripeData();
         return;
       }
 
-      // Case 2: Downgrade to another paid plan - Schedule change
-      if (modalVariant === 'downgrade') {
-        const response = await fetch('/api/stripe/schedule-downgrade', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ priceId: selectedPriceId }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to schedule downgrade');
-        }
+      // Case 3: User on PAID, changing to another PAID - Update subscription
+      if (!isCurrentlyOnFreePlan && !isChangingToFreePlan) {
+        const result = await updateSubscription(selectedPriceId, isUpgrade);
 
         toast({
-          title: 'Plano agendado',
-          description: `Seu plano será alterado para ${selectedPlan.name} ao final do período.`,
+          title: isUpgrade ? 'Plano atualizado!' : 'Mudança agendada',
+          description: result.message,
         });
 
         setModalOpen(false);
-        invalidateStripeData(); // Refetch data
+        invalidateStripeData();
         return;
       }
 
-      // Case 3: Upgrade - Redirect to Stripe Checkout
-      await createCheckout(selectedPriceId);
-      // The checkout function will redirect, so we don't need to do anything else
+      // Should not reach here
+      throw new Error('Invalid plan change scenario');
     } catch (error: any) {
       console.error('Error confirming plan:', error);
       logClientError(error, { component: 'Plan', action: 'handleConfirmPlan', planId: selectedPlan.internalPlanId });

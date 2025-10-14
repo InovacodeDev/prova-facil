@@ -1,17 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, FileText, TrendingUp, BarChart3, PieChart } from 'lucide-react';
+import { useMonthlyUsage, usePlan, useProfile } from '@/hooks/use-cache';
 import { useToast } from '@/hooks/use-toast';
-import { DashboardSkeleton } from '@/components/ui/loading';
-import { useProfile, usePlan, useMonthlyUsage } from '@/hooks/use-cache';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { logClientError } from '@/lib/client-error-logger';
-import { PageHeader } from '@/components/layout';
+import { createClient } from '@/lib/supabase/client';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { BarChart3, FileText, PieChart, TrendingUp, Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface QuestionStats {
   total: number;
