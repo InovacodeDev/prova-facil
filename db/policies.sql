@@ -189,8 +189,7 @@ SELECT
   authenticated USING (true);
 
 -- Only service role or admins can modify plans
--- Note: You'll need to add an is_admin column to profiles for this to work
-CREATE POLICY "plans_manage_service" ON plans FOR ALL TO authenticated USING (
+CREATE POLICY "plans_manage_admin" ON plans FOR ALL TO authenticated USING (
   EXISTS (
     SELECT
       1
@@ -198,13 +197,13 @@ CREATE POLICY "plans_manage_service" ON plans FOR ALL TO authenticated USING (
       profiles
     WHERE
       profiles.id = auth.uid ()
-      -- AND profiles.is_admin = true -- Uncomment when is_admin column exists
+      AND profiles.is_admin = true
   )
 );
 
 COMMENT ON POLICY "plans_select_all" ON plans IS 'Allow public read access to plan configurations';
 
-COMMENT ON POLICY "plans_manage_service" ON plans IS 'Only admins can manage plans (requires is_admin column)';
+COMMENT ON POLICY "plans_manage_admin" ON plans IS 'Only admins can manage plans';
 
 -- =====================================================
 -- 6. ACADEMIC_LEVELS TABLE
@@ -218,7 +217,7 @@ SELECT
   authenticated USING (true);
 
 -- Only service role or admins can modify academic levels
-CREATE POLICY "academic_levels_manage_service" ON academic_levels FOR ALL TO authenticated USING (
+CREATE POLICY "academic_levels_manage_admin" ON academic_levels FOR ALL TO authenticated USING (
   EXISTS (
     SELECT
       1
@@ -226,13 +225,13 @@ CREATE POLICY "academic_levels_manage_service" ON academic_levels FOR ALL TO aut
       profiles
     WHERE
       profiles.id = auth.uid ()
-      -- AND profiles.is_admin = true -- Uncomment when is_admin column exists
+      AND profiles.is_admin = true
   )
 );
 
 COMMENT ON POLICY "academic_levels_select_all" ON academic_levels IS 'Allow public read access';
 
-COMMENT ON POLICY "academic_levels_manage_service" ON academic_levels IS 'Only admins can manage levels (requires is_admin column)';
+COMMENT ON POLICY "academic_levels_manage_admin" ON academic_levels IS 'Only admins can manage academic levels';
 
 -- =====================================================
 -- 7. PROFILE_LOGS_CYCLE TABLE
@@ -258,12 +257,13 @@ COMMENT ON POLICY "profile_logs_cycle_manage_system" ON profile_logs_cycle IS 'S
 -- =====================================================
 ALTER TABLE error_logs ENABLE ROW LEVEL SECURITY;
 
--- Users can only view their own error logs
+-- Users can view error logs where they are mentioned in context JSONB
 CREATE POLICY "error_logs_select_own" ON error_logs FOR
 SELECT
   TO authenticated USING (
-    user_id = auth.uid ()
-    OR user_id IS NULL
+    -- Check if context->>'userId' matches auth.uid()
+    (context->>'userId')::uuid = auth.uid ()
+    OR context->>'userId' IS NULL
   );
 
 -- Anyone (including anonymous) can insert error logs
@@ -272,8 +272,8 @@ authenticated
 WITH
   CHECK (true);
 
--- Only service role can update/delete error logs
-CREATE POLICY "error_logs_manage_service" ON error_logs FOR ALL TO authenticated USING (
+-- Only admins can update/delete error logs
+CREATE POLICY "error_logs_manage_admin" ON error_logs FOR ALL TO authenticated USING (
   EXISTS (
     SELECT
       1
@@ -281,15 +281,15 @@ CREATE POLICY "error_logs_manage_service" ON error_logs FOR ALL TO authenticated
       profiles
     WHERE
       profiles.id = auth.uid ()
-      -- AND profiles.is_admin = true -- Uncomment when is_admin column exists
+      AND profiles.is_admin = true
   )
 );
 
-COMMENT ON POLICY "error_logs_select_own" ON error_logs IS 'Users can view their own errors';
+COMMENT ON POLICY "error_logs_select_own" ON error_logs IS 'Users can view errors where they are mentioned in context.userId';
 
 COMMENT ON POLICY "error_logs_insert_all" ON error_logs IS 'Anyone can report errors';
 
-COMMENT ON POLICY "error_logs_manage_service" ON error_logs IS 'Only admins can manage error logs';
+COMMENT ON POLICY "error_logs_manage_admin" ON error_logs IS 'Only admins can manage error logs (requires is_admin column)';
 
 -- =====================================================
 -- INDEXES FOR POLICY PERFORMANCE
@@ -307,9 +307,9 @@ CREATE INDEX IF NOT EXISTS idx_questions_assessment_for_auth ON questions (asses
 -- =====================================================
 -- NOTES
 -- =====================================================
--- 1. To enable admin functionality, add an is_admin column to profiles:
---    ALTER TABLE profiles ADD COLUMN is_admin BOOLEAN DEFAULT false;
---    Then uncomment the is_admin checks in policies above.
+-- 1. Admin functionality is controlled by profiles.is_admin column.
+--    To make a user admin:
+--    UPDATE profiles SET is_admin = true WHERE id = '<user-uuid>';
 --
 -- 2. Service role bypasses RLS automatically. Use it for:
 --    - Migrations
@@ -325,3 +325,6 @@ CREATE INDEX IF NOT EXISTS idx_questions_assessment_for_auth ON questions (asses
 --
 -- 4. To view all policies:
 --    SELECT * FROM pg_policies WHERE schemaname = 'public';
+--
+-- 5. Error logs use context->>'userId' instead of a dedicated user_id column.
+--    This allows flexible error tracking for both authenticated and anonymous users.
