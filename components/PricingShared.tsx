@@ -1,129 +1,44 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useProducts } from '@/hooks/stripe';
+import { getPlanConfig } from '@/lib/plans/config';
+import type { StripeProductWithPrices } from '@/types/stripe';
+import { AlertCircle, Check, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-
-export interface Plan {
-  id: string;
-  name: string;
-  monthlyPrice: number;
-  annualPrice: number;
-  description: string;
-  aiLevel: string;
-  features: string[];
-  cta: string;
-  highlighted: boolean;
-}
-
-export const plans: Plan[] = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    monthlyPrice: 0,
-    annualPrice: 0,
-    description: 'Ideal para testar a plataforma',
-    aiLevel: 'IA Básica',
-    features: [
-      'Até 25 questões/mês para suas primeiras turmas',
-      '1 tipo de questão personalizável',
-      'Upload de arquivos TXT e DOCX (10MB)',
-      'Entrada de texto direto',
-      'Suporte por email',
-    ],
-    cta: 'Começar Grátis',
-    highlighted: false,
-  },
-  {
-    id: 'basic',
-    name: 'Basic',
-    monthlyPrice: 29.9,
-    annualPrice: 269.1, // 29.9 * 12 * 0.75 = 25% desconto
-    description: 'Perfeito para 2-3 turmas pequenas',
-    aiLevel: 'IA Básica',
-    features: [
-      'Até 50 questões/mês, ideal para aulas semanais',
-      'Até 2 tipos de questões disponíveis',
-      'Upload de arquivos TXT e DOCX (20MB)',
-      'Entrada de texto direto',
-      'Suporte prioritário com resposta em 24h',
-    ],
-    cta: 'Começar Agora',
-    highlighted: false,
-  },
-  {
-    id: 'essentials',
-    name: 'Essentials',
-    monthlyPrice: 49.9,
-    annualPrice: 449.1, // 49.9 * 12 * 0.75 = 25% desconto
-    description: 'Ótimo para 4-5 turmas regulares',
-    aiLevel: 'IA Avançada',
-    features: [
-      'Até 75 questões/mês para diversas disciplinas',
-      'Até 3 tipos de questões disponíveis',
-      'Upload de PDF, DOCX, TXT e links externos (30MB)',
-      'IA avançada com maior precisão contextual',
-      'Suporte prioritário via email e WhatsApp',
-    ],
-    cta: 'Começar Agora',
-    highlighted: false,
-  },
-  {
-    id: 'plus',
-    name: 'Plus',
-    monthlyPrice: 79.9,
-    annualPrice: 719.1, // 79.9 * 12 * 0.75 = 25% desconto
-    description: 'Completo para múltiplas turmas',
-    aiLevel: 'IA Avançada',
-    features: [
-      'Até 100 questões/mês, liberdade para criar sem limites',
-      'Até 4 tipos de questões disponíveis',
-      'Upload de PPTX, PDF, DOCX, TXT + links (40MB)',
-      'IA avançada otimizada para contextos técnicos',
-      'Suporte VIP com atendimento prioritário',
-    ],
-    cta: 'Começar Agora',
-    highlighted: false,
-  },
-  {
-    id: 'advanced',
-    name: 'Advanced',
-    monthlyPrice: 129.9,
-    annualPrice: 1169.1, // 129.9 * 12 * 0.75 = 25% desconto
-    description: 'Máxima capacidade para instituições',
-    aiLevel: 'IA Premium',
-    features: [
-      'Até 150 questões/mês com máxima qualidade',
-      'Todos os 6 tipos de questões disponíveis',
-      'Upload de PPTX, PDF, DOCX, TXT + links (50MB)',
-      'IA Premium com precisão máxima e contexto profundo',
-      'Suporte VIP dedicado com resposta imediata',
-    ],
-    cta: 'Começar Agora',
-    highlighted: true,
-  },
-];
 
 interface PricingSharedProps {
   currentPlan?: string;
-  onPlanClick: (planId: string) => void;
+  onPlanClick: (planId: string, priceId: string, billingPeriod: 'monthly' | 'annual') => void;
 }
 
 export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
 
-  const formatPrice = (plan: Plan) => {
-    if (plan.monthlyPrice === 0) return 'Grátis';
+  // Use the hook to fetch products with automatic caching
+  const { data: products, isLoading, error } = useProducts();
 
-    const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
-    return `R$ ${price.toFixed(2).replace('.', ',')}`;
+  const formatPrice = (product: StripeProductWithPrices) => {
+    const price = billingPeriod === 'monthly' ? product.prices.monthly : product.prices.yearly;
+
+    if (!price || price.unit_amount === 0) return 'Grátis';
+
+    const reais = price.unit_amount / 100;
+    return `R$ ${reais.toFixed(2).replace('.', ',')}`;
   };
 
-  const getPeriod = (plan: Plan) => {
-    if (plan.monthlyPrice === 0) return '';
+  const getPeriod = (product: StripeProductWithPrices) => {
+    const price = billingPeriod === 'monthly' ? product.prices.monthly : product.prices.yearly;
+    if (!price || price.unit_amount === 0) return '';
     return billingPeriod === 'monthly' ? '/mês' : '/ano';
+  };
+
+  const getPriceId = (product: StripeProductWithPrices): string => {
+    const price = billingPeriod === 'monthly' ? product.prices.monthly : product.prices.yearly;
+    return price?.id || '';
   };
 
   return (
@@ -134,6 +49,7 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
           variant={billingPeriod === 'monthly' ? 'default' : 'outline'}
           onClick={() => setBillingPeriod('monthly')}
           className="min-w-[120px]"
+          disabled={isLoading}
         >
           Mensal
         </Button>
@@ -141,6 +57,7 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
           variant={billingPeriod === 'annual' ? 'default' : 'outline'}
           onClick={() => setBillingPeriod('annual')}
           className="min-w-[120px] relative"
+          disabled={isLoading}
         >
           Anual
           <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">-25%</Badge>
@@ -150,69 +67,105 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
         <p className="text-sm text-green-600 text-center font-medium">💰 Economize 25% com o plano anual</p>
       )}
 
-      {/* Scroll horizontal container */}
-      <div className="overflow-x-auto py-8">
-        <div className="flex gap-6 min-w-max px-4 mx-auto no-scrollbar" style={{ justifyContent: 'center' }}>
-          {plans.map((plan) => (
-            <Card
-              key={plan.id}
-              className={`relative flex flex-col w-[280px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-                plan.highlighted ? 'border-primary border-2 shadow-lg' : 'border-border'
-              }`}
-            >
-              {plan.highlighted && (
-                <div className="absolute -top-4 left-0 right-0 text-center">
-                  <Badge className="bg-primary text-primary-foreground">Recomendado</Badge>
-                </div>
-              )}
+      {/* Error State */}
+      {error && (
+        <Alert variant="destructive" className="max-w-2xl mx-auto">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>Erro ao carregar planos. Por favor, tente novamente.</AlertDescription>
+        </Alert>
+      )}
 
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  {currentPlan && currentPlan === plan.id && (
-                    <Badge variant="secondary" className="text-xs">
-                      Atual
-                    </Badge>
-                  )}
-                </div>
-                <Badge variant="outline" className="text-xs whitespace-nowrap w-fit">
-                  {plan.aiLevel}
-                </Badge>
-                <CardDescription className="text-xs min-h-[32px] pt-2">{plan.description}</CardDescription>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">{formatPrice(plan)}</span>
-                  {getPeriod(plan) && <span className="text-sm text-muted-foreground">{getPeriod(plan)}</span>}
-                </div>
-              </CardHeader>
-
-              <CardContent className="flex-grow pt-0">
-                <ul className="space-y-2.5">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-xs leading-relaxed">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-
-              <CardFooter className="pt-4">
-                <Button
-                  className="w-full"
-                  variant={currentPlan === plan.id ? 'secondary' : plan.highlighted ? 'default' : 'outline'}
-                  onClick={() => onPlanClick(plan.id)}
-                  disabled={currentPlan === plan.id}
-                >
-                  {currentPlan === plan.id ? 'Plano Atual' : plan.cta}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando planos...</p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Scroll horizontal container */}
+      {!isLoading && products && products.length > 0 && (
+        <div className="overflow-x-auto py-8">
+          <div className="flex gap-6 min-w-max px-4 mx-auto no-scrollbar" style={{ justifyContent: 'center' }}>
+            {products.map((product) => {
+              // Get static plan config from frontend
+              const planConfig = getPlanConfig(product.internalPlanId);
+              const priceId = getPriceId(product);
+              const isCurrentPlan = currentPlan === product.internalPlanId;
+
+              return (
+                <Card
+                  key={product.id}
+                  className={`relative flex flex-col w-[280px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+                    planConfig.highlighted ? 'border-primary border-2 shadow-lg' : 'border-border'
+                  }`}
+                >
+                  {planConfig.highlighted && (
+                    <div className="absolute -top-4 left-0 right-0 text-center">
+                      <Badge className="bg-primary text-primary-foreground">{planConfig.badge || 'Recomendado'}</Badge>
+                    </div>
+                  )}
+
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      {/* Name from Stripe, fallback to frontend config */}
+                      <CardTitle className="text-xl">{product.name || planConfig.displayName}</CardTitle>
+                      {isCurrentPlan && (
+                        <Badge variant="secondary" className="text-xs">
+                          Atual
+                        </Badge>
+                      )}
+                    </div>
+                    {/* AI Level from frontend config */}
+                    <Badge variant="outline" className="text-xs whitespace-nowrap w-fit">
+                      {planConfig.aiLevel}
+                    </Badge>
+                    {/* Description from frontend config */}
+                    <CardDescription className="text-xs min-h-[32px] pt-2">{planConfig.description}</CardDescription>
+                    {/* Prices from Stripe */}
+                    <div className="mt-4">
+                      <span className="text-3xl font-bold">{formatPrice(product)}</span>
+                      {getPeriod(product) && (
+                        <span className="text-sm text-muted-foreground">{getPeriod(product)}</span>
+                      )}
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="flex-grow pt-0">
+                    {/* Features from frontend config */}
+                    <ul className="space-y-2.5">
+                      {planConfig.features.map((feature, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          <span className="text-xs leading-relaxed">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+
+                  <CardFooter className="pt-4">
+                    <Button
+                      className="w-full"
+                      variant={isCurrentPlan ? 'secondary' : planConfig.highlighted ? 'default' : 'outline'}
+                      onClick={() => onPlanClick(product.internalPlanId, priceId, billingPeriod)}
+                      disabled={isCurrentPlan || isLoading}
+                    >
+                      {isCurrentPlan ? 'Plano Atual' : 'Selecionar Plano'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Scroll hint for mobile */}
-      <div className="text-center text-xs text-muted-foreground md:hidden">← Deslize para ver todos os planos →</div>
+      {!isLoading && products && products.length > 0 && (
+        <div className="text-center text-xs text-muted-foreground md:hidden">← Deslize para ver todos os planos →</div>
+      )}
     </div>
   );
 }

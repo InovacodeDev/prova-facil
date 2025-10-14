@@ -1,12 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { PricingShared } from '@/components/PricingShared';
+import { useRouter } from 'next/navigation';
 
 export function Pricing() {
   const router = useRouter();
 
-  const handlePlanClick = (planId: string) => {
+  const handlePlanClick = (planId: string, priceId: string, billingPeriod: 'monthly' | 'annual') => {
     router.push('/auth');
   };
 
