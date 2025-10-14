@@ -10,7 +10,7 @@
 import { invalidateSubscriptionCache } from '@/lib/cache/subscription-cache';
 import { STRIPE_PRODUCTS } from '@/lib/stripe/config';
 import { stripe } from '@/lib/stripe/server';
-import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +31,11 @@ export async function POST(request: Request) {
     }
 
     // Verificar se o usuário já tem um customer_id
-    const supabase = await createClient();
+    // const supabaseAdmin = await createClient();
+    // const {
+    //   data: { user },
+    // } = await supabaseAdmin.auth.getUser();
+    // console.log(`Fetched user for admin:`, user);
 
     // Para operações de escrita (INSERT/UPDATE), usar service role para bypass RLS
     const supabaseAdmin = await createServiceRoleClient();
@@ -47,6 +51,7 @@ export async function POST(request: Request) {
       console.error('Error fetching profile:', profileError);
       return NextResponse.json({ error: 'Failed to fetch user profile' }, { status: 500 });
     }
+    console.log(`Fetched profile for user_id ${userId}:`, profile);
 
     // Se o perfil não existe, criar um primeiro
     if (!profile) {
