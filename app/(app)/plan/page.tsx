@@ -77,6 +77,7 @@ export default function PlanPage() {
   const handleSelectPlan = async (planId: string, priceId: string, billingPeriod: 'monthly' | 'annual') => {
     // Find the selected product
     const product = products?.find((p) => p.internalPlanId === planId);
+    console.log('Selected plan:', planId, priceId, billingPeriod, product);
     if (!product) return;
 
     // Store selection
@@ -105,10 +106,21 @@ export default function PlanPage() {
       const isChangingToFreePlan = isFreePlan(selectedPlan.internalPlanId);
       const isUpgrade = modalVariant === 'upgrade';
 
-      // Case 1: User on FREE, going to PAID - Use checkout (create first subscription)
+      // Case 1: User on FREE, going to PAID - Update subscription (will redirect to checkout to collect payment)
       if (isCurrentlyOnFreePlan && !isChangingToFreePlan) {
-        await createCheckout(selectedPriceId);
-        // Checkout redirects, no further action needed
+        const result = await updateSubscription(selectedPriceId, true); // immediate = true for upgrade
+
+        // If requiresCheckout is true, the hook already redirected to checkout
+        // Otherwise, show success message
+        if (!result.requiresCheckout) {
+          toast({
+            title: 'Plano atualizado!',
+            description: result.message,
+          });
+          setModalOpen(false);
+          invalidateStripeData();
+        }
+        // If redirecting to checkout, modal will close automatically on redirect
         return;
       }
 

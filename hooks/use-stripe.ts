@@ -18,7 +18,10 @@ interface UseStripeReturn {
 
   // Actions
   createCheckout: (priceId: string) => Promise<void>;
-  updateSubscription: (priceId: string, immediate: boolean) => Promise<{ success: boolean; message: string }>;
+  updateSubscription: (
+    priceId: string,
+    immediate: boolean
+  ) => Promise<{ success: boolean; message: string; requiresCheckout?: boolean }>;
   cancelSubscription: () => Promise<{ success: boolean; message: string }>;
   openBillingPortal: () => Promise<void>;
   fetchProducts: () => Promise<void>;
@@ -106,6 +109,18 @@ export function useStripe(): UseStripeReturn {
 
       if (!response.ok) {
         throw new Error(data.message || data.error || 'Failed to update subscription');
+      }
+
+      // SPECIAL CASE: Upgrading from FREE to PAID requires checkout (to collect payment method)
+      if (data.requiresCheckout && data.checkoutUrl) {
+        console.log('[useStripe] Redirecting to checkout for payment method collection...');
+        window.location.href = data.checkoutUrl;
+        // No need to return here, redirect will happen
+        return {
+          success: true,
+          message: data.message || 'Redirecionando para checkout...',
+          requiresCheckout: true,
+        };
       }
 
       return {

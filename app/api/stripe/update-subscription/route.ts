@@ -85,6 +85,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SPECIAL CASE: Upgrading from FREE (Starter) to PAID
+    // User needs to provide payment method, so redirect to checkout
+    const currentPriceDetails = await stripe.prices.retrieve(currentPrice);
+    const isCurrentlyFree = currentPriceDetails.unit_amount === 0;
+    const newPriceDetails = await stripe.prices.retrieve(priceId);
+    const isNewPricePaid = (newPriceDetails.unit_amount ?? 0) > 0;
+
+    if (isCurrentlyFree && isNewPricePaid) {
+      // Cancel the FREE subscription immediately (will create new PAID subscription via checkout)
+      await stripe.subscriptions.cancel(profile.stripe_subscription_id, {
+        prorate: false, // No refund needed for FREE plan
+      });
+
+      console.log(
+        `[API] Canceled FREE subscription ${profile.stripe_subscription_id} before upgrade. ` +
+          `Will create new PAID subscription via checkout.`
+      );
+
+      // Create a checkout session for the PAID plan
+      const checkoutSession = await stripe.checkout.sessions.create({
+        customer: profile.stripe_customer_id!,
+        mode: 'subscription',
+        payment_method_collection: 'always', // Force payment method collection
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        subscription_data: {
+          metadata: {
+            user_id: user.id,
+            upgraded_from_free: 'true',
+          },
+        },
+        success_url: `${request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL}/plan?success=true`,
+        cancel_url: `${request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL}/plan?canceled=true`,
+        allow_promotion_codes: true,
+        billing_address_collection: 'auto',
+      });
+
+      console.log(`[API] Created checkout session ${checkoutSession.id} for user ${user.id}`);
+
+      // Return checkout URL so frontend can redirect
+      return NextResponse.json(
+        {
+          requiresCheckout: true,
+          checkoutUrl: checkoutSession.url,
+          message: 'Redirecionando para adicionar método de pagamento...',
+        },
+        { status: 200 }
+      );
+    }
+
     // Get subscription item ID
     const subscriptionItemId = currentSubscription.items.data[0].id;
 
