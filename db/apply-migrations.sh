@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # apply-migrations.sh
-# Script para aplicar todas as migrations e setup files via Supabase CLI
+# Script para aplicar todas as migrations e setup files
 # Uso: ./db/apply-migrations.sh [--local|--remote]
-# --local: aplica no banco local (padrão)
+# --local: aplica no banco local do Supabase (padrão)
 # --remote: aplica no banco remoto (produção)
 
 set -e  # Exit on error
@@ -16,11 +16,12 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Default to local
-DB_FLAG="--local"
+TARGET="local"
+DB_URL="postgresql://postgres:postgres@localhost:54322/postgres"
 
 # Parse arguments
 if [ "$1" = "--remote" ]; then
-    DB_FLAG="--db-url"
+    TARGET="remote"
     echo -e "${YELLOW}⚠️  ATENÇÃO: Você está prestes a aplicar migrations no banco REMOTO!${NC}"
     read -p "Tem certeza que deseja continuar? (digite 'sim' para confirmar): " confirm
     if [ "$confirm" != "sim" ]; then
@@ -34,11 +35,11 @@ if [ "$1" = "--remote" ]; then
         echo "Execute: export DATABASE_URL='sua-connection-string'"
         exit 1
     fi
-    DB_FLAG="--db-url $DATABASE_URL"
+    DB_URL="$DATABASE_URL"
 fi
 
 echo -e "${BLUE}🚀 Iniciando aplicação de migrations e setup files...${NC}"
-echo -e "${BLUE}Target: $([ "$1" = "--remote" ] && echo "REMOTE (produção)" || echo "LOCAL")${NC}"
+echo -e "${BLUE}Target: $([ "$TARGET" = "remote" ] && echo "REMOTE (produção)" || echo "LOCAL")${NC}"
 echo ""
 
 # Function to execute SQL file
@@ -49,16 +50,14 @@ execute_sql() {
     echo -e "${YELLOW}📄 Executando: ${file}${NC}"
     echo -e "   ${description}"
 
-    if [ "$1" = "--remote" ]; then
-        supabase db execute --file "$file" $DB_FLAG
-    else
-        supabase db execute --file "$file" $DB_FLAG
-    fi
+    # Execute using psql
+    psql "$DB_URL" -f "$file" > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✅ Sucesso!${NC}"
     else
         echo -e "${RED}❌ Erro ao executar $file${NC}"
+        echo -e "${RED}Execute manualmente para ver o erro: psql \"$DB_URL\" -f \"$file\"${NC}"
         exit 1
     fi
     echo ""
