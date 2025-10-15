@@ -160,44 +160,6 @@ export function InvoicesCard() {
                       {formatPeriod(invoice.periodStart, invoice.periodEnd)}
                     </div>
 
-                    {/* Invoice Icon */}
-                    <a
-                      href={invoice.hostedInvoiceUrl || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`relative block rounded-md aspect-[3/4] overflow-hidden group bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border ${
-                        !invoice.hostedInvoiceUrl ? 'pointer-events-none opacity-50' : 'cursor-pointer hover:shadow-md transition-all'
-                      }`}
-                    >
-                      {/* Invoice SVG Icon */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="w-16 h-16 text-slate-400 dark:text-slate-600"
-                        >
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="9" y1="13" x2="15" y2="13" />
-                          <line x1="9" y1="17" x2="15" y2="17" />
-                        </svg>
-                      </div>
-
-                      {/* Status Badge */}
-                      <div className="absolute top-2 right-2 z-10">{getStatusBadge(invoice.status)}</div>
-
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center pointer-events-none">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-800/90 rounded-full p-2">
-                          <FileText className="h-6 w-6 text-primary" />
-                        </div>
-                      </div>
-                    </a>
-
                     {/* Amount */}
                     <div className="text-center">
                       <p className="text-lg font-bold">{formatCurrency(invoice.amountPaid, invoice.currency)}</p>
