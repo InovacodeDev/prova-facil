@@ -28,6 +28,7 @@ Advanced:   R$ 129,90/mês   | R$ 1.169,10/ano    ✅ Correto
 ### Passo 1: Verificação no Stripe Dashboard
 
 Confirmado que o preço mensal existia e estava ativo:
+
 - **Preço:** R$ 29,90 (2990 centavos)
 - **Intervalo:** Mensal
 - **Status:** Ativo ✅
@@ -75,6 +76,7 @@ const prices = await stripe.prices.list({
 ```
 
 **Resultado:** A API do Stripe tem um **limite padrão de 10 resultados** e estava retornando apenas:
+
 - 10 preços no total
 - Apenas 1 preço do Basic (o anual)
 - O preço mensal não estava sendo retornado
@@ -115,6 +117,7 @@ export async function GET(request: Request) {
 ```
 
 **Uso:**
+
 ```bash
 # Com cache (padrão)
 GET /api/stripe/products
@@ -139,6 +142,7 @@ export async function POST() {
 ```
 
 **Uso:**
+
 ```bash
 curl -X POST http://localhost:8800/api/stripe/clear-cache
 ```
@@ -193,15 +197,16 @@ Plano Basic:
 ## 📊 Impacto
 
 ### Planos Afetados
+
 - **Basic:** ✅ Corrigido
 - **Outros planos:** ✅ Não afetados
 
 ### Valores Corretos do Plano Basic
 
-| Período | Valor | Centavos | ID do Preço |
-|---------|-------|----------|-------------|
-| **Mensal** | R$ 29,90/mês | 2990 | `price_1SHuMuEezeAMnhEzWi4Nn8y1` |
-| **Anual** | R$ 269,10/ano | 26910 | `price_1SHvC9EezeAMnhEzIaDrRmd8` |
+| Período    | Valor         | Centavos | ID do Preço                      |
+| ---------- | ------------- | -------- | -------------------------------- |
+| **Mensal** | R$ 29,90/mês  | 2990     | `price_1SHuMuEezeAMnhEzWi4Nn8y1` |
+| **Anual**  | R$ 269,10/ano | 26910    | `price_1SHvC9EezeAMnhEzIaDrRmd8` |
 
 ### Economia no Anual
 
@@ -218,15 +223,18 @@ Economia: R$ 89,70/ano (24,96% ~25%)
 ### Se o preço ainda aparecer zerado
 
 1. **Limpar o cache Redis:**
+
    ```bash
    curl -X POST http://localhost:8800/api/stripe/clear-cache
    ```
 
 2. **Invalidar o cache do React Query no frontend:**
+
    - Recarregue a página com Ctrl+Shift+R (hard refresh)
    - Ou abra em uma aba anônima
 
 3. **Verificar se o preço está ativo no Stripe:**
+
    ```bash
    curl -s 'http://localhost:8800/api/stripe/debug-prices?product=prod_TEN7yqB6u8yLoN'
    ```
@@ -247,15 +255,16 @@ O Stripe API tem limites padrão para evitar sobrecarga. Sempre especifique expl
 
 ```typescript
 // ❌ RUIM - usa limite padrão (10)
-stripe.prices.list({ active: true })
+stripe.prices.list({ active: true });
 
 // ✅ BOM - especifica limite adequado
-stripe.prices.list({ active: true, limit: 100 })
+stripe.prices.list({ active: true, limit: 100 });
 ```
 
 ### 2. Implementar ferramentas de debug
 
 Os endpoints criados foram essenciais:
+
 - `/api/stripe/products?bypass=true` - Debug sem cache
 - `/api/stripe/clear-cache` - Invalidar cache manualmente
 - `/api/stripe/debug-prices` - Ver todos os preços de um produto
@@ -273,7 +282,7 @@ O Redis estava cacheando a resposta incorreta por 1 hora. Sempre testar com cach
 Adicionar logging quando preços esperados não forem encontrados:
 
 ```typescript
-const monthlyPrice = productPrices.find(p => p.recurring?.interval === 'month' && p.active);
+const monthlyPrice = productPrices.find((p) => p.recurring?.interval === 'month' && p.active);
 
 if (!monthlyPrice && product.name !== 'Starter') {
   console.warn(`[Stripe] Missing monthly price for product: ${product.name}`);
@@ -314,7 +323,7 @@ Criar testes para validar que todos os planos têm ambos os preços:
 describe('Stripe Products', () => {
   it('should have both monthly and yearly prices for paid plans', async () => {
     const products = await getStripeProducts();
-    
+
     for (const product of products) {
       if (product.name !== 'Starter') {
         expect(product.prices.monthly).toBeDefined();

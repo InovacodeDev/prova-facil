@@ -98,9 +98,6 @@ export function PricingShared({
           <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">-25%</Badge>
         </Button>
       </div>
-      {billingPeriod === 'annual' && (
-        <p className="text-sm text-green-600 text-center font-medium">💰 Economize 25% com o plano anual</p>
-      )}
 
       {/* Error State */}
       {error && (
