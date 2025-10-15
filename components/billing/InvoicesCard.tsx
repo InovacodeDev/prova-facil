@@ -3,8 +3,8 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Download, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Calendar, Download, FileText, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface Invoice {
   id: string;
@@ -26,6 +26,7 @@ export function InvoicesCard() {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -33,7 +34,7 @@ export function InvoicesCard() {
 
   const fetchInvoices = async (cursor?: string) => {
     try {
-      const url = cursor ? `/api/stripe/invoices?starting_after=${cursor}` : '/api/stripe/invoices';
+      const url = cursor ? `/api/stripe/invoices?starting_after=${cursor}&limit=5` : '/api/stripe/invoices?limit=5';
       const response = await fetch(url);
 
       if (!response.ok) throw new Error('Failed to fetch invoices');
@@ -56,12 +57,26 @@ export function InvoicesCard() {
     }
   };
 
-  const loadMore = () => {
-    if (nextCursor) {
+  const handleScroll = useCallback(() => {
+    if (!scrollContainerRef.current || isLoadingMore || !hasMore) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+    const scrollPercentage = (scrollLeft + clientWidth) / scrollWidth;
+
+    // Load more when 80% scrolled
+    if (scrollPercentage > 0.8 && nextCursor) {
       setIsLoadingMore(true);
       fetchInvoices(nextCursor);
     }
-  };
+  }, [isLoadingMore, hasMore, nextCursor]);
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -70,22 +85,28 @@ export function InvoicesCard() {
     }).format(amount / 100);
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString('pt-BR', {
+  const formatPeriod = (start: number, end: number) => {
+    const startDate = new Date(start * 1000).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+    });
+    const endDate = new Date(end * 1000).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
     });
+    return `${startDate} - ${endDate}`;
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-      paid: { variant: 'default', label: 'Pago' },
-      open: { variant: 'secondary', label: 'Aberto' },
-      void: { variant: 'outline', label: 'Cancelado' },
-      uncollectible: { variant: 'destructive', label: 'Não cobrável' },
-      draft: { variant: 'outline', label: 'Rascunho' },
-    };
+    const statusMap: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> =
+      {
+        paid: { variant: 'default', label: 'Pago' },
+        open: { variant: 'secondary', label: 'Aberto' },
+        void: { variant: 'outline', label: 'Cancelado' },
+        uncollectible: { variant: 'destructive', label: 'Não cobrável' },
+        draft: { variant: 'outline', label: 'Rascunho' },
+      };
 
     const statusInfo = statusMap[status] || { variant: 'outline' as const, label: status };
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
@@ -99,6 +120,7 @@ export function InvoicesCard() {
             <Calendar className="h-5 w-5" />
             Histórico de Pagamento
           </CardTitle>
+          <CardDescription>Suas últimas faturas</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -119,41 +141,85 @@ export function InvoicesCard() {
       <CardContent>
         {invoices.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
             <p>Nenhuma fatura encontrada</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {invoices.map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{invoice.number || `Fatura ${invoice.id.slice(-8)}`}</p>
-                    {getStatusBadge(invoice.status)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{formatDate(invoice.created)}</p>
-                  <p className="text-sm font-semibold">{formatCurrency(invoice.amountPaid, invoice.currency)}</p>
-                </div>
-                {invoice.invoicePdf && (
-                  <Button variant="ghost" size="sm" asChild>
-                    <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
-              </div>
-            ))}
+          <div className="relative">
+            {/* Horizontal scroll container */}
+            <div
+              ref={scrollContainerRef}
+              className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
+              style={{ scrollBehavior: 'smooth' }}
+            >
+              {invoices.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="flex-shrink-0 w-[200px] snap-start"
+                >
+                  {/* Invoice card */}
+                  <div className="border rounded-lg p-3 space-y-3 h-full flex flex-col hover:shadow-md transition-shadow">
+                    {/* Period */}
+                    <div className="text-xs text-muted-foreground font-medium">
+                      {formatPeriod(invoice.periodStart, invoice.periodEnd)}
+                    </div>
 
-            {hasMore && (
-              <Button variant="outline" className="w-full" onClick={loadMore} disabled={isLoadingMore}>
-                {isLoadingMore ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Carregando...
-                  </>
-                ) : (
-                  'Carregar mais'
-                )}
-              </Button>
+                    {/* PDF Thumbnail */}
+                    <div className="relative bg-muted rounded-md aspect-[3/4] flex items-center justify-center group">
+                      <FileText className="h-12 w-12 text-muted-foreground/50" />
+                      {getStatusBadge(invoice.status)}
+                      
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-md" />
+                    </div>
+
+                    {/* Amount */}
+                    <div className="text-center">
+                      <p className="text-lg font-bold">
+                        {formatCurrency(invoice.amountPaid, invoice.currency)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {invoice.number || `#${invoice.id.slice(-8)}`}
+                      </p>
+                    </div>
+
+                    {/* Download button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      asChild
+                      disabled={!invoice.invoicePdf}
+                    >
+                      {invoice.invoicePdf ? (
+                        <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar
+                        </a>
+                      ) : (
+                        <span>
+                          <Download className="h-4 w-4 mr-2" />
+                          Indisponível
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Loading indicator for infinite scroll */}
+              {isLoadingMore && (
+                <div className="flex-shrink-0 w-[200px] flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </div>
+
+            {/* Scroll hint */}
+            {invoices.length > 0 && (
+              <div className="text-xs text-center text-muted-foreground mt-2">
+                {hasMore ? '← Deslize para ver mais faturas →' : `${invoices.length} fatura${invoices.length !== 1 ? 's' : ''} no total`}
+              </div>
             )}
           </div>
         )}
