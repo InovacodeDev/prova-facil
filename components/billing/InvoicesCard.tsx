@@ -162,23 +162,34 @@ export function InvoicesCard() {
 
                     {/* PDF Thumbnail with Preview */}
                     <a
-                      href={invoice.invoicePdf || invoice.hostedInvoiceUrl || '#'}
+                      href={invoice.hostedInvoiceUrl || invoice.invoicePdf || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`relative block rounded-md aspect-[3/4] overflow-hidden group ${
+                      className={`relative block rounded-md aspect-[3/4] overflow-hidden group bg-muted ${
                         !invoice.invoicePdf && !invoice.hostedInvoiceUrl ? 'pointer-events-none' : 'cursor-pointer'
                       }`}
+                      onClick={(e) => {
+                        // Prevent default if only PDF available, open in new tab manually
+                        if (!invoice.hostedInvoiceUrl && invoice.invoicePdf) {
+                          e.preventDefault();
+                          window.open(invoice.invoicePdf, '_blank', 'noopener,noreferrer');
+                        }
+                      }}
                     >
                       {invoice.invoicePdf ? (
                         <>
-                          {/* PDF Preview using iframe */}
-                          <iframe
-                            src={`${invoice.invoicePdf}#view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
-                            className="absolute inset-0 w-full h-full pointer-events-none scale-[2] origin-top-left"
-                            title={`Invoice ${invoice.number || invoice.id}`}
+                          {/* PDF Preview using embed */}
+                          <embed
+                            src={`${invoice.invoicePdf}#view=FitH&toolbar=0&navpanes=0&scrollbar=0&page=1`}
+                            type="application/pdf"
+                            className="absolute inset-0 w-full h-full pointer-events-none"
+                            style={{
+                              transform: 'scale(1.5)',
+                              transformOrigin: 'top left',
+                            }}
                           />
                           {/* Overlay gradient for better badge visibility */}
-                          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20" />
+                          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20 pointer-events-none" />
                         </>
                       ) : (
                         <div className="absolute inset-0 bg-muted flex items-center justify-center">
@@ -190,7 +201,7 @@ export function InvoicesCard() {
                       <div className="absolute top-2 right-2 z-10">{getStatusBadge(invoice.status)}</div>
 
                       {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center pointer-events-none">
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-2">
                           <FileText className="h-6 w-6 text-primary" />
                         </div>
