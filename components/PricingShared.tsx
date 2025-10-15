@@ -12,10 +12,12 @@ import { useState } from 'react';
 
 interface PricingSharedProps {
   currentPlan?: string;
+  scheduledNextPlan?: string | null;
+  currentPeriodEnd?: string | null;
   onPlanClick: (planId: string, priceId: string, billingPeriod: 'monthly' | 'annual') => void;
 }
 
-export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) {
+export function PricingShared({ currentPlan, scheduledNextPlan, currentPeriodEnd, onPlanClick }: PricingSharedProps) {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
 
   // Use the hook to fetch products with automatic caching
@@ -65,6 +67,25 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
       </div>
       {billingPeriod === 'annual' && (
         <p className="text-sm text-green-600 text-center font-medium">💰 Economize 25% com o plano anual</p>
+      )}
+
+      {/* Scheduled Plan Change Alert */}
+      {scheduledNextPlan && currentPeriodEnd && (
+        <Alert className="max-w-2xl mx-auto border-amber-500 bg-amber-50 dark:bg-amber-950">
+          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+          <AlertDescription className="text-sm text-amber-900 dark:text-amber-100">
+            <strong>Mudança de plano agendada:</strong> Seu plano será alterado para{' '}
+            <strong className="capitalize">{scheduledNextPlan}</strong> em{' '}
+            <strong>
+              {new Date(currentPeriodEnd).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </strong>
+            .
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Error State */}

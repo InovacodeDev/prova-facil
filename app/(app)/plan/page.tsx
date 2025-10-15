@@ -3,7 +3,7 @@
 import { PageHeader } from '@/components/layout';
 import { PlanConfirmationModal } from '@/components/PlanConfirmationModal';
 import { PricingShared } from '@/components/PricingShared';
-import { useInvalidateAllStripeData, usePlan, useProducts } from '@/hooks/stripe';
+import { useInvalidateAllStripeData, usePlan, useProducts, useSubscription } from '@/hooks/stripe';
 import { useStripe } from '@/hooks/use-stripe';
 import { useToast } from '@/hooks/use-toast';
 import { logClientError } from '@/lib/client-error-logger';
@@ -30,11 +30,13 @@ export default function PlanPage() {
   // Use hooks for data fetching with automatic caching (4h)
   const { data: products, isLoading: productsLoading, refetch: refetchProducts } = useProducts();
   const { plan, isLoading: planLoading, refetch: refetchPlan } = usePlan();
+  const { data: subscription } = useSubscription();
   const invalidateStripeData = useInvalidateAllStripeData();
 
   const currentPlan = plan?.id || 'starter';
   const loading = planLoading;
   const currentPeriodEnd = plan?.currentPeriodEnd ? new Date(plan.currentPeriodEnd * 1000).toISOString() : null;
+  const scheduledNextPlan = subscription?.scheduledNextPlan || null;
 
   useEffect(() => {
     handleStripeReturn();
@@ -322,7 +324,12 @@ export default function PlanPage() {
             </p>
           </div>
 
-          <PricingShared currentPlan={currentPlan} onPlanClick={handleSelectPlan} />
+          <PricingShared
+            currentPlan={currentPlan}
+            scheduledNextPlan={scheduledNextPlan}
+            currentPeriodEnd={currentPeriodEnd}
+            onPlanClick={handleSelectPlan}
+          />
         </div>
       )}
 
