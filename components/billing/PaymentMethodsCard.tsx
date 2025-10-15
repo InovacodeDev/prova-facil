@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreditCard, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AddPaymentMethodDialog } from './AddPaymentMethodDialog';
 
 interface PaymentMethod {
   id: string;
@@ -30,6 +31,7 @@ export function PaymentMethodsCard() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => {
     fetchPaymentMethods();
@@ -49,9 +51,13 @@ export function PaymentMethodsCard() {
     }
   };
 
-  const handleAddPaymentMethod = async () => {
-    // TODO: Integrate with Stripe Elements for adding payment method
-    alert('Funcionalidade em desenvolvimento. Use o portal do cliente do Stripe para adicionar métodos de pagamento.');
+  const handleAddPaymentMethod = () => {
+    setShowAddDialog(true);
+  };
+
+  const handlePaymentMethodAdded = async () => {
+    // Refresh payment methods list
+    await fetchPaymentMethods();
   };
 
   const handleRemovePaymentMethod = async (paymentMethodId: string) => {
@@ -177,6 +183,13 @@ export function PaymentMethodsCard() {
           )}
         </div>
       </CardContent>
+
+      {/* Add Payment Method Dialog */}
+      <AddPaymentMethodDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSuccess={handlePaymentMethodAdded}
+      />
     </Card>
   );
 }

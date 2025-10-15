@@ -10,7 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { formatPeriodEnd, formatPrice, getBillingIntervalDisplay, isFreePlan } from '@/lib/stripe/plan-helpers';
+import { getPlanConfig } from '@/lib/plans/config';
 import type { StripeProductWithPrices } from '@/types/stripe';
 import { AlertTriangle, Check, Loader2 } from 'lucide-react';
 
@@ -44,6 +46,10 @@ export function PlanConfirmationModal({
   const priceAmount = price?.unit_amount ? formatPrice(price.unit_amount) : 'Grátis';
   const billingDisplay = getBillingIntervalDisplay(billingPeriod === 'monthly' ? 'month' : 'year');
   const formattedPeriodEnd = currentPeriodEnd ? formatPeriodEnd(currentPeriodEnd) : '';
+
+  // Get plan config for features fallback
+  const planConfig = getPlanConfig(plan.internalPlanId);
+  const features = plan.features && plan.features.length > 0 ? plan.features : planConfig.features;
 
   // Determine modal title
   const title = variant === 'upgrade' ? 'Confirmar Upgrade de Plano' : 'Confirmar Alteração de Plano';
@@ -81,7 +87,7 @@ export function PlanConfirmationModal({
 
         <div className="space-y-6">
           {/* Plan Details */}
-          <div className="border rounded-lg p-4 space-y-3">
+          <div className="border rounded-lg p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-lg">{plan.name}</h3>
@@ -97,14 +103,16 @@ export function PlanConfirmationModal({
               </div>
             </div>
 
+            <Separator />
+
             {/* Features List */}
-            <div className="pt-3 border-t">
-              <p className="text-sm font-medium mb-2">Recursos incluídos:</p>
-              <ul className="space-y-2">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
+            <div>
+              <p className="text-sm font-semibold mb-3 text-muted-foreground">Recursos incluídos:</p>
+              <ul className="space-y-2.5">
+                {features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3 text-sm">
                     <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    <span>{feature}</span>
+                    <span className="leading-relaxed">{feature}</span>
                   </li>
                 ))}
               </ul>
