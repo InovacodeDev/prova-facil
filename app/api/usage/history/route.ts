@@ -1,7 +1,7 @@
 /**
  * Usage History API Route
  *
- * Fetches question generation history for the last 6 months
+ * Fetches question generation history from profile_logs_cycle for the last 6 months
  */
 
 import { createClient } from '@/lib/supabase/server';
@@ -22,26 +22,36 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Calculate date 6 months ago
+    // Get user profile ID
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    // Calculate date 6 months ago (format: YYYY-MM)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const minCycle = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}`;
 
-    // Fetch question generation history
-    const { data: history, error } = await supabase
-      .from('questions')
-      .select('created_at')
-      .eq('user_id', user.id)
-      .gte('created_at', sixMonthsAgo.toISOString())
-      .order('created_at', { ascending: true });
+    // Fetch usage data from profile_logs_cycle
+    const { data: logsCycles, error } = await supabase
+      .from('profile_logs_cycle')
+      .select('cycle, total_questions, subjects_breakdown')
+      .eq('user_id', profile.id)
+      .gte('cycle', minCycle)
+      .order('cycle', { ascending: true });
 
     if (error) {
       throw error;
     }
 
-    // Group by month and count
-    const monthlyUsage: Record<string, number> = {};
-    
     // Initialize all 6 months with 0
+    const monthlyUsage: Record<string, number> = {};
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
@@ -49,31 +59,32 @@ export async function GET() {
       monthlyUsage[key] = 0;
     }
 
-    // Count questions per month
-    history?.forEach((question) => {
-      const date = new Date(question.created_at);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      if (key in monthlyUsage) {
-        monthlyUsage[key]++;
+    // Populate with actual data
+    logsCycles?.forEach((log) => {
+      if (log.cycle in monthlyUsage) {
+        monthlyUsage[log.cycle] = log.total_questions || 0;
       }
     });
 
     // Format for chart
-    const formattedData = Object.entries(monthlyUsage).map(([month, count]) => {
-      const [year, monthNum] = month.split('-');
+    const formattedData = Object.entries(monthlyUsage).map(([cycle, count]) => {
+      const [year, monthNum] = cycle.split('-');
       const date = new Date(parseInt(year), parseInt(monthNum) - 1);
       const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
-      
+
       return {
-        month: monthName.charAt(0).toUpperCase() + monthName.slice(1), // Capitalize
+        month: monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', ''), // Capitalize and remove dot
         count: count,
-        fullDate: month,
+        fullDate: cycle,
       };
     });
 
+    // Calculate total
+    const total = Object.values(monthlyUsage).reduce((sum, count) => sum + count, 0);
+
     return NextResponse.json({
       usage: formattedData,
-      total: history?.length || 0,
+      total: total,
     });
   } catch (error) {
     console.error('[API] Error fetching usage history:', error);

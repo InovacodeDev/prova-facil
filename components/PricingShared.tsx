@@ -99,74 +99,76 @@ export function PricingShared({ currentPlan, onPlanClick }: PricingSharedProps) 
                 return (priceA || 0) - (priceB || 0);
               })
               .map((product) => {
-              // Get static plan config from frontend
-              const planConfig = getPlanConfig(product.internalPlanId);
-              const priceId = getPriceId(product);
-              const isCurrentPlan = currentPlan === product.internalPlanId;
+                // Get static plan config from frontend
+                const planConfig = getPlanConfig(product.internalPlanId);
+                const priceId = getPriceId(product);
+                const isCurrentPlan = currentPlan === product.internalPlanId;
 
-              return (
-                <Card
-                  key={product.id}
-                  className={`relative flex flex-col w-[280px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-                    planConfig.highlighted ? 'border-primary border-2 shadow-lg' : 'border-border'
-                  }`}
-                >
-                  {planConfig.highlighted && (
-                    <div className="absolute -top-4 left-0 right-0 text-center">
-                      <Badge className="bg-primary text-primary-foreground">{planConfig.badge || 'Recomendado'}</Badge>
-                    </div>
-                  )}
-
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      {/* Name from Stripe, fallback to frontend config */}
-                      <CardTitle className="text-xl">{product.name || planConfig.displayName}</CardTitle>
-                      {isCurrentPlan && (
-                        <Badge variant="secondary" className="text-xs">
-                          Atual
+                return (
+                  <Card
+                    key={product.id}
+                    className={`relative flex flex-col w-[280px] transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+                      planConfig.highlighted ? 'border-primary border-2 shadow-lg' : 'border-border'
+                    }`}
+                  >
+                    {planConfig.highlighted && (
+                      <div className="absolute -top-4 left-0 right-0 text-center">
+                        <Badge className="bg-primary text-primary-foreground">
+                          {planConfig.badge || 'Recomendado'}
                         </Badge>
-                      )}
-                    </div>
-                    {/* AI Level from frontend config */}
-                    <Badge variant="outline" className="text-xs whitespace-nowrap w-fit">
-                      {planConfig.aiLevel}
-                    </Badge>
-                    {/* Description from frontend config */}
-                    <CardDescription className="text-xs min-h-[32px] pt-2">{planConfig.description}</CardDescription>
-                    {/* Prices from Stripe */}
-                    <div className="mt-4">
-                      <span className="text-3xl font-bold">{formatPrice(product)}</span>
-                      {getPeriod(product) && (
-                        <span className="text-sm text-muted-foreground">{getPeriod(product)}</span>
-                      )}
-                    </div>
-                  </CardHeader>
+                      </div>
+                    )}
 
-                  <CardContent className="flex-grow pt-0">
-                    {/* Features from frontend config */}
-                    <ul className="space-y-2.5">
-                      {planConfig.features.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                          <span className="text-xs leading-relaxed">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        {/* Name from Stripe, fallback to frontend config */}
+                        <CardTitle className="text-xl">{product.name || planConfig.displayName}</CardTitle>
+                        {isCurrentPlan && (
+                          <Badge variant="secondary" className="text-xs">
+                            Atual
+                          </Badge>
+                        )}
+                      </div>
+                      {/* AI Level from frontend config */}
+                      <Badge variant="outline" className="text-xs whitespace-nowrap w-fit">
+                        {planConfig.aiLevel}
+                      </Badge>
+                      {/* Description from frontend config */}
+                      <CardDescription className="text-xs min-h-[32px] pt-2">{planConfig.description}</CardDescription>
+                      {/* Prices from Stripe */}
+                      <div className="mt-4">
+                        <span className="text-3xl font-bold">{formatPrice(product)}</span>
+                        {getPeriod(product) && (
+                          <span className="text-sm text-muted-foreground">{getPeriod(product)}</span>
+                        )}
+                      </div>
+                    </CardHeader>
 
-                  <CardFooter className="pt-4">
-                    <Button
-                      className="w-full"
-                      variant={isCurrentPlan ? 'secondary' : 'default'}
-                      onClick={() => onPlanClick(product.internalPlanId, priceId, billingPeriod)}
-                      disabled={isCurrentPlan || isLoading}
-                    >
-                      {isCurrentPlan ? 'Plano Atual' : 'Selecionar Plano'}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })}
+                    <CardContent className="flex-grow pt-0">
+                      {/* Features from frontend config */}
+                      <ul className="space-y-2.5">
+                        {planConfig.features.map((feature, index) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                            <span className="text-xs leading-relaxed">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+
+                    <CardFooter className="pt-4">
+                      <Button
+                        className="w-full"
+                        variant={isCurrentPlan ? 'secondary' : 'default'}
+                        onClick={() => onPlanClick(product.internalPlanId, priceId, billingPeriod)}
+                        disabled={isCurrentPlan || isLoading}
+                      >
+                        {isCurrentPlan ? 'Plano Atual' : 'Selecionar Plano'}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
           </div>
         </div>
       )}

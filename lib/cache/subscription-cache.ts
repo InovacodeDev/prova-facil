@@ -19,8 +19,8 @@
  * @module lib/cache/subscription-cache
  */
 
-import { getRedisClient } from './redis';
 import type Stripe from 'stripe';
+import { getRedisClient } from './redis';
 
 const CACHE_KEY_PREFIX = 'stripe:subscription:';
 

@@ -1,8 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +11,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreditCard, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -39,7 +39,7 @@ export function PaymentMethodsCard() {
     try {
       const response = await fetch('/api/stripe/payment-methods');
       if (!response.ok) throw new Error('Failed to fetch payment methods');
-      
+
       const data = await response.json();
       setPaymentMethods(data.paymentMethods);
     } catch (error) {
@@ -142,11 +142,7 @@ export function PaymentMethodsCard() {
                   {!pm.isDefault && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isRemoving === pm.id}
-                        >
+                        <Button variant="ghost" size="sm" disabled={isRemoving === pm.id}>
                           {isRemoving === pm.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (

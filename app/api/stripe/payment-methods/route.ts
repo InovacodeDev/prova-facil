@@ -45,7 +45,7 @@ export async function GET() {
     // Get default payment method from customer
     const customerResponse = await stripe.customers.retrieve(profile.stripe_customer_id);
     let defaultPaymentMethodId: string | null = null;
-    
+
     if (!('deleted' in customerResponse) || !customerResponse.deleted) {
       // Type guard: at this point customerResponse is a Customer, not DeletedCustomer
       const customer = customerResponse as Stripe.Customer;

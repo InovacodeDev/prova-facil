@@ -371,11 +371,9 @@ export async function getSubscriptionData(
 
     // Map product ID to internal plan ID
     const effectivePlan = (PRODUCT_ID_TO_PLAN[effectiveProductId] || 'starter') as PlanId;
-    
+
     // Map scheduled downgrade product ID to plan ID (if exists)
-    const scheduledNextPlan = scheduledDowngradeTo 
-      ? (PRODUCT_ID_TO_PLAN[scheduledDowngradeTo] || null)
-      : null;
+    const scheduledNextPlan = scheduledDowngradeTo ? PRODUCT_ID_TO_PLAN[scheduledDowngradeTo] || null : null;
 
     // Extract period info (Stripe uses snake_case but TS types might differ)
     const periodEnd = (subscription as any).current_period_end as number;

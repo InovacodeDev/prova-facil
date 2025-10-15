@@ -1,8 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,9 +11,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Crown, Loader2, X } from 'lucide-react';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface PlanCardProps {
   plan: string;
@@ -45,9 +45,9 @@ export function PlanCard({ plan, period, nextRenewal, scheduledNextPlan, isLoadi
       // Get current subscription data
       const subResponse = await fetch('/api/stripe/subscription');
       if (!subResponse.ok) throw new Error('Failed to fetch subscription');
-      
+
       const { subscription } = await subResponse.json();
-      
+
       // Schedule downgrade to starter
       const response = await fetch('/api/stripe/update-subscription', {
         method: 'POST',
@@ -155,7 +155,7 @@ export function PlanCard({ plan, period, nextRenewal, scheduledNextPlan, isLoadi
           <Button variant="outline" className="flex-1" onClick={() => router.push('/plan')}>
             Alterar Plano
           </Button>
-          
+
           {plan !== 'starter' && !scheduledNextPlan && (
             <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
               <AlertDialogTrigger asChild>

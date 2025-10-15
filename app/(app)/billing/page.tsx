@@ -1,9 +1,9 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { InvoicesCard } from '@/components/billing/InvoicesCard';
 import { PaymentMethodsCard } from '@/components/billing/PaymentMethodsCard';
 import { PlanCard } from '@/components/billing/PlanCard';
 import { UsageHistoryCard } from '@/components/billing/UsageHistoryCard';
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
 export const metadata = {
   title: 'Faturamento | Prova Fácil',
@@ -31,15 +31,11 @@ export default async function BillingPage() {
 
   // Fetch subscription data directly (this will use cache)
   const { getSubscriptionData } = await import('@/lib/stripe/server');
-  
+
   let subscriptionData = null;
   if (profile?.stripe_customer_id && profile?.stripe_subscription_id) {
     try {
-      subscriptionData = await getSubscriptionData(
-        user.id,
-        profile.stripe_customer_id,
-        profile.stripe_subscription_id
-      );
+      subscriptionData = await getSubscriptionData(user.id, profile.stripe_customer_id, profile.stripe_subscription_id);
     } catch (error) {
       console.error('Error fetching subscription:', error);
     }
@@ -66,12 +62,7 @@ export default async function BillingPage() {
       {/* Grid of cards - 2 per row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Row 1 */}
-        <PlanCard
-          plan={plan}
-          period={period}
-          nextRenewal={nextRenewal}
-          scheduledNextPlan={scheduledNextPlan}
-        />
+        <PlanCard plan={plan} period={period} nextRenewal={nextRenewal} scheduledNextPlan={scheduledNextPlan} />
         <PaymentMethodsCard />
 
         {/* Row 2 */}

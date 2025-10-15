@@ -35,17 +35,17 @@ export function InvoicesCard() {
     try {
       const url = cursor ? `/api/stripe/invoices?starting_after=${cursor}` : '/api/stripe/invoices';
       const response = await fetch(url);
-      
+
       if (!response.ok) throw new Error('Failed to fetch invoices');
-      
+
       const data = await response.json();
-      
+
       if (cursor) {
         setInvoices((prev) => [...prev, ...data.invoices]);
       } else {
         setInvoices(data.invoices);
       }
-      
+
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
     } catch (error) {
@@ -79,14 +79,13 @@ export function InvoicesCard() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> =
-      {
-        paid: { variant: 'default', label: 'Pago' },
-        open: { variant: 'secondary', label: 'Aberto' },
-        void: { variant: 'outline', label: 'Cancelado' },
-        uncollectible: { variant: 'destructive', label: 'Não cobrável' },
-        draft: { variant: 'outline', label: 'Rascunho' },
-      };
+    const statusMap: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
+      paid: { variant: 'default', label: 'Pago' },
+      open: { variant: 'secondary', label: 'Aberto' },
+      void: { variant: 'outline', label: 'Cancelado' },
+      uncollectible: { variant: 'destructive', label: 'Não cobrável' },
+      draft: { variant: 'outline', label: 'Rascunho' },
+    };
 
     const statusInfo = statusMap[status] || { variant: 'outline' as const, label: status };
     return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
@@ -128,9 +127,7 @@ export function InvoicesCard() {
               <div key={invoice.id} className="flex items-center justify-between border-b pb-3 last:border-0">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">
-                      {invoice.number || `Fatura ${invoice.id.slice(-8)}`}
-                    </p>
+                    <p className="text-sm font-medium">{invoice.number || `Fatura ${invoice.id.slice(-8)}`}</p>
                     {getStatusBadge(invoice.status)}
                   </div>
                   <p className="text-xs text-muted-foreground">{formatDate(invoice.created)}</p>
@@ -145,14 +142,9 @@ export function InvoicesCard() {
                 )}
               </div>
             ))}
-            
+
             {hasMore && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={loadMore}
-                disabled={isLoadingMore}
-              >
+              <Button variant="outline" className="w-full" onClick={loadMore} disabled={isLoadingMore}>
                 {isLoadingMore ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
