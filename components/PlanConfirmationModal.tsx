@@ -25,6 +25,7 @@ interface PlanConfirmationModalProps {
   loading: boolean;
   variant: 'upgrade' | 'downgrade';
   currentPlan?: string;
+  currentBillingPeriod?: 'monthly' | 'annual';
   currentPeriodEnd?: string;
 }
 
@@ -37,11 +38,13 @@ export function PlanConfirmationModal({
   loading,
   variant,
   currentPlan,
+  currentBillingPeriod,
   currentPeriodEnd,
 }: PlanConfirmationModalProps) {
   if (!plan) return null;
 
   const isDowngradeToStarter = variant === 'downgrade' && isFreePlan(plan.internalPlanId);
+  const isPeriodChange = currentPlan === plan.internalPlanId && currentBillingPeriod !== billingPeriod;
   const price = billingPeriod === 'monthly' ? plan.prices.monthly : plan.prices.yearly;
   const priceAmount = price?.unit_amount ? formatPrice(price.unit_amount) : 'Grátis';
   const billingDisplay = getBillingIntervalDisplay(billingPeriod === 'monthly' ? 'month' : 'year');
@@ -52,11 +55,18 @@ export function PlanConfirmationModal({
   const features = plan.features && plan.features.length > 0 ? plan.features : planConfig.features;
 
   // Determine modal title
-  const title = variant === 'upgrade' ? 'Confirmar Upgrade de Plano' : 'Confirmar Alteração de Plano';
+  let title: string;
+  if (isPeriodChange) {
+    title = 'Confirmar Mudança de Período';
+  } else {
+    title = variant === 'upgrade' ? 'Confirmar Upgrade de Plano' : 'Confirmar Alteração de Plano';
+  }
 
   // Determine modal description
   let description: string;
-  if (isDowngradeToStarter) {
+  if (isPeriodChange) {
+    description = `Seu plano ${plan.name} será alterado para cobrança ${billingDisplay} ao final do período atual em ${formattedPeriodEnd}. Seu novo valor será ${priceAmount}.`;
+  } else if (isDowngradeToStarter) {
     description = `Seu plano atual será cancelado ao final do período de cobrança em ${formattedPeriodEnd}. Você voltará ao plano gratuito Starter após essa data.`;
   } else if (variant === 'downgrade') {
     description = `Seu plano será alterado para ${plan.name} (${billingDisplay}) ao final do período de cobrança atual em ${formattedPeriodEnd}. Seu novo valor será ${priceAmount}.`;
@@ -66,7 +76,9 @@ export function PlanConfirmationModal({
 
   // Determine button text
   let confirmButtonText: string;
-  if (isDowngradeToStarter) {
+  if (isPeriodChange) {
+    confirmButtonText = 'Confirmar Mudança';
+  } else if (isDowngradeToStarter) {
     confirmButtonText = 'Confirmar Cancelamento';
   } else if (variant === 'downgrade') {
     confirmButtonText = 'Confirmar Alteração';

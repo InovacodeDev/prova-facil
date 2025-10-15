@@ -37,6 +37,7 @@ export default function PlanPage() {
   const loading = planLoading;
   const currentPeriodEnd = plan?.currentPeriodEnd ? new Date(plan.currentPeriodEnd * 1000).toISOString() : null;
   const scheduledNextPlan = subscription?.scheduledNextPlan || null;
+  const currentBillingPeriod: 'monthly' | 'annual' = subscription?.renewStatus === 'yearly' ? 'annual' : 'monthly';
 
   useEffect(() => {
     handleStripeReturn();
@@ -182,8 +183,14 @@ export default function PlanPage() {
     setSelectedPriceId(priceId);
     setSelectedBillingPeriod(billingPeriod);
 
+    // Check if this is a period change for the same plan
+    const isPeriodChange = currentPlan === planId && currentBillingPeriod !== billingPeriod;
+
     // Determine if this is an upgrade or downgrade
-    if (isDowngrade(currentPlan, planId)) {
+    if (isPeriodChange) {
+      // Period change is treated as upgrade (will happen at period end)
+      setModalVariant('upgrade');
+    } else if (isDowngrade(currentPlan, planId)) {
       setModalVariant('downgrade');
     } else {
       setModalVariant('upgrade');
@@ -326,6 +333,7 @@ export default function PlanPage() {
 
           <PricingShared
             currentPlan={currentPlan}
+            currentBillingPeriod={currentBillingPeriod}
             scheduledNextPlan={scheduledNextPlan}
             currentPeriodEnd={currentPeriodEnd}
             onPlanClick={handleSelectPlan}
@@ -343,6 +351,7 @@ export default function PlanPage() {
         loading={checkoutLoading}
         variant={modalVariant}
         currentPlan={currentPlan}
+        currentBillingPeriod={currentBillingPeriod}
         currentPeriodEnd={currentPeriodEnd}
       />
     </>

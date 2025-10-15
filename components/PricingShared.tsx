@@ -12,12 +12,19 @@ import { useState } from 'react';
 
 interface PricingSharedProps {
   currentPlan?: string;
+  currentBillingPeriod?: 'monthly' | 'annual';
   scheduledNextPlan?: string | null;
   currentPeriodEnd?: string | null;
   onPlanClick: (planId: string, priceId: string, billingPeriod: 'monthly' | 'annual') => void;
 }
 
-export function PricingShared({ currentPlan, scheduledNextPlan, currentPeriodEnd, onPlanClick }: PricingSharedProps) {
+export function PricingShared({
+  currentPlan,
+  currentBillingPeriod,
+  scheduledNextPlan,
+  currentPeriodEnd,
+  onPlanClick,
+}: PricingSharedProps) {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
 
   // Use the hook to fetch products with automatic caching
@@ -69,23 +76,30 @@ export function PricingShared({ currentPlan, scheduledNextPlan, currentPeriodEnd
         <p className="text-sm text-green-600 text-center font-medium">💰 Economize 25% com o plano anual</p>
       )}
 
-      {/* Scheduled Plan Change Alert */}
+      {/* Scheduled Plan Change Alert - Same style as billing page */}
       {scheduledNextPlan && currentPeriodEnd && (
-        <Alert className="max-w-2xl mx-auto border-amber-500 bg-amber-50 dark:bg-amber-950">
-          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-          <AlertDescription className="text-sm text-amber-900 dark:text-amber-100">
-            <strong>Mudança de plano agendada:</strong> Seu plano será alterado para{' '}
-            <strong className="capitalize">{scheduledNextPlan}</strong> em{' '}
-            <strong>
-              {new Date(currentPeriodEnd).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </strong>
-            .
-          </AlertDescription>
-        </Alert>
+        <div className="max-w-2xl mx-auto rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-500 shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-semibold text-orange-900 dark:text-orange-100">Mudança de plano agendada</p>
+              <p className="text-sm text-orange-800 dark:text-orange-200">
+                Após{' '}
+                <strong>
+                  {new Date(currentPeriodEnd).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </strong>
+                , seu plano será alterado para <strong className="capitalize">{scheduledNextPlan}</strong>.
+              </p>
+            </div>
+            <Badge variant="outline" className="bg-white dark:bg-slate-950 shrink-0">
+              → {scheduledNextPlan}
+            </Badge>
+          </div>
+        </div>
       )}
 
       {/* Error State */}
@@ -125,6 +139,25 @@ export function PricingShared({ currentPlan, scheduledNextPlan, currentPeriodEnd
                 const priceId = getPriceId(product);
                 const isCurrentPlan = currentPlan === product.internalPlanId;
 
+                // Check if this is the same plan but different billing period
+                const isCurrentPlanDifferentPeriod =
+                  isCurrentPlan &&
+                  currentBillingPeriod &&
+                  ((currentBillingPeriod === 'monthly' && billingPeriod === 'annual') ||
+                    (currentBillingPeriod === 'annual' && billingPeriod === 'monthly'));
+
+                // Button text logic
+                let buttonText = 'Selecionar Plano';
+                let isButtonDisabled = isLoading;
+
+                if (isCurrentPlan && !isCurrentPlanDifferentPeriod) {
+                  buttonText = 'Plano Atual';
+                  isButtonDisabled = true;
+                } else if (isCurrentPlanDifferentPeriod) {
+                  buttonText = billingPeriod === 'annual' ? 'Mudar para Anual' : 'Mudar para Mensal';
+                  isButtonDisabled = false;
+                }
+
                 return (
                   <Card
                     key={product.id}
@@ -144,9 +177,14 @@ export function PricingShared({ currentPlan, scheduledNextPlan, currentPeriodEnd
                       <div className="flex items-center justify-between mb-2">
                         {/* Name from Stripe, fallback to frontend config */}
                         <CardTitle className="text-xl">{product.name || planConfig.displayName}</CardTitle>
-                        {isCurrentPlan && (
+                        {isCurrentPlan && !isCurrentPlanDifferentPeriod && (
                           <Badge variant="secondary" className="text-xs">
                             Atual
+                          </Badge>
+                        )}
+                        {isCurrentPlanDifferentPeriod && (
+                          <Badge variant="outline" className="text-xs">
+                            {billingPeriod === 'annual' ? 'Economize 25%' : 'Seu Plano'}
                           </Badge>
                         )}
                       </div>
@@ -180,11 +218,11 @@ export function PricingShared({ currentPlan, scheduledNextPlan, currentPeriodEnd
                     <CardFooter className="pt-4">
                       <Button
                         className="w-full"
-                        variant={isCurrentPlan ? 'secondary' : 'default'}
+                        variant={isCurrentPlan && !isCurrentPlanDifferentPeriod ? 'secondary' : 'default'}
                         onClick={() => onPlanClick(product.internalPlanId, priceId, billingPeriod)}
-                        disabled={isCurrentPlan || isLoading}
+                        disabled={isButtonDisabled}
                       >
-                        {isCurrentPlan ? 'Plano Atual' : 'Selecionar Plano'}
+                        {buttonText}
                       </Button>
                     </CardFooter>
                   </Card>
