@@ -3,7 +3,8 @@
 import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMonthlyUsage, usePlan } from '@/hooks/use-cache';
+import { useMonthlyUsage } from '@/hooks/use-cache';
+import { usePlan, usePlanConfig } from '@/hooks/use-plan';
 import { useProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import { logClientError } from '@/lib/client-error-logger';
@@ -42,15 +43,16 @@ export default function DashboardPage() {
 
   // Use cache hooks for profile, plan, and usage
   const { profile, isLoading: profileLoading } = useProfile();
-  const { plan, loading: planLoading } = usePlan(profile?.id);
+  const { plan, isLoading: planLoading } = usePlan();
+  const { config: planConfig, isLoading: planConfigLoading } = usePlanConfig(plan?.id);
   const { usage, loading: usageLoading } = useMonthlyUsage(profile?.id);
 
   // Combined loading state
-  const loading = profileLoading || planLoading || usageLoading;
+  const loading = profileLoading || planLoading || planConfigLoading || usageLoading;
 
   // Derived values from cache (memoized to prevent unnecessary re-renders)
   const monthlyUsage = useMemo(() => usage ?? 0, [usage]);
-  const monthlyLimit = useMemo(() => plan?.questions_month ?? 30, [plan?.questions_month]);
+  const monthlyLimit = useMemo(() => planConfig?.questions_month ?? 30, [planConfig?.questions_month]);
   const planName = useMemo(
     () => (plan?.id ? plan.id.charAt(0).toUpperCase() + plan.id.slice(1) : 'Starter'),
     [plan?.id]

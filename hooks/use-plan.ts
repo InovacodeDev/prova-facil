@@ -58,6 +58,21 @@ export interface PlanData {
   priceId: string | null;
 }
 
+export interface PlanConfig {
+  /** Plan ID */
+  id: string;
+  /** Monthly question limit */
+  questions_month: number;
+  /** Allowed document types */
+  doc_type: string[];
+  /** Maximum document size in MB */
+  docs_size: number;
+  /** Maximum number of question types */
+  max_question_types: number;
+  /** Support types available */
+  support: string[];
+}
+
 /**
  * Maps plan ID to display name
  */
@@ -81,6 +96,20 @@ async function fetchPlanIdByProductId(productId: string): Promise<string> {
 
   const data = await response.json();
   return data.planId;
+}
+
+/**
+ * Fetches plan configuration from database
+ */
+async function fetchPlanConfig(planId: string): Promise<PlanConfig> {
+  const response = await fetch(`/api/plans/${planId}`);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch plan config');
+  }
+
+  const data = await response.json();
+  return data.plan;
 }
 
 /**
@@ -143,6 +172,41 @@ export function usePlan() {
     isLoading,
     error,
     refetch,
+  };
+}
+
+/**
+ * Hook para buscar a configuração detalhada do plano (limits, features, etc)
+ * Útil para páginas que precisam de informações sobre limites e permissões
+ *
+ * @example
+ * ```tsx
+ * function CreateQuestionPage() {
+ *   const { plan } = usePlan();
+ *   const { config, isLoading } = usePlanConfig(plan?.id);
+ *
+ *   const maxQuestions = config?.questions_month ?? 30;
+ *   const allowedTypes = config?.max_question_types ?? 1;
+ * }
+ * ```
+ */
+export function usePlanConfig(planId?: string) {
+  const {
+    data: config,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['plan-config', planId],
+    queryFn: () => fetchPlanConfig(planId!),
+    enabled: !!planId, // Only fetch if we have a planId
+    staleTime: 4 * 60 * 60 * 1000, // 4 hours (config doesn't change often)
+    gcTime: 6 * 60 * 60 * 1000, // 6 hours
+  });
+
+  return {
+    config,
+    isLoading,
+    error,
   };
 }
 

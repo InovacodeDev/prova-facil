@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { invalidateUsageCache, useMonthlyUsage, usePlan } from '@/hooks/use-cache';
+import { invalidateUsageCache, useMonthlyUsage } from '@/hooks/use-cache';
+import { usePlan, usePlanConfig } from '@/hooks/use-plan';
 import { useProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import { invalidateDashboardCache } from '@/lib/cache';
@@ -143,35 +144,42 @@ export default function NewAssessmentPage() {
 
   // Use cache hooks for profile, plan, and usage data
   const { profile, isLoading: profileLoading } = useProfile();
-  const { plan, loading: planLoading } = usePlan(profile?.id);
+  const { plan, isLoading: planLoading } = usePlan();
+  const { config: planConfig, isLoading: planConfigLoading } = usePlanConfig(plan?.id);
   const { usage, loading: usageLoading } = useMonthlyUsage(profile?.id);
+
+  // Combined loading state
+  const loading = profileLoading || planLoading || planConfigLoading || usageLoading;
 
   // Derived values from cache
   const userPlan = plan?.id || 'starter';
   const allowedQuestionTypes = profile?.selected_question_types || [];
-  const planConfig: PlanConfig = useMemo(
+  const planConfigData: PlanConfig = useMemo(
     () =>
-      plan
+      planConfig
         ? {
-            id: plan.id,
-            monthlyQuestionLimit: plan.questions_month ?? DEFAULT_PLAN_CONFIG.monthlyQuestionLimit,
-            docTypes: plan.doc_type ?? DEFAULT_PLAN_CONFIG.docTypes,
-            maxQuestionTypes: plan.max_question_types ?? DEFAULT_PLAN_CONFIG.maxQuestionTypes,
-            maxDocumentSizeMB: plan.docs_size ?? DEFAULT_PLAN_CONFIG.maxDocumentSizeMB,
+            id: planConfig.id,
+            monthlyQuestionLimit: planConfig.questions_month ?? DEFAULT_PLAN_CONFIG.monthlyQuestionLimit,
+            docTypes: planConfig.doc_type ?? DEFAULT_PLAN_CONFIG.docTypes,
+            maxQuestionTypes: planConfig.max_question_types ?? DEFAULT_PLAN_CONFIG.maxQuestionTypes,
+            maxDocumentSizeMB: planConfig.docs_size ?? DEFAULT_PLAN_CONFIG.maxDocumentSizeMB,
           }
         : DEFAULT_PLAN_CONFIG,
-    [plan]
+    [planConfig]
   );
   const planConfigId = plan?.id || DEFAULT_PLAN_CONFIG.id;
   const monthlyUsage = usage || 0;
-  const maxQuestions = Math.max(0, (plan?.questions_month || DEFAULT_PLAN_CONFIG.monthlyQuestionLimit) - monthlyUsage);
+  const maxQuestions = Math.max(
+    0,
+    (planConfig?.questions_month || DEFAULT_PLAN_CONFIG.monthlyQuestionLimit) - monthlyUsage
+  );
 
   const router = useRouter();
   const { toast } = useToast();
   const supabase = useMemo(() => createClient(), []);
   const { modes: allowedDocModes, allowPdf: canUploadPdf } = useMemo(
-    () => mapDocTypesToModes(planConfig.docTypes),
-    [planConfig]
+    () => mapDocTypesToModes(planConfigData.docTypes),
+    [planConfigData]
   );
 
   useEffect(() => {
@@ -608,7 +616,7 @@ export default function NewAssessmentPage() {
       return 'Você precisa fornecer material de referência (arquivo, texto ou link).';
     }
     if (maxQuestions === 0)
-      return `Você atingiu o limite mensal de ${planConfig.monthlyQuestionLimit} questões. Tente novamente no próximo mês ou faça upgrade do seu plano.`;
+      return `Você atingiu o limite mensal de ${planConfigData.monthlyQuestionLimit} questões. Tente novamente no próximo mês ou faça upgrade do seu plano.`;
     if (!title.trim()) return 'Preencha o título da avaliação.';
     if (!subject) return 'Selecione uma matéria.';
     if (!questionContext) return 'Selecione o contexto/nível da questão.';
@@ -736,7 +744,7 @@ export default function NewAssessmentPage() {
                     disabled={maxQuestions === 0}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Plano {userPlan}: {monthlyUsage}/{planConfig.monthlyQuestionLimit} questões usadas este mês.{' '}
+                    Plano {userPlan}: {monthlyUsage}/{planConfigData.monthlyQuestionLimit} questões usadas este mês.{' '}
                     <strong>Disponível: {maxQuestions}</strong>
                   </p>
 
@@ -994,8 +1002,8 @@ export default function NewAssessmentPage() {
                       <p className="text-sm text-muted-foreground">Arraste arquivos aqui ou clique para selecionar</p>
                       <p className="text-xs text-muted-foreground">
                         {canUploadPdf
-                          ? `PDF, DOC ou DOCX - Máximo 10MB por arquivo, ${planConfig.maxDocumentSizeMB}MB total`
-                          : `DOC ou DOCX - Máximo 10MB por arquivo, ${planConfig.maxDocumentSizeMB}MB total`}
+                          ? `PDF, DOC ou DOCX - Máximo 10MB por arquivo, ${planConfigData.maxDocumentSizeMB}MB total`
+                          : `DOC ou DOCX - Máximo 10MB por arquivo, ${planConfigData.maxDocumentSizeMB}MB total`}
                       </p>
                       <Input
                         id="files"
