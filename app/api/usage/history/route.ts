@@ -23,11 +23,7 @@ export async function GET() {
     }
 
     // Get user profile ID
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });

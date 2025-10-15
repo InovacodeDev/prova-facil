@@ -20,7 +20,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProfile } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
@@ -147,17 +146,10 @@ export function AppHeader({ onMenuClick }: AppHeaderProps) {
                 <BarChart3 className="mr-2 h-4 w-4" />
                 <span>Uso da Conta</span>
               </DropdownMenuItem>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem disabled>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    <span>Faturamento</span>
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>Em breve</p>
-                </TooltipContent>
-              </Tooltip>
+              <DropdownMenuItem onClick={() => router.push('/billing')}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                <span>Faturamento</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push('/plan')}>
                 <Crown className="mr-2 h-4 w-4" />
                 <span>Plano</span>

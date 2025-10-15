@@ -59,14 +59,18 @@ export default async function BillingPage() {
         </p>
       </div>
 
-      {/* Cards - Full width layout */}
+      {/* Cards Layout */}
       <div className="space-y-6">
-        {/* Row 1: Plan and Payment Methods */}
-        <PlanCard plan={plan} period={period} nextRenewal={nextRenewal} scheduledNextPlan={scheduledNextPlan} />
-        <PaymentMethodsCard />
+        {/* Row 1: Plan and Payment Methods - Side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PlanCard plan={plan} period={period} nextRenewal={nextRenewal} scheduledNextPlan={scheduledNextPlan} />
+          <PaymentMethodsCard />
+        </div>
 
-        {/* Row 2: Invoices and Usage */}
+        {/* Row 2: Invoices - Full width */}
         <InvoicesCard />
+
+        {/* Row 3: Usage - Full width */}
         <UsageHistoryCard />
       </div>
     </div>
