@@ -12,14 +12,18 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Check if we should bypass cache (for debugging)
+    const { searchParams } = new URL(request.url);
+    const bypassCache = searchParams.get('bypass') === 'true';
+
     // Try to get products from cache first
-    let products = await getCachedStripeProducts();
+    let products = bypassCache ? null : await getCachedStripeProducts();
 
     if (!products) {
       // Cache miss - fetch from Stripe API
-      console.log('[API] Fetching products from Stripe API');
+      console.log('[API] Fetching products from Stripe API' + (bypassCache ? ' (cache bypassed)' : ''));
       products = await getStripeProducts();
 
       // Store in cache for next time

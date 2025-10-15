@@ -72,10 +72,11 @@ export async function getStripeProducts(): Promise<StripeProductWithPrices[]> {
       expand: ['data.default_price'],
     });
 
-    // Fetch all active prices
+    // Fetch all active prices (increase limit to get all prices)
     const prices = await stripe.prices.list({
       active: true,
       expand: ['data.product'],
+      limit: 100, // Increase limit to ensure we get all prices
     });
 
     // Group prices by product
