@@ -2,6 +2,7 @@ import { InvoicesCard } from '@/components/billing/InvoicesCard';
 import { PaymentMethodsCard } from '@/components/billing/PaymentMethodsCard';
 import { PlanCard } from '@/components/billing/PlanCard';
 import { UsageHistoryCard } from '@/components/billing/UsageHistoryCard';
+import { PageHeader } from '@/components/layout';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -50,14 +51,12 @@ export default async function BillingPage() {
   const scheduledNextPlan = subscriptionData?.scheduledNextPlan || null;
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Faturamento</h1>
-        <p className="text-muted-foreground mt-2">
-          Gerencie sua assinatura, métodos de pagamento e acompanhe seu consumo
-        </p>
-      </div>
+      <PageHeader
+        title='Faturamento'
+        description='Gerencie sua assinatura, métodos de pagamento e acompanhe seu consumo'
+      />
 
       {/* Cards Layout */}
       <div className="space-y-6">
@@ -73,6 +72,6 @@ export default async function BillingPage() {
         {/* Row 3: Usage - Full width */}
         <UsageHistoryCard />
       </div>
-    </div>
+    </>
   );
 }

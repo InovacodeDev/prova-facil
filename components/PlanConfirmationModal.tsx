@@ -11,8 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { formatPeriodEnd, formatPrice, getBillingIntervalDisplay, isFreePlan } from '@/lib/stripe/plan-helpers';
 import { getPlanConfig } from '@/lib/plans/config';
+import { formatPeriodEnd, formatPrice, getBillingIntervalDisplay, isFreePlan } from '@/lib/stripe/plan-helpers';
 import type { StripeProductWithPrices } from '@/types/stripe';
 import { AlertTriangle, Check, Loader2 } from 'lucide-react';
 
