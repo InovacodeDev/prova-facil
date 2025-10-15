@@ -54,8 +54,8 @@ export default async function BillingPage() {
     <>
       {/* Header */}
       <PageHeader
-        title='Faturamento'
-        description='Gerencie sua assinatura, métodos de pagamento e acompanhe seu consumo'
+        title="Faturamento"
+        description="Gerencie sua assinatura, métodos de pagamento e acompanhe seu consumo"
       />
 
       {/* Cards Layout */}

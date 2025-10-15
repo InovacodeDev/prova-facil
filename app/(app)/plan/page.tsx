@@ -33,9 +33,13 @@ export default function PlanPage() {
   const { data: subscription } = useSubscription();
   const invalidateStripeData = useInvalidateAllStripeData();
 
+  console.log({ subscription });
   const currentPlan = plan?.id || 'starter';
   const loading = planLoading;
-  const currentPeriodEnd = plan?.currentPeriodEnd ? new Date(plan.currentPeriodEnd * 1000).toISOString() : null;
+  const period = subscription?.renewStatus === 'yearly' ? 'yearly' : 'monthly';
+  const nextRenewal = subscription?.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd * 1000).toISOString()
+    : new Date(Date.now() + (period === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000).toISOString(); // 30 days from now for free plan
   const scheduledNextPlan = subscription?.scheduledNextPlan || null;
   const currentBillingPeriod: 'monthly' | 'annual' = subscription?.renewStatus === 'yearly' ? 'annual' : 'monthly';
 
@@ -335,7 +339,7 @@ export default function PlanPage() {
             currentPlan={currentPlan}
             currentBillingPeriod={currentBillingPeriod}
             scheduledNextPlan={scheduledNextPlan}
-            currentPeriodEnd={currentPeriodEnd}
+            currentPeriodEnd={nextRenewal}
             onPlanClick={handleSelectPlan}
           />
         </div>
@@ -352,7 +356,7 @@ export default function PlanPage() {
         variant={modalVariant}
         currentPlan={currentPlan}
         currentBillingPeriod={currentBillingPeriod}
-        currentPeriodEnd={currentPeriodEnd}
+        currentPeriodEnd={nextRenewal}
       />
     </>
   );

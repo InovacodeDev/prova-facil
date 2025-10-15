@@ -52,30 +52,6 @@ export function PricingShared({
 
   return (
     <div className="space-y-8">
-      {/* Billing Period Toggle */}
-      <div className="flex items-center justify-center gap-4">
-        <Button
-          variant={billingPeriod === 'monthly' ? 'default' : 'outline'}
-          onClick={() => setBillingPeriod('monthly')}
-          className="min-w-[120px]"
-          disabled={isLoading}
-        >
-          Mensal
-        </Button>
-        <Button
-          variant={billingPeriod === 'annual' ? 'default' : 'outline'}
-          onClick={() => setBillingPeriod('annual')}
-          className="min-w-[120px] relative"
-          disabled={isLoading}
-        >
-          Anual
-          <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">-25%</Badge>
-        </Button>
-      </div>
-      {billingPeriod === 'annual' && (
-        <p className="text-sm text-green-600 text-center font-medium">💰 Economize 25% com o plano anual</p>
-      )}
-
       {/* Scheduled Plan Change Alert - Same style as billing page */}
       {scheduledNextPlan && currentPeriodEnd && (
         <div className="max-w-2xl mx-auto rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800 p-4">
@@ -100,6 +76,30 @@ export function PricingShared({
             </Badge>
           </div>
         </div>
+      )}
+
+      {/* Billing Period Toggle */}
+      <div className="flex items-center justify-center gap-4">
+        <Button
+          variant={billingPeriod === 'monthly' ? 'default' : 'outline'}
+          onClick={() => setBillingPeriod('monthly')}
+          className="min-w-[120px]"
+          disabled={isLoading}
+        >
+          Mensal
+        </Button>
+        <Button
+          variant={billingPeriod === 'annual' ? 'default' : 'outline'}
+          onClick={() => setBillingPeriod('annual')}
+          className="min-w-[120px] relative"
+          disabled={isLoading}
+        >
+          Anual
+          <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5">-25%</Badge>
+        </Button>
+      </div>
+      {billingPeriod === 'annual' && (
+        <p className="text-sm text-green-600 text-center font-medium">💰 Economize 25% com o plano anual</p>
       )}
 
       {/* Error State */}
