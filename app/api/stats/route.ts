@@ -4,10 +4,10 @@
  * Revalidação a cada 1 hora (3600 segundos)
  */
 
-import { NextResponse } from 'next/server';
+import { logError } from '@/lib/error-logs-service';
 import { getAllLogsStats } from '@/lib/logs';
 import { createClient } from '@/lib/supabase/server';
-import { logError } from '@/lib/error-logs-service';
+import { NextResponse } from 'next/server';
 
 export const revalidate = 3600; // Revalidar a cada 1 hora
 export const dynamic = 'force-dynamic'; // Necessário pois usa cookies via logError
@@ -18,7 +18,7 @@ export async function GET() {
 
     const stats = await getAllLogsStats();
 
-    const { data: viewData } = await supabase.from('public_profiles_count').select('*').single();
+    const { data: viewData } = await supabase.from('public_profiles_count').select('*').maybeSingle();
 
     const formattedStats = stats.reduce((acc, stat) => {
       acc[stat.action] = {

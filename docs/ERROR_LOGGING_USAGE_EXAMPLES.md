@@ -91,7 +91,7 @@ const { data: user } = await supabase.auth.getUser();
         subject: data.subject,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
 
@@ -179,6 +179,7 @@ headers: { 'Content-Type': 'application/json' },
 }
 
 return (
+
 <form onSubmit={(e) => {
 e.preventDefault();
 onSubmit(new FormData(e.currentTarget));

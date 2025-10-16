@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         .from('profiles')
         .select('id')
         .eq('user_id', data.user.id)
-        .single();
+        .maybeSingle();
 
       if (!existingProfile) {
         // Criar profile automaticamente se não existir

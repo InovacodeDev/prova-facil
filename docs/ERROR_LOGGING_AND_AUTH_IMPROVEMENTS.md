@@ -177,7 +177,11 @@ const { data, error } = await supabase.auth.signInWithPassword({
 
 if (data.user) {
   // Verificar se o profile existe
-  const { data: existingProfile } = await supabase.from('profiles').select('id').eq('user_id', data.user.id).single();
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
 
   // Se não existir, criar automaticamente
   if (!existingProfile) {
@@ -196,7 +200,11 @@ const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
 if (!error && data.user) {
   // Verificar se o profile existe
-  const { data: existingProfile } = await supabase.from('profiles').select('id').eq('user_id', data.user.id).single();
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', data.user.id)
+    .maybeSingle();
 
   // Criar se não existir
   if (!existingProfile) {
@@ -438,6 +446,6 @@ SELECT * FROM error_logs ORDER BY created_at DESC LIMIT 10;
 
 ---
 
-**Implementado em:** Outubro de 2025  
-**Branch:** `feat/error-log`  
+**Implementado em:** Outubro de 2025
+**Branch:** `feat/error-log`
 **Status:** ✅ Completo e testado

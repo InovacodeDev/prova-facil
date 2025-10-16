@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
             .from('plans')
             .select('id')
             .eq('stripe_product_id', productId)
-            .single();
+            .maybeSingle();
 
           if (planError) {
             console.error('[Sync Customer Subscription] Error fetching plan:', planError);

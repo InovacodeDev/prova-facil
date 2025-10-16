@@ -33,16 +33,17 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
 
     const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('stripe_subscription_id')
-      .eq('id', userId)
-      .single();
+      .select('stripe_subscription_id, stripe_customer_id')
+      .eq('user_id', userId)
+      .maybeSingle();
 
     if (profileError || !userProfile || !userProfile.stripe_subscription_id) {
       return null;
     }
 
-    // Get subscription data to find product_id
-    const subscriptionResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/subscription`);
+    const subscriptionResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/subscription?userId=${userId}&stripe_subscription_id=${userProfile.stripe_subscription_id}&stripe_customer_id=${userProfile.stripe_customer_id}`
+    );
 
     if (!subscriptionResponse.ok) {
       return null;
@@ -51,17 +52,18 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
     const { subscription } = await subscriptionResponse.json();
     const stripeProductId = subscription.productId;
 
+    console.log('Stripe Product ID:', stripeProductId);
     if (!stripeProductId) {
       return null;
     }
 
-    // Get plan configuration based on stripe_product_id
     const { data: planData, error: planError } = await supabase
       .from('plans')
       .select('questions_month')
       .eq('stripe_product_id', stripeProductId)
-      .single();
+      .maybeSingle();
 
+    console.log('Plan data:', planData);
     if (planError || !planData) {
       return null;
     }
@@ -77,6 +79,7 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
       .eq('cycle', cycle)
       .maybeSingle();
 
+    console.log('Cycle log data:', cycleLog);
     if (cycleError && cycleError.code !== 'PGRST116') {
       throw cycleError;
     }

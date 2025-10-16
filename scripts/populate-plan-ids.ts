@@ -47,7 +47,7 @@ interface Profile {
  * Busca plan_id a partir do Stripe product_id
  */
 async function getPlanIdFromStripeProduct(productId: string): Promise<string | null> {
-  const { data, error } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).single();
+  const { data, error } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).maybeSingle();
 
   if (error || !data) {
     console.warn(`⚠️  Plano não encontrado para product ${productId}`);

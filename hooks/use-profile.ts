@@ -61,7 +61,7 @@ const ONE_HOUR_IN_MS = 60 * 60 * 1000;
 async function fetchProfile(userId: string): Promise<Profile | null> {
   const supabase = createClient();
 
-  const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).single();
+  const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
 
   if (error) {
     console.error('[useProfile] Error fetching profile:', error);
@@ -209,7 +209,12 @@ export function useUpdateProfile() {
     });
 
     try {
-      const { data, error } = await supabase.from('profiles').update(updates).eq('user_id', userId).select().single();
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('user_id', userId)
+        .select()
+        .maybeSingle();
 
       if (error) throw error;
 

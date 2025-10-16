@@ -5,9 +5,9 @@
  * NOTA: O log é atualizado automaticamente via trigger SQL
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/error-logs-service';
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic'; // Necessário pois usa cookies via logError
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       .from('questions')
       .select('copy_count, copy_last_at')
       .eq('id', questionId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !question) {
       return NextResponse.json({ error: 'Questão não encontrada' }, { status: 404 });
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', questionId)
         .select('copy_count')
-        .single();
+        .maybeSingle();
 
       if (updateError) {
         console.error('Error updating question:', updateError);

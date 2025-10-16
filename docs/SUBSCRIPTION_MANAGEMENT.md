@@ -149,7 +149,7 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
     .from('profiles')
     .select('stripe_subscription_id')
     .eq('stripe_customer_id', customerId)
-    .single();
+    .maybeSingle();
 
   // Se existe subscription diferente E a nova está ativa, cancela a antiga
   if (

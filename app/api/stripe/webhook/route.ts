@@ -63,7 +63,7 @@ async function getPlanIdFromStripeProduct(subscription: Stripe.Subscription): Pr
 
   console.log(`[Webhook] Looking up plan for Stripe product: ${productId}`);
 
-  const { data, error } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).single();
+  const { data, error } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).maybeSingle();
 
   if (error || !data) {
     console.warn(`[Webhook] Plan not found for product ${productId}, using starter plan. Error:`, error);
@@ -161,7 +161,7 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
     .from('plans')
     .select('id')
     .eq('stripe_product_id', effectiveProductId)
-    .single();
+    .maybeSingle();
 
   const planId = planData?.id || 'starter';
   console.log(`[Webhook] Mapped product ${effectiveProductId} to plan: ${planId}`);
@@ -171,7 +171,7 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
     .from('profiles')
     .select('stripe_subscription_id')
     .eq('stripe_customer_id', customerId)
-    .single();
+    .maybeSingle();
 
   if (
     profile?.stripe_subscription_id &&

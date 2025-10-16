@@ -14,17 +14,17 @@ Added all 11 question types with descriptions:
 
 ```typescript
 const QUESTION_TYPES = [
-    { id: "multiple_choice", label: "Múltipla escolha", description: "5 alternativas, 1 correta" },
-    { id: "true_false", label: "Verdadeiro ou Falso", description: "Julgamento de afirmativas" },
-    { id: "open", label: "Aberta/Dissertativa", description: "Resposta livre e argumentada" },
-    { id: "sum", label: "Somatória", description: "Soma de valores das corretas" },
-    { id: "fill_in_the_blank", label: "Preencher Lacunas", description: "Complete os espaços em branco" },
-    { id: "matching_columns", label: "Associação de Colunas", description: "Relacione itens de duas colunas" },
-    { id: "problem_solving", label: "Resolução de Problemas", description: "Problemas práticos e aplicados" },
-    { id: "essay", label: "Redação", description: "Produção textual completa" },
-    { id: "project_based", label: "Baseada em Projeto", description: "Projetos com fases e entregas" },
-    { id: "gamified", label: "Gamificada", description: "Cenários e desafios interativos" },
-    { id: "summative", label: "Avaliação Somativa", description: "Múltiplas seções integradas" },
+  { id: 'multiple_choice', label: 'Múltipla escolha', description: '5 alternativas, 1 correta' },
+  { id: 'true_false', label: 'Verdadeiro ou Falso', description: 'Julgamento de afirmativas' },
+  { id: 'open', label: 'Aberta/Dissertativa', description: 'Resposta livre e argumentada' },
+  { id: 'sum', label: 'Somatória', description: 'Soma de valores das corretas' },
+  { id: 'fill_in_the_blank', label: 'Preencher Lacunas', description: 'Complete os espaços em branco' },
+  { id: 'matching_columns', label: 'Associação de Colunas', description: 'Relacione itens de duas colunas' },
+  { id: 'problem_solving', label: 'Resolução de Problemas', description: 'Problemas práticos e aplicados' },
+  { id: 'essay', label: 'Redação', description: 'Produção textual completa' },
+  { id: 'project_based', label: 'Baseada em Projeto', description: 'Projetos com fases e entregas' },
+  { id: 'gamified', label: 'Gamificada', description: 'Cenários e desafios interativos' },
+  { id: 'summative', label: 'Avaliação Somativa', description: 'Múltiplas seções integradas' },
 ];
 ```
 
@@ -100,7 +100,7 @@ className={cn(
 Added states for flexible input:
 
 ```typescript
-const [customSubject, setCustomSubject] = useState("");
+const [customSubject, setCustomSubject] = useState('');
 const [showCustomSubject, setShowCustomSubject] = useState(false);
 const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
 ```
@@ -127,13 +127,13 @@ const [subjectSuggestions, setSubjectSuggestions] = useState<string[]>([]);
 
 ```typescript
 useEffect(() => {
-    const fetchSubjectSuggestions = async () => {
-        const { data } = await supabase.from("assessments").select("subject").not("subject", "is", null);
+  const fetchSubjectSuggestions = async () => {
+    const { data } = await supabase.from('assessments').select('subject').not('subject', 'is', null);
 
-        const uniqueSubjects = Array.from(new Set(subjects));
-        setSubjectSuggestions(uniqueSubjects);
-    };
-    fetchSubjectSuggestions();
+    const uniqueSubjects = Array.from(new Set(subjects));
+    setSubjectSuggestions(uniqueSubjects);
+  };
+  fetchSubjectSuggestions();
 }, [supabase]);
 ```
 
@@ -141,15 +141,15 @@ useEffect(() => {
 
 ```typescript
 // First try to find existing subject
-const { data: existingSubject } = await supabase.from("subjects").select("id").eq("name", subject).maybeSingle();
+const { data: existingSubject } = await supabase.from('subjects').select('id').eq('name', subject).maybeSingle();
 
 if (existingSubject) {
-    subjectId = existingSubject.id;
+  subjectId = existingSubject.id;
 } else {
-    // Create new subject if it doesn't exist
-    const { data: newSubject } = await supabase.from("subjects").insert({ name: subject }).select("id").single();
+  // Create new subject if it doesn't exist
+  const { data: newSubject } = await supabase.from('subjects').insert({ name: subject }).select('id').maybeSingle();
 
-    subjectId = newSubject.id;
+  subjectId = newSubject.id;
 }
 ```
 
@@ -187,15 +187,15 @@ if (existingSubject) {
 
 ```tsx
 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-    {QUESTION_TYPES.map((type) => (
-        <div className="flex items-start space-x-3 p-3 rounded-lg border">
-            <Checkbox />
-            <div>
-                <Label>{type.label}</Label>
-                <p className="text-xs text-muted-foreground">{type.description}</p>
-            </div>
-        </div>
-    ))}
+  {QUESTION_TYPES.map((type) => (
+    <div className="flex items-start space-x-3 p-3 rounded-lg border">
+      <Checkbox />
+      <div>
+        <Label>{type.label}</Label>
+        <p className="text-xs text-muted-foreground">{type.description}</p>
+      </div>
+    </div>
+  ))}
 </div>
 ```
 
@@ -203,17 +203,17 @@ if (existingSubject) {
 
 ```tsx
 <Select
-    onValueChange={(value) => {
-        if (value === "custom") {
-            setShowCustomSubject(true);
-        } else {
-            setSubject(value);
-        }
-    }}
+  onValueChange={(value) => {
+    if (value === 'custom') {
+      setShowCustomSubject(true);
+    } else {
+      setSubject(value);
+    }
+  }}
 >
-    {/* Common subjects */}
-    {/* Recent subjects */}
-    {/* Custom option */}
+  {/* Common subjects */}
+  {/* Recent subjects */}
+  {/* Custom option */}
 </Select>
 ```
 
@@ -221,15 +221,15 @@ if (existingSubject) {
 
 ```tsx
 <Input
-    placeholder="Digite o tema/conteúdo..."
-    value={customSubject}
-    onChange={(e) => {
-        setCustomSubject(e.target.value);
-        setSubject(e.target.value);
-    }}
+  placeholder="Digite o tema/conteúdo..."
+  value={customSubject}
+  onChange={(e) => {
+    setCustomSubject(e.target.value);
+    setSubject(e.target.value);
+  }}
 />;
 {
-    /* Suggestion chips */
+  /* Suggestion chips */
 }
 ```
 

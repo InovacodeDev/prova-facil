@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, TrendingUp, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { createClient } from '@/lib/supabase/client';
 import { UsageChart } from '@/components/UsageChart';
-import type { UsageStats } from '@/lib/usage-tracking';
+import { useToast } from '@/hooks/use-toast';
 import { logClientError } from '@/lib/client-error-logger';
-import { PageHeader } from '@/components/layout';
+import { createClient } from '@/lib/supabase/client';
+import type { UsageStats } from '@/lib/usage-tracking';
+import { AlertCircle, Loader2, TrendingUp } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function UsagePage() {
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);

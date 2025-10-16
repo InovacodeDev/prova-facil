@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       .from('plans')
       .select('id')
       .eq('stripe_product_id', productId)
-      .single();
+      .maybeSingle();
 
     if (error || !planData) {
       console.error('[API] Plan not found for product ID:', productId, error);

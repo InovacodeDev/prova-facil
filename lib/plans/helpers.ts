@@ -33,7 +33,7 @@ export async function getPlanByUserId(userId: string): Promise<PlanConfiguration
       .from('profiles')
       .select('stripe_subscription_id, stripe_customer_id')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (profileError || !profile || !profile.stripe_subscription_id) {
       console.error('[getPlanByUserId] Profile not found or no subscription', { userId, error: profileError });
@@ -64,7 +64,7 @@ export async function getPlanByUserId(userId: string): Promise<PlanConfiguration
       .from('plans')
       .select('*')
       .eq('stripe_product_id', productId)
-      .single();
+      .maybeSingle();
 
     if (planError || !planData) {
       console.error('[getPlanByUserId] Plan not found for product', { productId, error: planError });
@@ -103,7 +103,7 @@ export async function getPlanByStripeProductId(stripeProductId: string): Promise
       .from('plans')
       .select('*')
       .eq('stripe_product_id', stripeProductId)
-      .single();
+      .maybeSingle();
 
     if (planError || !planData) {
       console.error('[getPlanByStripeProductId] Plan not found', { stripeProductId, error: planError });

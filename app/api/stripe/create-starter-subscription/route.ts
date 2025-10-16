@@ -65,7 +65,7 @@ export async function POST(request: Request) {
           full_name: fullName,
         })
         .select('id, stripe_customer_id, stripe_subscription_id')
-        .single();
+        .maybeSingle();
 
       if (createError) {
         console.error('Error creating profile:', createError);
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       .from('profiles')
       .select('id, stripe_customer_id, stripe_subscription_id')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (refetchError || !currentProfile) {
       console.error('Error re-fetching profile:', refetchError);
@@ -185,7 +185,7 @@ export async function POST(request: Request) {
       })
       .eq('user_id', userId)
       .select('id, stripe_customer_id, stripe_subscription_id')
-      .single();
+      .maybeSingle();
 
     if (updateError) {
       console.error('ERROR updating profile with Stripe IDs:', updateError);

@@ -23,7 +23,7 @@
 **❌ ANTES:**
 
 ```typescript
-const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', userId).single();
+const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
 
 // Acessar diretamente
 const userPlan = profile.plan;
@@ -40,7 +40,7 @@ const { data: profile } = await supabase
   .from('profiles')
   .select('id, stripe_customer_id, stripe_subscription_id')
   .eq('user_id', userId)
-  .single();
+  .maybeSingle();
 
 // Buscar dados do plano (com cache)
 const planData = await getUserPlanData(profile.id, profile.stripe_customer_id, profile.stripe_subscription_id);

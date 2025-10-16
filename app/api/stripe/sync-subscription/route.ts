@@ -75,7 +75,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get plan_id from product
-    const { data: planData } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).single();
+    const { data: planData } = await supabase
+      .from('plans')
+      .select('id')
+      .eq('stripe_product_id', productId)
+      .maybeSingle();
 
     const planId = planData?.id || 'starter';
 
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('id, stripe_customer_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });

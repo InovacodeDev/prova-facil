@@ -224,7 +224,7 @@ export default async function ProfilePage() {
     .from('profiles')
     .select('id, stripe_customer_id, stripe_subscription_id')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   // Buscar dados do plano (com cache)
   const planData = await getUserPlanData(profile.id, profile.stripe_customer_id, profile.stripe_subscription_id);
@@ -275,7 +275,7 @@ export async function getMySubscription() {
     .from('profiles')
     .select('id, stripe_customer_id, stripe_subscription_id')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
   // Cache-first fetch
   const subscription = await getSubscriptionData(

@@ -237,7 +237,7 @@ async function getPlanIdFromStripeProduct(subscription: Stripe.Subscription): Pr
   const productId = typeof item.price.product === 'string' ? item.price.product : item.price.product.id;
 
   // Busca plan_id correspondente
-  const { data, error } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).single();
+  const { data, error } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).maybeSingle();
 
   if (error || !data) {
     console.warn(`[Webhook] Plan not found for product ${productId}, using starter`);
@@ -378,7 +378,7 @@ async function populatePlanIds() {
       const productId = subscription.items.data[0]?.price?.product as string;
 
       // 4. Buscar plan_id correspondente
-      const { data: plan } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).single();
+      const { data: plan } = await supabase.from('plans').select('id').eq('stripe_product_id', productId).maybeSingle();
 
       if (plan) {
         // 5. Atualizar profile

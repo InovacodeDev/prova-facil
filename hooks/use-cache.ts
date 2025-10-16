@@ -68,7 +68,7 @@ export function useProfile() {
             'id, user_id, full_name, email, email_verified, email_verified_at, selected_question_types, question_types_updated_at'
           )
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (fetchError) throw fetchError;
 
@@ -135,7 +135,7 @@ export function usePlan(planId: string | null | undefined) {
           .from('plans')
           .select('id, questions_month, doc_type, docs_size, max_question_types, support')
           .eq('id', planId)
-          .single();
+          .maybeSingle();
 
         if (fetchError) throw fetchError;
 

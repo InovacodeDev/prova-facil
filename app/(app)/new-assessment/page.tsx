@@ -320,7 +320,7 @@ export default function NewAssessmentPage() {
           .from('profiles')
           .select('academic_level_id, academic_levels(name)')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (userProfile) {
           const academicLevel = (userProfile as any)?.academic_levels?.name;
@@ -489,7 +489,7 @@ export default function NewAssessmentPage() {
         .from('profiles')
         .select('academic_level_id, academic_levels(name)')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       const academicLevel = (userProfile as any)?.academic_levels?.name;
 

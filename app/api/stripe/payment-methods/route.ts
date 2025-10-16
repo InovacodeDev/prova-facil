@@ -30,7 +30,7 @@ export async function GET() {
       .from('profiles')
       .select('stripe_customer_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError || !profile?.stripe_customer_id) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       .from('profiles')
       .select('stripe_customer_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError || !profile?.stripe_customer_id) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });

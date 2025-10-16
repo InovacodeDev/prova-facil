@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('id, email, full_name, stripe_customer_id, stripe_subscription_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });

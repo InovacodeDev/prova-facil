@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       .from('plans')
       .select('id, questions_month, doc_type, docs_size, max_question_types, support')
       .eq('id', planId)
-      .single();
+      .maybeSingle();
 
     if (error || !planData) {
       console.error('[API] Plan not found:', planId, error);

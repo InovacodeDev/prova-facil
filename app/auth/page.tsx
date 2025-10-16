@@ -93,7 +93,7 @@ export default function AuthPage() {
         .from('profiles')
         .select('id')
         .eq('user_id', data.user.id)
-        .single();
+        .maybeSingle();
 
       // Se não existir, criar automaticamente
       if (!existingProfile) {

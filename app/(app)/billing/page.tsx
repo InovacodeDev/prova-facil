@@ -28,7 +28,7 @@ export default async function BillingPage() {
     .from('profiles')
     .select('stripe_customer_id, stripe_subscription_id')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
   // Fetch subscription data directly (this will use cache)
   const { getSubscriptionData } = await import('@/lib/stripe/server');

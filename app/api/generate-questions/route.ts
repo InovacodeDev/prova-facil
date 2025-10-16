@@ -45,7 +45,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
@@ -58,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Get AI model for user's plan
-    const { data: planModelData } = await supabase.from('plan_models').select('model').eq('plan', planId).single();
+    const { data: planModelData } = await supabase.from('plan_models').select('model').eq('plan', planId).maybeSingle();
     const aiModel = planModelData?.model || 'gemini-2.5-flash-lite';
 
     // 3. Parse and validate request body
@@ -87,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Check user's quota
-    const hasQuota = await checkUserQuota(profile.id, totalRequestedQuestions);
+    const hasQuota = await checkUserQuota(profile.user_id, totalRequestedQuestions);
     if (!hasQuota) {
       return NextResponse.json(
         {
@@ -99,13 +103,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Create or find the assessment
-    let { data: assessment } = await supabase.from('assessments').select('id').eq('title', title).single();
+    let { data: assessment } = await supabase.from('assessments').select('id').eq('title', title).maybeSingle();
     if (!assessment) {
       const { data: newAssessment, error: assessmentError } = await supabase
         .from('assessments')
         .insert({ user_id: profile.id, title, subject })
         .select('id')
-        .single();
+        .maybeSingle();
 
       if (assessmentError || !newAssessment) {
         console.error('Error creating assessment:', assessmentError);

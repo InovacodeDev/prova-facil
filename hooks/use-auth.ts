@@ -1,25 +1,25 @@
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface Profile {
-    id: string;
-    user_id: string;
-    full_name: string;
-    email: string;
-    plan: string;
-    renew_status: string;
-    academic_level_id: string | null;
-    created_at: string;
-    updated_at: string;
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  plan: string;
+  renew_status: string;
+  academic_level_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface UseAuthReturn {
-    user: User | null;
-    profile: Profile | null;
-    loading: boolean;
-    error: string | null;
+  user: User | null;
+  profile: Profile | null;
+  loading: boolean;
+  error: string | null;
 }
 
 /**
@@ -38,84 +38,84 @@ interface UseAuthReturn {
  * return <div>Bem-vindo, {profile?.full_name}!</div>;
  * ```
  */
-export function useAuth(redirectTo: string = "/auth"): UseAuthReturn {
-    const [user, setUser] = useState<User | null>(null);
-    const [profile, setProfile] = useState<Profile | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
-    const supabase = createClient();
+export function useAuth(redirectTo: string = '/auth'): UseAuthReturn {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
 
-    useEffect(() => {
-        async function checkAuth() {
-            try {
-                // 1. Verificar sessão atual
-                const {
-                    data: { session },
-                    error: sessionError,
-                } = await supabase.auth.getSession();
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        // 1. Verificar sessão atual
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-                if (sessionError) {
-                    throw sessionError;
-                }
-
-                // 2. Se não houver sessão, redirecionar para login
-                if (!session) {
-                    router.push(redirectTo);
-                    return;
-                }
-
-                setUser(session.user);
-
-                // 3. Buscar profile do usuário
-                const { data: profileData, error: profileError } = await supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("user_id", session.user.id)
-                    .single();
-
-                if (profileError) {
-                    throw profileError;
-                }
-
-                setProfile(profileData);
-            } catch (err: any) {
-                console.error("Erro ao verificar autenticação:", err);
-                setError(err.message || "Erro ao carregar dados do usuário");
-                router.push(redirectTo);
-            } finally {
-                setLoading(false);
-            }
+        if (sessionError) {
+          throw sessionError;
         }
 
-        checkAuth();
+        // 2. Se não houver sessão, redirecionar para login
+        if (!session) {
+          router.push(redirectTo);
+          return;
+        }
 
-        // 4. Listener para mudanças no estado de autenticação
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === "SIGNED_OUT" || !session) {
-                setUser(null);
-                setProfile(null);
-                router.push(redirectTo);
-            } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-                setUser(session.user);
+        setUser(session.user);
 
-                // Recarregar profile
-                const { data: profileData } = await supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("user_id", session.user.id)
-                    .single();
+        // 3. Buscar profile do usuário
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
 
-                setProfile(profileData);
-            }
-        });
+        if (profileError) {
+          throw profileError;
+        }
 
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [router, redirectTo, supabase]);
+        setProfile(profileData);
+      } catch (err: any) {
+        console.error('Erro ao verificar autenticação:', err);
+        setError(err.message || 'Erro ao carregar dados do usuário');
+        router.push(redirectTo);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    return { user, profile, loading, error };
+    checkAuth();
+
+    // 4. Listener para mudanças no estado de autenticação
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setUser(null);
+        setProfile(null);
+        router.push(redirectTo);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setUser(session.user);
+
+        // Recarregar profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        setProfile(profileData);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router, redirectTo, supabase]);
+
+  return { user, profile, loading, error };
 }

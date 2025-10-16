@@ -4,8 +4,8 @@
 
 Todas as queries que usavam Drizzle ORM foram substituídas por queries usando o Supabase Client. O Drizzle agora é usado apenas para:
 
--   ✅ Definição de schemas (tipagem)
--   ✅ Geração de migrations
+- ✅ Definição de schemas (tipagem)
+- ✅ Geração de migrations
 
 ---
 
@@ -16,35 +16,35 @@ Todas as queries que usavam Drizzle ORM foram substituídas por queries usando o
 #### ❌ Antes (Drizzle):
 
 ```typescript
-import { db } from "@/db";
-import { questions, assessments, profiles, plans } from "@/db/schema";
-import { eq, and, gte, sql } from "drizzle-orm";
+import { db } from '@/db';
+import { questions, assessments, profiles, plans } from '@/db/schema';
+import { eq, and, gte, sql } from 'drizzle-orm';
 
 const totalQuestionsResult = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(questions)
-    .innerJoin(assessments, eq(questions.assessment_id, assessments.id))
-    .where(and(eq(assessments.user_id, userId), gte(questions.created_at, monthStart)));
+  .select({ count: sql<number>`count(*)::int` })
+  .from(questions)
+  .innerJoin(assessments, eq(questions.assessment_id, assessments.id))
+  .where(and(eq(assessments.user_id, userId), gte(questions.created_at, monthStart)));
 ```
 
 #### ✅ Depois (Supabase):
 
 ```typescript
-import { createClient } from "./supabase/server";
+import { createClient } from './supabase/server';
 
 const supabase = await createClient();
 
 // Count total questions
 const { count: totalQuestions } = await supabase
-    .from("questions")
-    .select("*", { count: "exact", head: true })
-    .eq("assessments.user_id", userId)
-    .gte("created_at", monthStart.toISOString());
+  .from('questions')
+  .select('*', { count: 'exact', head: true })
+  .eq('assessments.user_id', userId)
+  .gte('created_at', monthStart.toISOString());
 
 // Get breakdown by subject using RPC function
-const { data: subjectBreakdownResult } = await supabase.rpc("get_user_questions_by_subject", {
-    p_user_id: userId,
-    p_month_start: monthStart.toISOString(),
+const { data: subjectBreakdownResult } = await supabase.rpc('get_user_questions_by_subject', {
+  p_user_id: userId,
+  p_month_start: monthStart.toISOString(),
 });
 ```
 
@@ -55,41 +55,41 @@ const { data: subjectBreakdownResult } = await supabase.rpc("get_user_questions_
 #### ❌ Antes (Drizzle):
 
 ```typescript
-import { db } from "@/db";
-import { plans, profiles } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { db } from '@/db';
+import { plans, profiles } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 const userProfile = await db
-    .select({
-        plan: profiles.plan,
-        allowedQuestions: plans.allowed_questions,
-    })
-    .from(profiles)
-    .leftJoin(plans, eq(profiles.plan, plans.id))
-    .where(eq(profiles.id, userId))
-    .limit(1);
+  .select({
+    plan: profiles.plan,
+    allowedQuestions: plans.allowed_questions,
+  })
+  .from(profiles)
+  .leftJoin(plans, eq(profiles.plan, plans.id))
+  .where(eq(profiles.id, userId))
+  .limit(1);
 ```
 
 #### ✅ Depois (Supabase):
 
 ```typescript
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
 const supabase = await createClient();
 
 // Get user's profile
 const { data: userProfile, error: profileError } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", userId)
-    .single();
+  .from('profiles')
+  .select('plan')
+  .eq('id', userId)
+  .maybeSingle();
 
 // Get plan details
 const { data: planData, error: planError } = await supabase
-    .from("plans")
-    .select("allowed_questions")
-    .eq("id", userProfile.plan)
-    .single();
+  .from('plans')
+  .select('allowed_questions')
+  .eq('id', userProfile.plan)
+  .maybeSingle();
 ```
 
 ---
@@ -134,10 +134,10 @@ $$;
 
 ### Por que RPC?
 
--   Supabase não suporta JOINs complexos e GROUP BY nativamente na API
--   Funções RPC oferecem melhor performance
--   Mantém lógica complexa no banco de dados
--   Mais seguro com `SECURITY DEFINER`
+- Supabase não suporta JOINs complexos e GROUP BY nativamente na API
+- Funções RPC oferecem melhor performance
+- Mantém lógica complexa no banco de dados
+- Mais seguro com `SECURITY DEFINER`
 
 ---
 
@@ -157,13 +157,13 @@ psql -h <SUPABASE_HOST> -U postgres -d postgres < db/migrations/0013_add_usage_r
 
 ```typescript
 // Testar usage stats
-import { getUserUsageStats } from "@/lib/usage-tracking";
+import { getUserUsageStats } from '@/lib/usage-tracking';
 const stats = await getUserUsageStats(userId);
 console.log(stats);
 
 // Testar validação
-import { validateQuestionType } from "@/lib/validators/question";
-const result = await validateQuestionType(userId, "project_based");
+import { validateQuestionType } from '@/lib/validators/question';
+const result = await validateQuestionType(userId, 'project_based');
 console.log(result);
 ```
 
@@ -173,33 +173,33 @@ console.log(result);
 
 ### 1. **Consistência**
 
--   Todas as queries usam o mesmo client (Supabase)
--   Não mistura dois ORMs no mesmo projeto
--   Facilita manutenção
+- Todas as queries usam o mesmo client (Supabase)
+- Não mistura dois ORMs no mesmo projeto
+- Facilita manutenção
 
 ### 2. **Performance**
 
--   Supabase Client usa PostgREST otimizado
--   RPC functions são mais rápidas que múltiplas queries
--   Menos overhead de serialização
+- Supabase Client usa PostgREST otimizado
+- RPC functions são mais rápidas que múltiplas queries
+- Menos overhead de serialização
 
 ### 3. **Segurança**
 
--   RLS (Row Level Security) aplicado automaticamente
--   Funções RPC com `SECURITY DEFINER`
--   Validação de permissões no banco
+- RLS (Row Level Security) aplicado automaticamente
+- Funções RPC com `SECURITY DEFINER`
+- Validação de permissões no banco
 
 ### 4. **Simplicidade**
 
--   API mais intuitiva do Supabase
--   Menos abstrações
--   Erros mais claros
+- API mais intuitiva do Supabase
+- Menos abstrações
+- Erros mais claros
 
 ### 5. **Manutenibilidade**
 
--   Drizzle usado apenas para schema/migrations
--   Separação clara de responsabilidades
--   Código mais limpo
+- Drizzle usado apenas para schema/migrations
+- Separação clara de responsabilidades
+- Código mais limpo
 
 ---
 
@@ -220,15 +220,15 @@ console.log(result);
 
 ### Arquivos sem Drizzle Query:
 
--   ✅ `/lib/usage-tracking.ts`
--   ✅ `/lib/validators/question.ts`
--   ✅ Todos os arquivos em `/app/api/`
+- ✅ `/lib/usage-tracking.ts`
+- ✅ `/lib/validators/question.ts`
+- ✅ Todos os arquivos em `/app/api/`
 
 ### Drizzle ainda usado para:
 
--   ✅ `/db/schema.ts` - Definição de tipos
--   ✅ `/db/migrations/` - Geração de SQL
--   ✅ `drizzle.config.ts` - Configuração
+- ✅ `/db/schema.ts` - Definição de tipos
+- ✅ `/db/migrations/` - Geração de SQL
+- ✅ `drizzle.config.ts` - Configuração
 
 ---
 
@@ -241,15 +241,15 @@ expect(stats.totalQuestions).toBeGreaterThanOrEqual(0);
 expect(stats.subjectBreakdown).toBeInstanceOf(Array);
 
 // 2. Testar validação de tipo
-const validResult = await validateQuestionType(userId, "multiple_choice");
+const validResult = await validateQuestionType(userId, 'multiple_choice');
 expect(validResult.valid).toBe(true);
 
-const invalidResult = await validateQuestionType(userId, "invalid_type");
+const invalidResult = await validateQuestionType(userId, 'invalid_type');
 expect(invalidResult.valid).toBe(false);
 
 // 3. Testar tipos permitidos
 const allowedTypes = await getAllowedQuestionTypes(userId);
-expect(allowedTypes).toContain("multiple_choice");
+expect(allowedTypes).toContain('multiple_choice');
 ```
 
 ---
@@ -277,7 +277,7 @@ GRANT EXECUTE ON FUNCTION get_user_questions_by_subject(UUID, TIMESTAMP WITH TIM
 **Solução:** Verificar se a query usa `{ count: "exact", head: true }`
 
 ```typescript
-const { count } = await supabase.from("questions").select("*", { count: "exact", head: true });
+const { count } = await supabase.from('questions').select('*', { count: 'exact', head: true });
 ```
 
 ---
@@ -286,10 +286,10 @@ const { count } = await supabase.from("questions").select("*", { count: "exact",
 
 ✅ **Migração completa e bem-sucedida!**
 
--   Todas as queries Drizzle substituídas por Supabase
--   Função RPC criada para queries complexas
--   Código mais limpo e consistente
--   Performance melhorada
--   Segurança aprimorada com RLS
+- Todas as queries Drizzle substituídas por Supabase
+- Função RPC criada para queries complexas
+- Código mais limpo e consistente
+- Performance melhorada
+- Segurança aprimorada com RLS
 
 **Status:** Pronto para produção 🚀

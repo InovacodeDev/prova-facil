@@ -6,41 +6,17 @@
  */
 
 import { getSubscriptionData } from '@/lib/stripe/server';
-import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest, { params }: { params: { userId: string } }) {
   try {
-    // Get authenticated user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const userId = request.nextUrl.searchParams.get('userId');
+    const stripe_subscription_id = request.nextUrl.searchParams.get('stripe_subscription_id');
+    const stripe_customer_id = request.nextUrl.searchParams.get('stripe_customer_id');
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user profile with Stripe IDs
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id, stripe_subscription_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    }
-
-    // Fetch subscription data (with cache)
-    const subscriptionData = await getSubscriptionData(
-      user.id,
-      profile.stripe_customer_id,
-      profile.stripe_subscription_id
-    );
+    const subscriptionData = await getSubscriptionData(userId, stripe_customer_id, stripe_subscription_id);
 
     return NextResponse.json(
       {

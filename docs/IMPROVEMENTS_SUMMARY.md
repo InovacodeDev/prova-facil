@@ -10,14 +10,14 @@ Data: 2 de Outubro de 2025
 
 **Implementação**:
 
--   ✅ Criado schema Drizzle em `db/schema.ts`
--   ✅ Criada migration `db/migrations/0004_create_plan_models.sql`
--   ✅ Configuração padrão:
-    -   `starter`: gemini-2.0-flash-exp
-    -   `basic`: gemini-2.0-flash-exp
-    -   `essentials`: gemini-2.0-flash-exp
-    -   `plus`: gemini-2.0-flash-exp
-    -   `advanced`: gemini-exp-1206 (modelo mais avançado)
+- ✅ Criado schema Drizzle em `db/schema.ts`
+- ✅ Criada migration `db/migrations/0004_create_plan_models.sql`
+- ✅ Configuração padrão:
+  - `starter`: gemini-2.0-flash-exp
+  - `basic`: gemini-2.0-flash-exp
+  - `essentials`: gemini-2.0-flash-exp
+  - `plus`: gemini-2.0-flash-exp
+  - `advanced`: gemini-exp-1206 (modelo mais avançado)
 
 **Uso**:
 
@@ -28,11 +28,11 @@ SELECT model FROM plan_models WHERE plan = 'advanced';
 
 **Arquivos Modificados**:
 
--   `db/schema.ts` - Adicionada tabela `planModels`
--   `db/migrations/0004_create_plan_models.sql` - Migration completa
--   `app/api/generate-questions/route.ts` - Busca modelo por plano
--   `lib/genkit/config.ts` - Função `getGoogleAIModel()`
--   `lib/genkit/prompts.ts` - Schema aceita `aiModel`
+- `db/schema.ts` - Adicionada tabela `planModels`
+- `db/migrations/0004_create_plan_models.sql` - Migration completa
+- `app/api/generate-questions/route.ts` - Busca modelo por plano
+- `lib/genkit/config.ts` - Função `getGoogleAIModel()`
+- `lib/genkit/prompts.ts` - Schema aceita `aiModel`
 
 ---
 
@@ -49,9 +49,9 @@ SELECT model FROM plan_models WHERE plan = 'advanced';
 
 **Benefícios**:
 
--   📉 **Economia de custos**: DOCX transcritos = menos tokens
--   🔒 **Controle de acesso**: PDFs restritos a planos premium
--   ⚡ **Performance**: Transcrição no navegador (paralelo)
+- 📉 **Economia de custos**: DOCX transcritos = menos tokens
+- 🔒 **Controle de acesso**: PDFs restritos a planos premium
+- ⚡ **Performance**: Transcrição no navegador (paralelo)
 
 **Validação**:
 
@@ -60,25 +60,25 @@ SELECT model FROM plan_models WHERE plan = 'advanced';
 const allowPdfUpload = PLAN_LIMITS[userPlan]?.allowPdfUpload;
 
 if (hasPDFs && !allowPdfUpload) {
-    toast({
-        title: "PDF não permitido",
-        description: "PDFs são permitidos apenas para planos Plus e Advanced. Use arquivos DOCX.",
-        variant: "destructive",
-    });
+  toast({
+    title: 'PDF não permitido',
+    description: 'PDFs são permitidos apenas para planos Plus e Advanced. Use arquivos DOCX.',
+    variant: 'destructive',
+  });
 }
 ```
 
 **Arquivos Modificados**:
 
--   `app/new-assessment/page.tsx`:
-    -   `handleFileChange()` - Valida tipo por plano
-    -   `handleSubmit()` - Envia PDFs como base64 ou DOCX como texto
-    -   `PLAN_LIMITS` - Adicionado `allowPdfUpload` booleano
--   `app/api/generate-questions/route.ts`:
-    -   Interface aceita `pdfFiles` e `documentContent`
--   `lib/genkit/prompts.ts`:
-    -   `buildDocumentContext()` - Lida com ambos os tipos
-    -   Schema aceita `pdfFiles`
+- `app/new-assessment/page.tsx`:
+  - `handleFileChange()` - Valida tipo por plano
+  - `handleSubmit()` - Envia PDFs como base64 ou DOCX como texto
+  - `PLAN_LIMITS` - Adicionado `allowPdfUpload` booleano
+- `app/api/generate-questions/route.ts`:
+  - Interface aceita `pdfFiles` e `documentContent`
+- `lib/genkit/prompts.ts`:
+  - `buildDocumentContext()` - Lida com ambos os tipos
+  - Schema aceita `pdfFiles`
 
 ---
 
@@ -88,14 +88,14 @@ if (hasPDFs && !allowPdfUpload) {
 
 **Antes**:
 
--   Limite POR MATÉRIA POR MÊS
--   Usuário precisava gerenciar múltiplos limites
--   Confuso e restritivo
+- Limite POR MATÉRIA POR MÊS
+- Usuário precisava gerenciar múltiplos limites
+- Confuso e restritivo
 
 **Depois**:
 
--   Limite TOTAL MENSAL (todas as matérias)
--   Aumento de **50%** em todos os planos
+- Limite TOTAL MENSAL (todas as matérias)
+- Aumento de **50%** em todos os planos
 
 | Plano      | Antes (por matéria) | Depois (total/mês) | Aumento |
 | ---------- | ------------------- | ------------------ | ------- |
@@ -110,22 +110,22 @@ if (hasPDFs && !allowPdfUpload) {
 ```typescript
 // Busca TODAS as questões do mês (independente de matéria)
 const { data: questionsData } = await supabase
-    .from("questions")
-    .select(`id, assessments!inner (user_id, created_at)`)
-    .eq("assessments.user_id", profile.id)
-    .gte("assessments.created_at", startOfMonth.toISOString());
+  .from('questions')
+  .select(`id, assessments!inner (user_id, created_at)`)
+  .eq('assessments.user_id', profile.id)
+  .gte('assessments.created_at', startOfMonth.toISOString());
 
 const monthlyUsage = questionsData?.length || 0;
 ```
 
 **Arquivos Modificados**:
 
--   `app/new-assessment/page.tsx`:
-    -   Removido `subjectUsage` state
-    -   Adicionado `monthlyUsage` state
-    -   `useEffect` agora busca total mensal
-    -   UI mostra "30/75 questões usadas este mês" (sem mencionar matéria)
--   `PLAN_LIMITS`: Renomeado `questionLimit` → `monthlyQuestionLimit`
+- `app/new-assessment/page.tsx`:
+  - Removido `subjectUsage` state
+  - Adicionado `monthlyUsage` state
+  - `useEffect` agora busca total mensal
+  - UI mostra "30/75 questões usadas este mês" (sem mencionar matéria)
+- `PLAN_LIMITS`: Renomeado `questionLimit` → `monthlyQuestionLimit`
 
 ---
 
@@ -149,31 +149,35 @@ const monthlyUsage = questionsData?.length || 0;
 
 **Mapeamento de Modelos**:
 
--   **Starter/Basic/Essentials**: `gemini-2.0-flash-exp` (rápido, econômico)
--   **Plus**: `gemini-2.0-flash-exp` (balanceado)
--   **Advanced**: `gemini-exp-1206` (mais inteligente, caro)
+- **Starter/Basic/Essentials**: `gemini-2.0-flash-exp` (rápido, econômico)
+- **Plus**: `gemini-2.0-flash-exp` (balanceado)
+- **Advanced**: `gemini-exp-1206` (mais inteligente, caro)
 
 **Código**:
 
 ```typescript
 // Em app/api/generate-questions/route.ts
-const { data: planModelData } = await supabase.from("plan_models").select("model").eq("plan", profile.plan).single();
+const { data: planModelData } = await supabase
+  .from('plan_models')
+  .select('model')
+  .eq('plan', profile.plan)
+  .maybeSingle();
 
-const aiModel = planModelData?.model || "gemini-2.0-flash-exp";
+const aiModel = planModelData?.model || 'gemini-2.0-flash-exp';
 console.log(`Usando modelo ${aiModel} para plano ${profile.plan}`);
 
 // Passar para Genkit
 const input: GenerateQuestionsInput = {
-    // ... outros campos
-    aiModel,
+  // ... outros campos
+  aiModel,
 };
 ```
 
 **Arquivos Modificados**:
 
--   `app/api/generate-questions/route.ts` - Busca e passa modelo
--   `lib/genkit/config.ts` - Helper `getGoogleAIModel()`
--   `lib/genkit/prompts.ts` - Schema e flows aceitam `aiModel`
+- `app/api/generate-questions/route.ts` - Busca e passa modelo
+- `lib/genkit/config.ts` - Helper `getGoogleAIModel()`
+- `lib/genkit/prompts.ts` - Schema e flows aceitam `aiModel`
 
 ---
 
@@ -185,16 +189,16 @@ const input: GenerateQuestionsInput = {
 
 ```typescript
 // Em app/layout.tsx
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-cache"; // Cache agressivo
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-cache'; // Cache agressivo
 export const revalidate = 3600; // 1 hora
 ```
 
 **Benefícios**:
 
--   ⚡ Cache de dados por 1 hora
--   🚀 Navegação mais fluida
--   📉 Menos requisições ao Supabase
+- ⚡ Cache de dados por 1 hora
+- 🚀 Navegação mais fluida
+- 📉 Menos requisições ao Supabase
 
 **Recomendações Futuras**:
 
@@ -246,21 +250,21 @@ CREATE POLICY "Public read access" ON plan_models
 
 1. **Teste PDF Upload**:
 
-    - Login como usuário Starter → Upload PDF → Deve bloquear
-    - Login como usuário Plus → Upload PDF → Deve permitir
+   - Login como usuário Starter → Upload PDF → Deve bloquear
+   - Login como usuário Plus → Upload PDF → Deve permitir
 
 2. **Teste DOCX Upload**:
 
-    - Qualquer plano → Upload DOCX → Deve transcrever e funcionar
+   - Qualquer plano → Upload DOCX → Deve transcrever e funcionar
 
 3. **Teste Limites Mensais**:
 
-    - Criar questões em múltiplas matérias
-    - Verificar que conta todas juntas
+   - Criar questões em múltiplas matérias
+   - Verificar que conta todas juntas
 
 4. **Teste Modelos de IA**:
-    - Verificar logs da API para confirmar modelo usado
-    - Comparar qualidade das respostas entre planos
+   - Verificar logs da API para confirmar modelo usado
+   - Comparar qualidade das respostas entre planos
 
 ---
 
@@ -268,20 +272,20 @@ CREATE POLICY "Public read access" ON plan_models
 
 ### Custos
 
--   **Redução estimada**: 30-50% nos custos de IA
-    -   DOCX transcritos = menos tokens
-    -   PDFs restritos a planos premium
+- **Redução estimada**: 30-50% nos custos de IA
+  - DOCX transcritos = menos tokens
+  - PDFs restritos a planos premium
 
 ### User Experience
 
--   **Clareza**: Limite mensal total mais fácil de entender
--   **Generosidade**: +50% de questões disponíveis
--   **Performance**: Navegação mais rápida
+- **Clareza**: Limite mensal total mais fácil de entender
+- **Generosidade**: +50% de questões disponíveis
+- **Performance**: Navegação mais rápida
 
 ### Business
 
--   **Diferenciação de Planos**: Premium tem acesso a PDFs e IA melhor
--   **Escalabilidade**: Modelo sustentável de custos
+- **Diferenciação de Planos**: Premium tem acesso a PDFs e IA melhor
+- **Escalabilidade**: Modelo sustentável de custos
 
 ---
 
@@ -311,9 +315,9 @@ SELECT * FROM plan_models WHERE plan = 'advanced';
 
 **Verificar**:
 
--   Timezone do servidor
--   Query de `startOfMonth`
--   Cache do React Query
+- Timezone do servidor
+- Query de `startOfMonth`
+- Cache do React Query
 
 ---
 
@@ -331,13 +335,13 @@ SELECT * FROM plan_models WHERE plan = 'advanced';
 
 Antes de fazer deploy, revise:
 
--   [ ] `db/migrations/0004_create_plan_models.sql` - Aplicada?
--   [ ] `app/new-assessment/page.tsx` - Lógica de validação PDF
--   [ ] `app/api/generate-questions/route.ts` - Busca modelo correto
--   [ ] Testes E2E para cada plano
+- [ ] `db/migrations/0004_create_plan_models.sql` - Aplicada?
+- [ ] `app/new-assessment/page.tsx` - Lógica de validação PDF
+- [ ] `app/api/generate-questions/route.ts` - Busca modelo correto
+- [ ] Testes E2E para cada plano
 
 ---
 
-**Implementado por**: GitHub Copilot  
-**Data**: 2 de Outubro de 2025  
+**Implementado por**: GitHub Copilot
+**Data**: 2 de Outubro de 2025
 **Status**: ✅ Completo, pronto para teste e deploy

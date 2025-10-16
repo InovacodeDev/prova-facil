@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('stripe_subscription_id, stripe_customer_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError || !profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
           .from('plans')
           .select('id')
           .eq('stripe_product_id', productIdStr)
-          .single();
+          .maybeSingle();
 
         if (planData?.id) {
           console.log(`[API] Updating profile plan_id to: ${planData.id} (immediate upgrade)`);

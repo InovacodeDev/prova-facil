@@ -98,7 +98,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
         if (!user) return;
 
         // Get user's profile ID
-        const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).maybeSingle();
 
         if (!profile) return;
 
@@ -180,7 +180,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
         .from('plans')
         .select('id')
         .eq('stripe_product_id', stripeProductId)
-        .single();
+        .maybeSingle();
 
       if (planData) {
         setPlan({

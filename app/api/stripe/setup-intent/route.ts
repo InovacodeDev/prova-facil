@@ -28,7 +28,7 @@ export async function POST() {
       .from('profiles')
       .select('stripe_customer_id, email')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
