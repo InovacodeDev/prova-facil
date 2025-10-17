@@ -107,12 +107,8 @@ BEGIN
   LOOP
     -- Try to update existing row
     UPDATE logs
-    SET details = jsonb_set(
-        COALESCE(details, '{}'::jsonb),
-        '{count}',
-        to_jsonb(COALESCE((details->>'count')::integer, 0) + 1)
-    ),
-        created_at = CURRENT_TIMESTAMP
+    SET count = count + 1,
+        updated_at = CURRENT_TIMESTAMP
     WHERE action = p_action;
 
     IF FOUND THEN
@@ -121,8 +117,8 @@ BEGIN
 
     -- If no row was updated, try to insert one
     BEGIN
-      INSERT INTO logs (action, details, created_at)
-      VALUES (p_action, '{"count": 1}'::jsonb, CURRENT_TIMESTAMP);
+      INSERT INTO logs (action, count, created_at)
+      VALUES (p_action, 1, CURRENT_TIMESTAMP);
       RETURN;
     EXCEPTION WHEN unique_violation THEN
       -- Concurrent insert happened, loop and try update again
