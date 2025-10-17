@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id: planId } = params;
+    const { id: planId } = await params;
 
     if (!planId) {
       return NextResponse.json({ error: 'Missing plan ID' }, { status: 400 });

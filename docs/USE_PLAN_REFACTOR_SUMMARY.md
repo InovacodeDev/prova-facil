@@ -7,12 +7,14 @@ Refatoração completa do hook `usePlan()` para centralizar toda a lógica de bu
 ## 🎯 Problema Resolvido
 
 ### Antes
+
 - **Código duplicado**: Sidebar, dashboard e outras páginas tinham lógica similar para buscar plano
 - **Sem real-time**: Mudanças no plano não refletiam automaticamente
 - **Cache conflitante**: Cada componente gerenciava seu próprio estado
 - **Manutenção complexa**: Atualizar a lógica requeria modificar múltiplos arquivos
 
 ### Depois
+
 - ✅ **Hook centralizado**: Toda lógica em `usePlan()`
 - ✅ **Real-time updates**: Supabase subscriptions + custom events
 - ✅ **Cache compartilhado**: React Query com 1min staleTime
@@ -21,7 +23,9 @@ Refatoração completa do hook `usePlan()` para centralizar toda a lógica de bu
 ## 📦 Arquivos Modificados
 
 ### 1. `/hooks/use-plan.ts` - Hook Principal
+
 **Mudanças**:
+
 - ✅ Adicionado `fetchUserPlan()` que busca subscription + mapeia para plan ID
 - ✅ Implementado `usePlan()` com React Query caching
 - ✅ Configurado real-time subscription no Supabase
@@ -29,6 +33,7 @@ Refatoração completa do hook `usePlan()` para centralizar toda a lógica de bu
 - ✅ Incluído `scheduledNextPlan` na interface `PlanData`
 
 **Nova Interface**:
+
 ```typescript
 interface PlanData {
   id: PlanId;
@@ -49,12 +54,15 @@ interface PlanData {
 ```
 
 ### 2. `/components/layout/Sidebar.tsx` - Componente Simplificado
+
 **Mudanças**:
+
 - ❌ Removido: `useState`, `useEffect`, `fetchPlan()`, real-time setup manual
 - ✅ Adicionado: `const { plan, isLoading } = usePlan()`
 - 📉 **Redução de código**: ~100 linhas → 3 linhas
 
 **Antes**:
+
 ```typescript
 const [plan, setPlan] = useState<PlanData | null>(null);
 const [loading, setLoading] = useState(true);
@@ -71,12 +79,15 @@ const fetchPlan = async () => {
 ```
 
 **Depois**:
+
 ```typescript
 const { plan, isLoading } = usePlan();
 ```
 
 ### 3. `/docs/USE_PLAN_HOOK_GUIDE.md` - Documentação Completa
+
 **Novo arquivo** com:
+
 - 📖 Guia de uso completo
 - 🎯 Casos de uso comuns (10+ exemplos)
 - ⚠️ Boas práticas e anti-patterns
@@ -86,28 +97,35 @@ const { plan, isLoading } = usePlan();
 - 🚀 Dicas de performance
 
 ### 4. `/hooks/stripe.ts` - Barrel Export
+
 **Status**: ✅ Já estava exportando `usePlan()` corretamente
 
 ## 🔄 Real-time Updates Implementado
 
 ### 1. Supabase Real-time
+
 Escuta mudanças na tabela `profiles`:
+
 ```typescript
-supabase
-  .channel(`profile-plan-changes-${profile.id}`)
-  .on('postgres_changes', {
+supabase.channel(`profile-plan-changes-${profile.id}`).on(
+  'postgres_changes',
+  {
     event: 'UPDATE',
     schema: 'public',
     table: 'profiles',
     filter: `id=eq.${profile.id}`,
-  }, () => {
+  },
+  () => {
     // Invalida cache automaticamente
     queryClient.invalidateQueries({ queryKey: ['user-plan', profile.id] });
-  })
+  }
+);
 ```
 
 ### 2. Custom Events
+
 Sincroniza entre componentes:
+
 ```typescript
 // Qualquer componente pode notificar mudanças:
 window.dispatchEvent(new CustomEvent('subscription-updated'));
@@ -119,6 +137,7 @@ window.addEventListener('subscription-updated', handleSubscriptionUpdate);
 ## ⚙️ Configuração de Cache
 
 ### React Query
+
 ```typescript
 {
   staleTime: 60 * 1000,        // 1 minuto
@@ -129,24 +148,26 @@ window.addEventListener('subscription-updated', handleSubscriptionUpdate);
 ```
 
 ### Por que 1 minuto?
+
 - Dados de plano mudam frequentemente (upgrades/downgrades)
 - Limites de uso precisam estar atualizados
 - Real-time complementa com invalidação instantânea
 
 ## 📊 Componentes Afetados
 
-| Componente | Status | Mudança |
-|------------|--------|---------|
-| `Sidebar.tsx` | ✅ Atualizado | Usa `usePlan()` - código reduzido em ~100 linhas |
-| `new-assessment/page.tsx` | ✅ Já usando | Sem mudanças necessárias |
-| `dashboard/page.tsx` | ✅ Já usando | Sem mudanças necessárias |
-| `plan/page.tsx` | ✅ Já usando | Via `hooks/stripe.ts` barrel export |
-| `billing/page.tsx` | ✅ Correto | Server Component - usa `getSubscriptionData()` |
-| `PlanCard.tsx` | ✅ Correto | Recebe props - não precisa do hook |
+| Componente                | Status        | Mudança                                          |
+| ------------------------- | ------------- | ------------------------------------------------ |
+| `Sidebar.tsx`             | ✅ Atualizado | Usa `usePlan()` - código reduzido em ~100 linhas |
+| `new-assessment/page.tsx` | ✅ Já usando  | Sem mudanças necessárias                         |
+| `dashboard/page.tsx`      | ✅ Já usando  | Sem mudanças necessárias                         |
+| `plan/page.tsx`           | ✅ Já usando  | Via `hooks/stripe.ts` barrel export              |
+| `billing/page.tsx`        | ✅ Correto    | Server Component - usa `getSubscriptionData()`   |
+| `PlanCard.tsx`            | ✅ Correto    | Recebe props - não precisa do hook               |
 
 ## 🎨 Exemplo de Uso
 
 ### Uso Básico
+
 ```tsx
 'use client';
 
@@ -162,14 +183,10 @@ export function MyComponent() {
   return (
     <div>
       <h1>Plano {plan.name}</h1>
-      <Badge variant={plan.isActive ? 'success' : 'secondary'}>
-        {plan.status}
-      </Badge>
-      
+      <Badge variant={plan.isActive ? 'success' : 'secondary'}>{plan.status}</Badge>
+
       {plan.cancelAtPeriodEnd && (
-        <Alert>
-          Plano ativo até {new Date(plan.currentPeriodEnd! * 1000).toLocaleDateString()}
-        </Alert>
+        <Alert>Plano ativo até {new Date(plan.currentPeriodEnd! * 1000).toLocaleDateString()}</Alert>
       )}
     </div>
   );
@@ -177,6 +194,7 @@ export function MyComponent() {
 ```
 
 ### Com Limites de Features
+
 ```tsx
 import { usePlan, usePlanConfig } from '@/hooks/use-plan';
 
@@ -197,18 +215,21 @@ function FeatureGate() {
 ## 🚀 Benefícios
 
 ### Performance
+
 - ✅ **Deduplicação**: Múltiplas chamadas = 1 request
 - ✅ **Cache compartilhado**: Mesmos dados entre componentes
 - ✅ **Background refetch**: Atualiza sem loading
 - ✅ **Optimistic updates**: UI responde instantaneamente
 
 ### Manutenção
+
 - ✅ **DRY**: Lógica centralizada
 - ✅ **Type-safe**: TypeScript força uso correto
 - ✅ **Testável**: Hook isolado fácil de testar
 - ✅ **Documentado**: Guia completo disponível
 
 ### Experiência do Usuário
+
 - ✅ **Real-time**: Mudanças refletem automaticamente
 - ✅ **Consistência**: Mesmos dados em toda a aplicação
 - ✅ **Performance**: Cache reduz requisições
@@ -217,6 +238,7 @@ function FeatureGate() {
 ## 📝 Migration Guide
 
 ### Se você tinha código como:
+
 ```tsx
 // ❌ ANTIGO
 const [plan, setPlan] = useState(null);
@@ -234,6 +256,7 @@ useEffect(() => {
 ```
 
 ### Substitua por:
+
 ```tsx
 // ✅ NOVO
 const { plan, isLoading } = usePlan();
@@ -242,20 +265,29 @@ const { plan, isLoading } = usePlan();
 ## ⚠️ Breaking Changes
 
 ### Interface PlanData
+
 - ✅ Adicionado: `scheduledNextPlan: PlanId | null`
 
 ### Retorno do Hook
+
 Antes:
+
 ```typescript
-{ plan, isLoading, error, refetch }
+{
+  plan, isLoading, error, refetch;
+}
 ```
 
 Depois (sem mudanças - mesma interface):
+
 ```typescript
-{ plan, isLoading, error, refetch }
+{
+  plan, isLoading, error, refetch;
+}
 ```
 
 ### Dependências
+
 - ✅ Hook agora usa `useProfile()` internamente
 - ✅ Requer usuário autenticado
 - ✅ Usa `createClient()` do Supabase
@@ -263,12 +295,14 @@ Depois (sem mudanças - mesma interface):
 ## 🧪 Testes
 
 ### Testado em:
+
 - ✅ Sidebar - real-time updates funcionando
 - ✅ Dashboard - dados carregando corretamente
 - ✅ new-assessment - limites aplicados
 - ✅ plan page - compatível com barrel export
 
 ### Como testar:
+
 1. Login na aplicação
 2. Navegue para diferentes páginas (Sidebar deve carregar plano)
 3. Faça upgrade/downgrade de plano
@@ -291,6 +325,7 @@ Depois (sem mudanças - mesma interface):
 ## 👥 Próximos Passos
 
 ### Sugerido para o futuro:
+
 1. ✅ Adicionar testes unitários para `usePlan()`
 2. ✅ Adicionar testes de integração para real-time
 3. ✅ Criar hook `useCanAccessFeature(featureName)` baseado em `usePlan()`
@@ -298,7 +333,7 @@ Depois (sem mudanças - mesma interface):
 
 ---
 
-**Data**: 17 de outubro de 2025  
-**Autor**: AI Assistant  
-**Revisado por**: Pendente  
+**Data**: 17 de outubro de 2025
+**Autor**: AI Assistant
+**Revisado por**: Pendente
 **Status**: ✅ Completo e testado
