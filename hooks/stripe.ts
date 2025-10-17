@@ -24,7 +24,7 @@ export {
   useInvalidateAllStripeData,
   useInvalidateSubscription,
   useSubscription,
-  useUpdateSubscriptionCache,
+  useUpdateSubscriptionCache
 } from './use-subscription';
 
 // Plan hooks

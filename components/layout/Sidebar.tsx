@@ -4,27 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useProfile } from '@/hooks/use-profile';
-import { createClient } from '@/lib/supabase/client';
+import { usePlan } from '@/hooks/use-plan';
 import { cn } from '@/lib/utils';
 import { ClipboardList, Crown, FileEdit, LayoutDashboard, Sparkles, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 interface SidebarProps {
   isExpanded: boolean;
   isOpen: boolean;
   onNavigate?: () => void;
-}
-
-type PlanType = 'starter' | 'basic' | 'essentials' | 'plus' | 'advanced';
-
-interface PlanData {
-  id: PlanType; // ID do plano (vem da coluna 'id' da tabela plans)
-  cancelAtPeriodEnd?: boolean; // Se o plano será cancelado/downgrade ao final do período
-  currentPeriodEnd?: number; // Unix timestamp do fim do período atual
-  scheduledNextPlan?: PlanType | null; // Próximo plano agendado (quando há downgrade)
 }
 
 const navigationItems = [
@@ -80,128 +69,7 @@ const planConfig = {
 
 export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
   const pathname = usePathname();
-  const { profile } = useProfile();
-  const [plan, setPlan] = useState<PlanData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClient();
-
-  useEffect(() => {
-    fetchPlan();
-
-    // Subscribe to profile changes for real-time updates
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    const setupRealtimeSubscription = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) return;
-
-        // Get user's profile ID
-        const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).maybeSingle();
-
-        if (!profile) return;
-
-        console.log('[Sidebar] Setting up real-time subscription for profile:', profile.id);
-
-        // Create a channel for profile updates
-        channel = supabase
-          .channel(`profile-changes-${profile.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'profiles',
-              filter: `id=eq.${profile.id}`,
-            },
-            (payload) => {
-              console.log('[Sidebar] Profile updated, refreshing plan...', payload);
-              // Refetch plan when profile changes
-              fetchPlan();
-            }
-          )
-          .subscribe((status) => {
-            console.log('[Sidebar] Realtime subscription status:', status);
-          });
-      } catch (error) {
-        console.error('[Sidebar] Error setting up realtime subscription:', error);
-      }
-    };
-
-    setupRealtimeSubscription();
-
-    // Also listen to custom subscription update events
-    const handleSubscriptionUpdate = () => {
-      console.log('[Sidebar] Subscription cache invalidated, refreshing plan...');
-      fetchPlan();
-    };
-
-    // Listen for custom events from other components (e.g., plan page)
-    window.addEventListener('subscription-updated', handleSubscriptionUpdate);
-
-    // Cleanup subscription on unmount
-    return () => {
-      if (channel) {
-        console.log('[Sidebar] Cleaning up realtime subscription');
-        supabase.removeChannel(channel);
-      }
-      window.removeEventListener('subscription-updated', handleSubscriptionUpdate);
-    };
-  }, []);
-
-  const fetchPlan = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      // Get subscription data from API (uses cache)
-      const subscriptionResponse = await fetch(
-        `/api/stripe/subscription?userId=${profile.id}&stripe_subscription_id=${
-          profile.stripe_subscription_id || ''
-        }&stripe_customer_id=${profile.stripe_customer_id || ''}`
-      );
-
-      if (!subscriptionResponse.ok) {
-        setLoading(false);
-        return;
-      }
-
-      const { subscription } = await subscriptionResponse.json();
-      const stripeProductId = subscription.productId;
-      const scheduledNextProductId = subscription.scheduledNextPlan; // This is already the plan ID from backend
-
-      if (!stripeProductId) {
-        setLoading(false);
-        return;
-      }
-
-      // Get plan configuration based on stripe_product_id
-      const { data: planData } = await supabase
-        .from('plans')
-        .select('id')
-        .eq('stripe_product_id', stripeProductId)
-        .maybeSingle();
-
-      if (planData) {
-        setPlan({
-          id: planData.id as PlanType,
-          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-          currentPeriodEnd: subscription.currentPeriodEnd,
-          scheduledNextPlan: scheduledNextProductId as PlanType | null, // Already mapped from backend
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao carregar plano:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { plan, isLoading } = usePlan();
 
   const handleNavigation = () => {
     if (onNavigate) {
@@ -283,7 +151,7 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
   };
 
   const renderPlanCard = () => {
-    if (loading) {
+    if (isLoading) {
       return <div className={cn('animate-pulse rounded-lg bg-muted', isExpanded ? 'h-24' : 'h-12')} />;
     }
 

@@ -143,13 +143,10 @@ export default function NewAssessmentPage() {
   const [academicLevelName, setAcademicLevelName] = useState<string>('');
 
   // Use cache hooks for profile, plan, and usage data
-  const { profile, isLoading: profileLoading } = useProfile();
-  const { plan, isLoading: planLoading, refetch: refetchPlan } = usePlan();
-  const { config: planConfig, isLoading: planConfigLoading } = usePlanConfig(plan?.id);
-  const { usage, loading: usageLoading } = useMonthlyUsage(profile?.id);
-
-  // Combined loading state
-  const loading = profileLoading || planLoading || planConfigLoading || usageLoading;
+  const { profile } = useProfile();
+  const { plan } = usePlan();
+  const { config: planConfig } = usePlanConfig(plan?.id);
+  const { usage } = useMonthlyUsage(profile?.id);
 
   // Derived values from cache
   const userPlan = plan?.id || 'starter';
@@ -167,7 +164,6 @@ export default function NewAssessmentPage() {
         : DEFAULT_PLAN_CONFIG,
     [planConfig]
   );
-  const planConfigId = plan?.id || DEFAULT_PLAN_CONFIG.id;
   const monthlyUsage = usage || 0;
   const maxQuestions = Math.max(
     0,
@@ -323,7 +319,7 @@ export default function NewAssessmentPage() {
           .maybeSingle();
 
         if (userProfile) {
-          const academicLevel = (userProfile as any)?.academic_levels?.name;
+          const academicLevel = (userProfile?.academic_levels as unknown as { name: string } | null)?.name;
           if (academicLevel) {
             setAcademicLevelName(academicLevel);
           }
@@ -400,7 +396,7 @@ export default function NewAssessmentPage() {
           description: `${selectedFiles.length} PDF(s) serão enviados completos para a IA (sem transcrição prévia).`,
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao extrair texto:', error);
       logClientError(error, {
         component: 'NewAssessment',
@@ -491,7 +487,7 @@ export default function NewAssessmentPage() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const academicLevel = (userProfile as any)?.academic_levels?.name;
+      const academicLevel = (userProfile?.academic_levels as unknown as { name: string } | null)?.name;
 
       let documentContent = '';
       let pdfFilesData: Array<{ name: string; type: string; data: string }> = [];
@@ -585,7 +581,7 @@ export default function NewAssessmentPage() {
       }
 
       router.push('/my-assessments');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao criar questões:', error);
       logClientError(error, {
         component: 'NewAssessment',
