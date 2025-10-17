@@ -126,7 +126,6 @@ export function usePlan() {
     refetch: refetchSubscription,
   } = useSubscription();
 
-  // Fetch plan ID from database based on productId
   const {
     data: planId,
     isLoading: planIdLoading,
@@ -135,14 +134,13 @@ export function usePlan() {
     queryKey: ['plan-id', subscription?.productId],
     queryFn: () => fetchPlanIdByProductId(subscription!.productId!),
     enabled: !!subscription?.productId, // Only fetch if we have a productId
-    staleTime: 4 * 60 * 60 * 1000, // 4 hours (same as subscription)
-    gcTime: 6 * 60 * 60 * 1000, // 6 hours
+    staleTime: 60 * 1000, // 4 hours (same as subscription)
+    gcTime: 60 * 1000, // 6 hours
   });
 
   const isLoading = subscriptionLoading || planIdLoading;
   const error = subscriptionError || planIdError;
 
-  // Derive plan data from subscription + planId
   const plan = useMemo<PlanData | null>(() => {
     if (!subscription || !planId) return null;
 

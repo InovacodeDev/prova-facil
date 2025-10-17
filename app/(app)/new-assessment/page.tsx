@@ -144,7 +144,7 @@ export default function NewAssessmentPage() {
 
   // Use cache hooks for profile, plan, and usage data
   const { profile, isLoading: profileLoading } = useProfile();
-  const { plan, isLoading: planLoading } = usePlan();
+  const { plan, isLoading: planLoading, refetch: refetchPlan } = usePlan();
   const { config: planConfig, isLoading: planConfigLoading } = usePlanConfig(plan?.id);
   const { usage, loading: usageLoading } = useMonthlyUsage(profile?.id);
 
@@ -188,6 +188,10 @@ export default function NewAssessmentPage() {
       setDocumentMode(fallbackMode);
     }
   }, [allowedDocModes, documentMode]);
+
+  useEffect(() => {
+    refetchPlan();
+  }, []);
 
   // Update questionCount when maxQuestions changes
   useEffect(() => {

@@ -33,6 +33,8 @@
 import type { CachedSubscriptionData } from '@/lib/cache/subscription-cache';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useProfile } from './use-profile';
+
 interface SubscriptionResponse {
   subscription: CachedSubscriptionData;
 }
@@ -43,14 +45,23 @@ const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
 /**
  * Fetches subscription data from the API
  */
-async function fetchSubscription(): Promise<CachedSubscriptionData> {
-  const response = await fetch('/api/stripe/subscription', {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include', // Inclui cookies de autenticação
-  });
+async function fetchSubscription({
+  userId,
+  userProfile,
+}: {
+  userId: string;
+  userProfile: { stripe_subscription_id: string; stripe_customer_id: string };
+}): Promise<CachedSubscriptionData> {
+  const response = await fetch(
+    `/api/stripe/subscription?userId=${userId}&stripe_subscription_id=${userProfile.stripe_subscription_id}&stripe_customer_id=${userProfile.stripe_customer_id}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Inclui cookies de autenticação
+    }
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -67,9 +78,18 @@ async function fetchSubscription(): Promise<CachedSubscriptionData> {
  * @returns Query result com subscription data, loading state e error handling
  */
 export function useSubscription() {
+  const { profile } = useProfile(); // Get userId and userProfile from auth context
+
   return useQuery({
     queryKey: ['stripe', 'subscription'],
-    queryFn: fetchSubscription,
+    queryFn: () =>
+      fetchSubscription({
+        userId: profile.user_id,
+        userProfile: {
+          stripe_subscription_id: profile.stripe_subscription_id,
+          stripe_customer_id: profile.stripe_customer_id,
+        },
+      }),
     staleTime: FOUR_HOURS_IN_MS, // Dados considerados "fresh" por 4 horas
     gcTime: SIX_HOURS_IN_MS, // Mantém em cache por 6 horas
     refetchOnWindowFocus: true, // Revalida ao voltar para a aba (se stale)

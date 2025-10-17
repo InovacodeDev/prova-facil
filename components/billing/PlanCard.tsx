@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useProfile } from '@/hooks/use-profile';
 import { Calendar, Crown, Loader2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -36,6 +37,7 @@ const planDisplayNames: Record<string, string> = {
 
 export function PlanCard({ plan, period, nextRenewal, scheduledNextPlan, isLoading }: PlanCardProps) {
   const router = useRouter();
+  const { profile } = useProfile();
   const [isCanceling, setIsCanceling] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
@@ -43,7 +45,11 @@ export function PlanCard({ plan, period, nextRenewal, scheduledNextPlan, isLoadi
     setIsCanceling(true);
     try {
       // Get current subscription data
-      const subResponse = await fetch('/api/stripe/subscription');
+      const subResponse = await fetch(
+        `/api/stripe/subscription?userId=${profile.id}&stripe_subscription_id=${
+          profile.stripe_subscription_id || ''
+        }&stripe_customer_id=${profile.stripe_customer_id || ''}`
+      );
       if (!subResponse.ok) throw new Error('Failed to fetch subscription');
 
       const { subscription } = await subResponse.json();

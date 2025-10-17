@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useProfile } from '@/hooks/use-profile';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { ClipboardList, Crown, FileEdit, LayoutDashboard, Sparkles, Zap } from 'lucide-react';
@@ -79,6 +80,7 @@ const planConfig = {
 
 export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
   const pathname = usePathname();
+  const { profile } = useProfile();
   const [plan, setPlan] = useState<PlanData | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -159,7 +161,11 @@ export function Sidebar({ isExpanded, isOpen, onNavigate }: SidebarProps) {
       if (!user) return;
 
       // Get subscription data from API (uses cache)
-      const subscriptionResponse = await fetch('/api/stripe/subscription');
+      const subscriptionResponse = await fetch(
+        `/api/stripe/subscription?userId=${profile.id}&stripe_subscription_id=${
+          profile.stripe_subscription_id || ''
+        }&stripe_customer_id=${profile.stripe_customer_id || ''}`
+      );
 
       if (!subscriptionResponse.ok) {
         setLoading(false);
