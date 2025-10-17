@@ -189,10 +189,6 @@ export default function NewAssessmentPage() {
     }
   }, [allowedDocModes, documentMode]);
 
-  useEffect(() => {
-    refetchPlan();
-  }, []);
-
   // Update questionCount when maxQuestions changes
   useEffect(() => {
     if (maxQuestions === 0) {

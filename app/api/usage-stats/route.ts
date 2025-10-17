@@ -1,5 +1,4 @@
 import { logError } from '@/lib/error-logs-service';
-import { createClient } from '@/lib/supabase/server';
 import { getUserUsageStats } from '@/lib/usage-tracking';
 import { NextResponse } from 'next/server';
 
@@ -7,16 +6,7 @@ export const dynamic = 'force-dynamic'; // Necessário pois usa cookies via logE
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
-
-    const stats = await getUserUsageStats(user.id);
+    const stats = await getUserUsageStats();
 
     if (!stats) {
       return NextResponse.json({ error: 'Não foi possível obter estatísticas' }, { status: 404 });

@@ -300,7 +300,7 @@ export async function getSubscriptionData(
 ): Promise<CachedSubscriptionData> {
   // Check cache first
   const cached = await getCachedSubscription(userId);
-  if (cached) {
+  if (cached?.subscriptionId) {
     console.log(`[Stripe] Using cached subscription data for user: ${userId}`);
     return cached;
   }

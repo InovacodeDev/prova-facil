@@ -3,6 +3,7 @@
  * Tracks user question generation usage and quota
  */
 
+import { useProfile } from '@/hooks/use-profile';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from './error-logs-service';
 
@@ -24,25 +25,16 @@ export interface UsageStats {
 
 /**
  * Get user's question usage statistics
- * @param userId - The user's UUID
  * @returns Usage statistics including subject breakdown
  */
-export async function getUserUsageStats(userId: string): Promise<UsageStats | null> {
+export async function getUserUsageStats(): Promise<UsageStats | null> {
+  const { profile } = useProfile();
+
   try {
     const supabase = await createClient();
 
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('stripe_subscription_id, stripe_customer_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (profileError || !userProfile || !userProfile.stripe_subscription_id) {
-      return null;
-    }
-
     const subscriptionResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/subscription?userId=${userId}&stripe_subscription_id=${userProfile.stripe_subscription_id}&stripe_customer_id=${userProfile.stripe_customer_id}`
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/subscription?userId=${profile.user_id}&stripe_subscription_id=${profile.stripe_subscription_id}&stripe_customer_id=${profile.stripe_customer_id}`
     );
 
     if (!subscriptionResponse.ok) {
@@ -75,7 +67,7 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
     const { data: cycleLog, error: cycleError } = await supabase
       .from('profile_logs_cycle')
       .select('total_questions, subjects_breakdown')
-      .eq('user_id', userId)
+      .eq('user_id', profile.user_id)
       .eq('cycle', cycle)
       .maybeSingle();
 
@@ -98,7 +90,7 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
     const percentageUsed = totalQuota > 0 ? Math.round((totalQuestions / totalQuota) * 100) : 0;
 
     return {
-      userId,
+      userId: profile.user_id,
       totalQuestions,
       totalQuota,
       remainingQuota,
@@ -115,7 +107,7 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
       level: 'error',
       context: {
         function: 'getUserUsageStats',
-        userId,
+        userId: profile.user_id,
       },
     });
 
@@ -125,12 +117,11 @@ export async function getUserUsageStats(userId: string): Promise<UsageStats | nu
 
 /**
  * Check if user has remaining quota to create questions
- * @param userId - The user's UUID
  * @param requestedCount - Number of questions to create
  * @returns Boolean indicating if user has quota
  */
-export async function checkUserQuota(userId: string, requestedCount: number = 1): Promise<boolean> {
-  const stats = await getUserUsageStats(userId);
+export async function checkUserQuota(requestedCount: number = 1): Promise<boolean> {
+  const stats = await getUserUsageStats();
   if (!stats) return false;
 
   return stats.remainingQuota >= requestedCount;

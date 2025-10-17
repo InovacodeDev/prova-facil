@@ -45,15 +45,11 @@ const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
 /**
  * Fetches subscription data from the API
  */
-async function fetchSubscription({
-  userId,
-  userProfile,
-}: {
-  userId: string;
-  userProfile: { stripe_subscription_id: string; stripe_customer_id: string };
-}): Promise<CachedSubscriptionData> {
+async function fetchSubscription(): Promise<CachedSubscriptionData> {
+  const { profile } = useProfile();
+
   const response = await fetch(
-    `/api/stripe/subscription?userId=${userId}&stripe_subscription_id=${userProfile.stripe_subscription_id}&stripe_customer_id=${userProfile.stripe_customer_id}`,
+    `/api/stripe/subscription?userId=${profile.user_id}&stripe_subscription_id=${profile.stripe_subscription_id}&stripe_customer_id=${profile.stripe_customer_id}`,
     {
       method: 'GET',
       headers: {
@@ -78,18 +74,9 @@ async function fetchSubscription({
  * @returns Query result com subscription data, loading state e error handling
  */
 export function useSubscription() {
-  const { profile } = useProfile(); // Get userId and userProfile from auth context
-
   return useQuery({
     queryKey: ['stripe', 'subscription'],
-    queryFn: () =>
-      fetchSubscription({
-        userId: profile.user_id,
-        userProfile: {
-          stripe_subscription_id: profile.stripe_subscription_id,
-          stripe_customer_id: profile.stripe_customer_id,
-        },
-      }),
+    queryFn: fetchSubscription,
     staleTime: FOUR_HOURS_IN_MS, // Dados considerados "fresh" por 4 horas
     gcTime: SIX_HOURS_IN_MS, // Mantém em cache por 6 horas
     refetchOnWindowFocus: true, // Revalida ao voltar para a aba (se stale)

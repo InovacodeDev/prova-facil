@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Check user's quota
-    const hasQuota = await checkUserQuota(profile.user_id, totalRequestedQuestions);
+    const hasQuota = await checkUserQuota(totalRequestedQuestions);
     if (!hasQuota) {
       return NextResponse.json(
         {
