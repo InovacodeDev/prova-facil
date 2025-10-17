@@ -59,16 +59,34 @@ SELECT
 -- Users can insert assessments if authenticated
 CREATE POLICY "assessments_insert_auth" ON assessments FOR INSERT TO authenticated
 WITH
-  CHECK (user_id = auth.uid ());
+  CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles WHERE profiles.id = user_id AND profiles.user_id = auth.uid()
+    )
+  );
 
 -- Users can only update their own assessments
 CREATE POLICY "assessments_update_own" ON assessments FOR
-UPDATE TO authenticated USING (user_id = auth.uid ())
+UPDATE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = user_id AND profiles.user_id = auth.uid()
+  )
+)
 WITH
-  CHECK (user_id = auth.uid ());
+  CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles WHERE profiles.id = user_id AND profiles.user_id = auth.uid()
+    )
+  );
 
 -- Users can only delete their own assessments
-CREATE POLICY "assessments_delete_own" ON assessments FOR DELETE TO authenticated USING (user_id = auth.uid ());
+CREATE POLICY "assessments_delete_own" ON assessments FOR DELETE TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles WHERE profiles.id = user_id AND profiles.user_id = auth.uid()
+  )
+);
 
 COMMENT ON POLICY "assessments_select_all" ON assessments IS 'Allow public read access for sharing';
 
@@ -94,52 +112,46 @@ CREATE POLICY "questions_insert_owner" ON questions FOR INSERT TO authenticated
 WITH
   CHECK (
     EXISTS (
-      SELECT
-        1
-      FROM
-        assessments
-      WHERE
-        assessments.id = assessment_id
-        AND assessments.user_id = auth.uid ()
+      SELECT 1
+      FROM assessments a
+      JOIN profiles p ON a.user_id = p.id
+      WHERE a.id = assessment_id
+        AND p.user_id = auth.uid()
     )
   );
 
 -- Users can only update questions in their own assessments
 CREATE POLICY "questions_update_owner" ON questions FOR
-UPDATE TO authenticated USING (
+UPDATE TO authenticated
+USING (
   EXISTS (
-    SELECT
-      1
-    FROM
-      assessments
-    WHERE
-      assessments.id = questions.assessment_id
-      AND assessments.user_id = auth.uid ()
+    SELECT 1
+    FROM assessments a
+    JOIN profiles p ON a.user_id = p.id
+    WHERE a.id = questions.assessment_id
+      AND p.user_id = auth.uid()
   )
 )
 WITH
   CHECK (
     EXISTS (
-      SELECT
-        1
-      FROM
-        assessments
-      WHERE
-        assessments.id = assessment_id
-        AND assessments.user_id = auth.uid ()
+      SELECT 1
+      FROM assessments a
+      JOIN profiles p ON a.user_id = p.id
+      WHERE a.id = assessment_id
+        AND p.user_id = auth.uid()
     )
   );
 
 -- Users can only delete questions from their own assessments
-CREATE POLICY "questions_delete_owner" ON questions FOR DELETE TO authenticated USING (
+CREATE POLICY "questions_delete_owner" ON questions FOR DELETE TO authenticated
+USING (
   EXISTS (
-    SELECT
-      1
-    FROM
-      assessments
-    WHERE
-      assessments.id = questions.assessment_id
-      AND assessments.user_id = auth.uid ()
+    SELECT 1
+    FROM assessments a
+    JOIN profiles p ON a.user_id = p.id
+    WHERE a.id = questions.assessment_id
+      AND p.user_id = auth.uid()
   )
 );
 
