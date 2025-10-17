@@ -45,11 +45,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, user_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
@@ -91,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Check user's quota
-    const hasQuota = await checkUserQuota(totalRequestedQuestions);
+    const hasQuota = await checkUserQuota(totalRequestedQuestions, profile);
     if (!hasQuota) {
       return NextResponse.json(
         {
@@ -200,7 +196,7 @@ export async function POST(request: NextRequest) {
       assessment_id: assessment!.id,
       type: q.type,
       question: q.question,
-      metadata: q.metadata as any, // Cast to 'any' for Supabase client, which expects generic Json
+      metadata: q.metadata, // Cast to 'any' for Supabase client, which expects generic Json
     }));
 
     const { error: insertError } = await supabase.from('questions').insert(questionsToInsert);
@@ -217,7 +213,7 @@ export async function POST(request: NextRequest) {
       assessment_id: assessment.id,
       questions_generated: allGeneratedQuestions.length,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Unhandled error in generate-questions endpoint:', error);
 
     await logError({

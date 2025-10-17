@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getPlanConfig } from '@/lib/plans/config';
 import { formatPeriodEnd, formatPrice, getBillingIntervalDisplay, isFreePlan } from '@/lib/stripe/plan-helpers';
 import type { StripeProductWithPrices } from '@/types/stripe';
@@ -27,6 +28,7 @@ interface PlanConfirmationModalProps {
   currentPlan?: string;
   currentBillingPeriod?: 'monthly' | 'annual';
   currentPeriodEnd?: string;
+  scheduledNextPlan?: string | null;
 }
 
 export function PlanConfirmationModal({
@@ -40,11 +42,15 @@ export function PlanConfirmationModal({
   currentPlan,
   currentBillingPeriod,
   currentPeriodEnd,
+  scheduledNextPlan,
 }: PlanConfirmationModalProps) {
   if (!plan) return null;
 
   const isDowngradeToStarter = variant === 'downgrade' && isFreePlan(plan.internalPlanId);
   const isPeriodChange = currentPlan === plan.internalPlanId && currentBillingPeriod !== billingPeriod;
+
+  console.log('scheduledNextPlan:', scheduledNextPlan);
+  const isAlreadyScheduled = scheduledNextPlan === plan.internalPlanId;
   const price = billingPeriod === 'monthly' ? plan.prices.monthly : plan.prices.yearly;
   const priceAmount = price?.unit_amount ? formatPrice(price.unit_amount) : 'Grátis';
   const billingDisplay = getBillingIntervalDisplay(billingPeriod === 'monthly' ? 'month' : 'year');
@@ -131,8 +137,18 @@ export function PlanConfirmationModal({
             </div>
           </div>
 
+          {/* Info: Plan Already Scheduled */}
+          {isAlreadyScheduled && (
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                <strong>Informação:</strong> Este plano já está agendado para ser ativado em {formattedPeriodEnd}. Não é
+                necessário confirmar novamente.
+              </p>
+            </div>
+          )}
+
           {/* Additional Info for Downgrades */}
-          {variant === 'downgrade' && !isDowngradeToStarter && (
+          {variant === 'downgrade' && !isDowngradeToStarter && !isAlreadyScheduled && (
             <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
               <p className="text-sm text-amber-900 dark:text-amber-100">
                 <strong>Atenção:</strong> A alteração será efetivada em {formattedPeriodEnd}. Até lá, você continuará
@@ -156,10 +172,29 @@ export function PlanConfirmationModal({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={onConfirm} disabled={loading} variant={isDowngradeToStarter ? 'destructive' : 'default'}>
-            {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            {confirmButtonText}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    onClick={onConfirm}
+                    disabled={loading || isAlreadyScheduled}
+                    variant={isDowngradeToStarter ? 'destructive' : 'default'}
+                  >
+                    {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    {confirmButtonText}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {isAlreadyScheduled && (
+                <TooltipContent>
+                  <p>
+                    Este plano já será alterado para {plan.name} no próximo ciclo em {formattedPeriodEnd}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </DialogFooter>
       </DialogContent>
     </Dialog>

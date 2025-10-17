@@ -44,12 +44,17 @@ const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
 
 /**
  * Fetches subscription data from the API
+ * CRITICAL: This function must receive profile data as parameter (cannot use hooks inside async function)
  */
-async function fetchSubscription(): Promise<CachedSubscriptionData> {
-  const { profile } = useProfile();
-
+async function fetchSubscription(
+  userId: string,
+  stripeSubscriptionId: string | null,
+  stripeCustomerId: string | null
+): Promise<CachedSubscriptionData> {
   const response = await fetch(
-    `/api/stripe/subscription?userId=${profile.user_id}&stripe_subscription_id=${profile.stripe_subscription_id}&stripe_customer_id=${profile.stripe_customer_id}`,
+    `/api/stripe/subscription?userId=${userId}&stripe_subscription_id=${
+      stripeSubscriptionId || ''
+    }&stripe_customer_id=${stripeCustomerId || ''}`,
     {
       method: 'GET',
       headers: {
@@ -71,16 +76,28 @@ async function fetchSubscription(): Promise<CachedSubscriptionData> {
 /**
  * Hook para buscar dados da subscription do usuário com cache de 4 horas
  *
+ * IMPORTANT: Requires profile data to be loaded first. Query is automatically disabled
+ * until profile is available, preventing null errors.
+ *
  * @returns Query result com subscription data, loading state e error handling
  */
 export function useSubscription() {
+  const { profile, isLoading: isProfileLoading } = useProfile();
+
   return useQuery({
-    queryKey: ['stripe', 'subscription'],
-    queryFn: fetchSubscription,
+    queryKey: ['stripe', 'subscription', profile?.user_id],
+    queryFn: () => {
+      if (!profile) {
+        throw new Error('Profile not loaded - subscription query should be disabled');
+      }
+      return fetchSubscription(profile.user_id, profile.stripe_subscription_id, profile.stripe_customer_id);
+    },
+    // CRITICAL: Only enable query when profile is loaded and has user_id
+    enabled: !isProfileLoading && !!profile?.user_id,
     staleTime: FOUR_HOURS_IN_MS, // Dados considerados "fresh" por 4 horas
     gcTime: SIX_HOURS_IN_MS, // Mantém em cache por 6 horas
     refetchOnWindowFocus: true, // Revalida ao voltar para a aba (se stale)
-    refetchOnMount: 'always', // CHANGED: Always refetch on mount to ensure fresh data after navigation
+    refetchOnMount: 'always', // Always refetch on mount to ensure fresh data after navigation
     retry: 1, // Tenta 1 vez em caso de erro (auth error não deve retry muito)
   });
 }

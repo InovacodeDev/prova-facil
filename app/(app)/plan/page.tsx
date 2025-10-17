@@ -25,17 +25,16 @@ export default function PlanPage() {
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
-  const { createCheckout, updateSubscription } = useStripe();
+  const { updateSubscription } = useStripe();
 
   // Use hooks for data fetching with automatic caching (4h)
   const { data: products, isLoading: productsLoading, refetch: refetchProducts } = useProducts();
   const { plan, isLoading: planLoading, refetch: refetchPlan } = usePlan();
-  const { data: subscription } = useSubscription();
+  const { data: subscription, isLoading: subscriptionLoading } = useSubscription();
   const invalidateStripeData = useInvalidateAllStripeData();
 
-  console.log({ subscription });
   const currentPlan = plan?.id || 'starter';
-  const loading = planLoading;
+  const loading = planLoading || subscriptionLoading;
   const period = subscription?.renewStatus === 'yearly' ? 'yearly' : 'monthly';
   const nextRenewal = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd * 1000).toISOString()
@@ -250,8 +249,6 @@ export default function PlanPage() {
           throw new Error(error.message || error.error || 'Failed to cancel subscription');
         }
 
-        const data = await response.json();
-
         toast({
           title: 'Assinatura cancelada',
           description: `Sua assinatura será cancelada ao final do período. Você voltará ao plano Starter.`,
@@ -302,7 +299,7 @@ export default function PlanPage() {
 
       // Should not reach here
       throw new Error('Invalid plan change scenario');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error confirming plan:', error);
       logClientError(error, { component: 'Plan', action: 'handleConfirmPlan', planId: selectedPlan.internalPlanId });
       toast({
@@ -357,6 +354,7 @@ export default function PlanPage() {
         currentPlan={currentPlan}
         currentBillingPeriod={currentBillingPeriod}
         currentPeriodEnd={nextRenewal}
+        scheduledNextPlan={scheduledNextPlan}
       />
     </>
   );

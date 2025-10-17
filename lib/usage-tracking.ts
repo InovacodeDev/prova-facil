@@ -3,7 +3,7 @@
  * Tracks user question generation usage and quota
  */
 
-import { useProfile } from '@/hooks/use-profile';
+import { type Profile } from '@/hooks/use-profile';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from './error-logs-service';
 
@@ -27,9 +27,7 @@ export interface UsageStats {
  * Get user's question usage statistics
  * @returns Usage statistics including subject breakdown
  */
-export async function getUserUsageStats(): Promise<UsageStats | null> {
-  const { profile } = useProfile();
-
+export async function getUserUsageStats(profile: Profile): Promise<UsageStats | null> {
   try {
     const supabase = await createClient();
 
@@ -44,7 +42,6 @@ export async function getUserUsageStats(): Promise<UsageStats | null> {
     const { subscription } = await subscriptionResponse.json();
     const stripeProductId = subscription.productId;
 
-    console.log('Stripe Product ID:', stripeProductId);
     if (!stripeProductId) {
       return null;
     }
@@ -55,7 +52,6 @@ export async function getUserUsageStats(): Promise<UsageStats | null> {
       .eq('stripe_product_id', stripeProductId)
       .maybeSingle();
 
-    console.log('Plan data:', planData);
     if (planError || !planData) {
       return null;
     }
@@ -67,11 +63,10 @@ export async function getUserUsageStats(): Promise<UsageStats | null> {
     const { data: cycleLog, error: cycleError } = await supabase
       .from('profile_logs_cycle')
       .select('total_questions, subjects_breakdown')
-      .eq('user_id', profile.user_id)
+      .eq('user_id', profile.id)
       .eq('cycle', cycle)
       .maybeSingle();
 
-    console.log('Cycle log data:', cycleLog);
     if (cycleError && cycleError.code !== 'PGRST116') {
       throw cycleError;
     }
@@ -90,7 +85,7 @@ export async function getUserUsageStats(): Promise<UsageStats | null> {
     const percentageUsed = totalQuota > 0 ? Math.round((totalQuestions / totalQuota) * 100) : 0;
 
     return {
-      userId: profile.user_id,
+      userId: profile.id,
       totalQuestions,
       totalQuota,
       remainingQuota,
@@ -120,8 +115,8 @@ export async function getUserUsageStats(): Promise<UsageStats | null> {
  * @param requestedCount - Number of questions to create
  * @returns Boolean indicating if user has quota
  */
-export async function checkUserQuota(requestedCount: number = 1): Promise<boolean> {
-  const stats = await getUserUsageStats();
+export async function checkUserQuota(requestedCount: number = 1, profile: Profile): Promise<boolean> {
+  const stats = await getUserUsageStats(profile);
   if (!stats) return false;
 
   return stats.remainingQuota >= requestedCount;

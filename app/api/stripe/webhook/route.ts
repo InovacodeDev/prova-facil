@@ -192,7 +192,6 @@ async function updateProfileSubscription(customerId: string, subscription: Strip
   const { error } = await supabase
     .from('profiles')
     .update({
-      stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       plan_id: planId,
       updated_at: new Date().toISOString(),
