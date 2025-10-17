@@ -4,9 +4,9 @@
  * Este endpoint permite que usuários solicitem um novo email de verificação.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/error-logs-service';
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic'; // Necessário pois usa cookies via logError
 

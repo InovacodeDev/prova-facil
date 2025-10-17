@@ -5,9 +5,9 @@
  * no banco de dados.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import { ErrorLogsService, type CreateErrorLogDto } from '@/lib/error-logs-service';
 import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {

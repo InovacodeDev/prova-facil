@@ -1,7 +1,7 @@
 'use client';
 
-import { ReactNode } from 'react';
 import { AppLayout } from '@/components/layout';
+import { ReactNode } from 'react';
 
 interface AppGroupLayoutProps {
   children: ReactNode;
